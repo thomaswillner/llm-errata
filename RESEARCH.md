@@ -33,7 +33,7 @@ The claim is about the **complete conjunction**. None of its individual mechanis
 
 ## Why the problem can reach mass scale
 
-OpenAI reported more than [800 million weekly ChatGPT users](https://openai.com/index/the-state-of-enterprise-ai-2025-report/) by December 2025. Its separate [consumer-use study](https://openai.com/index/how-people-are-using-chatgpt/) found that practical guidance, information seeking, and writing were dominant uses. A [2026 Glean survey of 6,000 digital workers](https://www.glean.com/work-ai-institute/reports/work-ai-index) reported that 77% used multiple AI tools each week and 33% used four or more.
+OpenAI reported more than [800 million weekly ChatGPT users](https://openai.com/index/the-state-of-enterprise-ai-2025-report/) by December 2025. Its separate [consumer-use study](https://openai.com/index/how-people-are-using-chatgpt/) found that practical guidance, information seeking, and writing were dominant uses. A [2026 Glean survey of 6,000 digital workers](https://www.glean.com/work-ai-institute/reports/work-ai-index) reported that, among its respondents who use AI, 77% used multiple AI tools each week and 33% used four or more.
 
 These samples cannot be multiplied together as if they measured the same population. They establish direction and scale: large populations use LLMs for persistent, practical work, and many users spread that work across tools.
 

@@ -44,7 +44,7 @@ The user sees one verified importer and one unresolved importer. “Notice deliv
 
 OpenAI reported more than [800 million weekly ChatGPT users](https://openai.com/index/the-state-of-enterprise-ai-2025-report/) by December 2025. A separate [OpenAI/NBER consumer-use study](https://openai.com/index/how-people-are-using-chatgpt/) found that practical guidance, information seeking, and writing dominate ordinary usage—not just disposable experiments.
 
-People are also spreading work across assistants. In a 2026 survey of 6,000 digital workers, [Glean reported](https://www.glean.com/work-ai-institute/reports/work-ai-index) that 77% used multiple AI tools each week and 33% used four or more. These populations are not directly interchangeable, but at this scale even a small affected fraction is millions of people.
+People are also spreading work across assistants. In a 2026 survey of 6,000 digital workers, [Glean reported](https://www.glean.com/work-ai-institute/reports/work-ai-index) that, among its respondents who use AI, 77% used multiple AI tools each week and 33% used four or more. These populations are not directly interchangeable, but at this scale even a small affected fraction is millions of people.
 
 Current correction controls expose the underlying burden. OpenAI's [Memory FAQ](https://help.openai.com/en/articles/8590148-memory-faq) says its memory summary is not exhaustive; fully removing something may require deleting every source in which it appears, including chats, archived chats, files, summaries, and connected apps; retained chats may cause a memory to be recreated. LLM Errata does not criticize that product-specific control. It asks what happens after the same memory has already crossed into independently operated tools.
 

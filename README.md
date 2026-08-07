@@ -73,7 +73,7 @@ This distinction prevents false history from being preserved, valid history from
 
 ## Why this could affect millions
 
-OpenAI reported more than [800 million weekly ChatGPT users](https://openai.com/index/the-state-of-enterprise-ai-2025-report/) by December 2025. A separate [OpenAI/NBER consumer-use study](https://openai.com/index/how-people-are-using-chatgpt/) found that practical guidance, information seeking, and writing dominate ordinary use. In a 2026 survey of 6,000 digital workers, [Glean reported](https://www.glean.com/work-ai-institute/reports/work-ai-index) that 77% used multiple AI tools weekly and 33% used four or more.
+OpenAI reported more than [800 million weekly ChatGPT users](https://openai.com/index/the-state-of-enterprise-ai-2025-report/) by December 2025. A separate [OpenAI/NBER consumer-use study](https://openai.com/index/how-people-are-using-chatgpt/) found that practical guidance, information seeking, and writing dominate ordinary use. In a 2026 survey of 6,000 digital workers, [Glean reported](https://www.glean.com/work-ai-institute/reports/work-ai-index) that, among its respondents who use AI, 77% used multiple AI tools weekly and 33% used four or more.
 
 Those datasets do not measure the same population, and they do not establish how many users already export memory. They do establish the scale of persistent AI use and multi-tool fragmentation. Even a small affected fraction would represent millions of users.
 
@@ -96,13 +96,37 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [IDEA.md](IDEA.md) | Complete, copy-pasteable idea file and architecture. |
 | [RESEARCH.md](RESEARCH.md) | Research scope, search protocol, rejected candidates, limits, and falsifiers. |
 | [PRIOR_ART.md](PRIOR_ART.md) | Feature-collision matrix and source-by-source comparison. |
+| [SOURCES.md](SOURCES.md) | Pinned source record: versions, commits, access dates, and the sources that remain unpinned. |
 | [ROADMAP.md](ROADMAP.md) | Smallest credible implementation, acceptance gates, and standards path. |
 | [AGENTS.md](AGENTS.md) | Model-agnostic rules for coding and research agents working in this repository. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to challenge the novelty boundary, correct evidence, or propose an implementation. |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | How disagreement about evidence is expected to be handled. |
 | [SECURITY.md](SECURITY.md) | Security-reporting scope and private-reporting guidance. |
 | [CITATION.cff](CITATION.cff) | Citation metadata. |
-| [CHANGELOG.md](CHANGELOG.md) | Public version history. |
+| [CHANGELOG.md](CHANGELOG.md) | Public version history, including claims that were narrowed or retired. |
 | [PUBLISHING.md](PUBLISHING.md) | Exact repository settings, review gates, release text, and announcement wording. |
+
+## Verifying this repository
+
+Everything is Python standard library only. There is nothing to install.
+
+```bash
+make check    # structure, bounded claim, and the self-tests for both
+make links    # liveness of every cited external URL (needs network)
+```
+
+`make check` runs three separate things because they answer different questions:
+
+| Command | Question | Failure means |
+|---|---|---|
+| `make lint` | Is the repository well formed? | A file, link, encoding, fence, or metadata field is wrong. |
+| `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. Exit `2` means *inconclusive*, which is not a pass. |
+| `make test` | Do those checkers reject what they claim to reject? | A checker has stopped catching a fault it is supposed to catch. |
+
+The third one exists because a check that has never failed has not been shown to
+work. The self-tests build corpora that misstate the proposal — an inverted
+quarantine ordering, an asserted world first — and require the guard to reject
+each one.
 
 ## Current maturity
 
