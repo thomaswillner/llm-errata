@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use or discuss this proposal, please cite it using these metadata."
+title: "LLM Errata"
+type: software
+authors:
+  - family-names: "Willner"
+    given-names: "Thomas Rainer"
+version: 0.1.0
+date-released: 2026-08-01
+license: Apache-2.0
+abstract: >-
+  An independent, vendor-neutral proposal for post-export AI-memory update
+  delivery, importer-side descendant quarantine and repair, behavioral
+  verification, and coverage-aware receipts. This proposal does not represent
+  or imply endorsement by the author's employer.
+keywords:
+  - artificial intelligence
+  - LLM memory
+  - memory portability
+  - provenance
+  - conformance
+  - verifiable repair
+
