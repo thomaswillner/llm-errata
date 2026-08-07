@@ -58,7 +58,7 @@ docs: publish LLM Errata concept and research record
 
 Link to the repository only after its final public URL exists. Do not invent or reserve a URL in the documentation before publication.
 
-This is also why the repository ships no CI badge and no changelog compare links: both require the public URL. Add them in the first post-publication commit.
+The repository was published on 2026-08-07 at https://github.com/thomaswillner/llm-errata. The CI badge, the changelog compare links, and `CODEOWNERS` were added in the first post-publication commit, which is what this paragraph previously deferred.
 
 ## After publication
 

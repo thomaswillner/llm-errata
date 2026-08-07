@@ -1,5 +1,7 @@
 # LLM Errata
 
+[![validate](https://github.com/thomaswillner/llm-errata/actions/workflows/validate.yml/badge.svg)](https://github.com/thomaswillner/llm-errata/actions/workflows/validate.yml)
+
 **A vendor-neutral proposal for making corrections follow AI memory after it has been copied.**
 
 > **An imported memory is a dependency, not a copy.** When its source changes, the importer should quarantine its known descendants, rebuild them from valid inputs, and report anything it could not verify.

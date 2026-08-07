@@ -1,0 +1,11 @@
+# The bounded novelty statement and the source comparison are the artifacts a
+# reader is trusting. PUBLISHING.md requires review before either changes, and
+# this file is how that requirement is enforced rather than remembered.
+
+*                   @thomaswillner
+
+/PRIOR_ART.md       @thomaswillner
+/RESEARCH.md        @thomaswillner
+/SOURCES.md         @thomaswillner
+/scripts/           @thomaswillner
+/tests/             @thomaswillner

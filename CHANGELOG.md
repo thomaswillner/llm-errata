@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## Unreleased
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.1.0...HEAD)
 
 ### Added
 
@@ -41,7 +41,7 @@ All six were found by adversarial review after the suite was green, and each has
 
 - `CHANGELOG.md` used `[version]` heading syntax with no link definitions, so the headings rendered as literal brackets, and it listed a placeholder as though it were a change. Version headings are now plain until the repository has a public URL to compare against.
 
-## 0.1.0 - 2026-08-01
+## [0.1.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.1.0) - 2026-08-01
 
 ### Added
 
