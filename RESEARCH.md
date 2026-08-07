@@ -230,7 +230,7 @@ AI assistance does not make the search exhaustive and does not replace independe
 - [TMLS: Agent Memory and State](https://www.tmls.nyc/research/agent-memory-state)
 - [Agentic Unlearning](https://arxiv.org/html/2602.17692v1)
 - [MaRS / Forgetful but Faithful](https://arxiv.org/html/2512.12856v1)
-- [Survey on the Security of Long-Term Memory in LLM Agents](https://arxiv.org/html/2604.16548v1)
+- [A Survey on Long-Term Memory Security in LLM Agents: Attacks, Defenses, and Governance Across the Memory Lifecycle](https://arxiv.org/html/2604.16548v1)
 
 ### Cross-recipient lifecycle, provenance, status, and receipts
 

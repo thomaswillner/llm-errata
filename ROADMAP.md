@@ -28,6 +28,13 @@ Exit gate:
 
 ## Phase 1 — File-backed proof
 
+**Status:** implemented in [`prototype/`](prototype/README.md), not yet externally reviewed. Run it with `make demo`.
+
+Every acceptance criterion below is enforced by a test in `tests/`, and `make check` runs the demo, so the headline result cannot regress silently. Two deviations from what this section originally specified, both recorded rather than quietly absorbed:
+
+- The prototype is a Python package rather than the `identity/ feeds/ registry/` directory tree sketched below. The tree describes an on-disk deployment; the package is the same model with the persistence layer deferred to Phase 2, where the schema is defined.
+- Model-graded probes are **absent**, not merely optional and separated. The behavioural probes are deterministic string checks over a declared scope. That is enough to test the repair triad's structure and nothing at all about how a real model would behave.
+
 Build one local controller with no external service dependency.
 
 ### Canonical project shape

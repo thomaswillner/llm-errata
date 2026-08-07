@@ -10,7 +10,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, run_checker
+from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, run_checker
 
 
 SCRIPT = "validate_repo.py"

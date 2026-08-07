@@ -11,7 +11,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from support import (
+from tests.support import (
     EXIT_FAIL,
     EXIT_INCONCLUSIVE,
     EXIT_OK,

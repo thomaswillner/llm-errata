@@ -1,6 +1,6 @@
 # Prior Art and Feature-Collision Matrix
 
-**Research cutoff:** 2026-08-01
+**Research cutoff:** 2026-08-01. **Supplementary screen:** 2026-08-07, recorded in [HARD_PROBLEMS.md](HARD_PROBLEMS.md); four rows added below and marked with their date.
 
 This document tests the bounded LLM Errata claim against its closest public predecessors. It distinguishes a complete collision from a system that implements one or more of the same mechanisms.
 
@@ -34,6 +34,10 @@ No individual mechanism is claimed as new.
 | [vCon Lifecycle using SCITT](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) with [SCITT RFC 9943](https://datatracker.ietf.org/doc/rfc9943/) | **Yes:** lifecycle events and acknowledgments across recipients | No AI-memory descendant-repair requirement; workflow implementation is left to applications | No | **Partial:** acknowledgments and SCITT inclusion receipts, not a semantic-repair coverage receipt | **Strongest formal control-plane collision.** It proves that cross-recipient lifecycle events and transparent receipts are not new. |
 | [Shomei](https://shomei.ai/how-it-works/) ([API](https://shomei.ai/docs/http-api/), [governance](https://shomei.ai/docs/governance-and-receipts/)) | **Partial:** governed correction/update inside the Shomei boundary; no reviewed persistent post-export importer subscription/callback obligation | **Yes locally:** derived lineage, erasure cascades, and explicit external-delete-pending states | **Partial:** bounded governance evidence, but no reviewed mandatory negative + positive + preservation profile for each importer | **Partial:** signed, bounded governance receipts, but not the complete cross-importer callback | **Strongest governed-memory product collision.** It establishes local lineage, lifecycle, honest coverage, and receipts. |
 | [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Partial:** lineage-aware retraction, echo guard, revert, and residue scanning for explicitly or successfully extractor-keyed assertions | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence, not a cross-importer repair callback | **Strongest open-source local correction collision.** Its README also reports that raw conversational prose is rarely keyed reliably, so supersession mostly does not fire there. |
+| [MemoRepair](https://arxiv.org/abs/2605.07242v1) | No cross-system delivery | **Yes, as an explicit contract:** descendants withdrawn before repair, republication restricted to validated predecessor-closed successors; invalidated-memory exposure cut from 69.8–94.3% to 0% *given complete influence provenance* | **Partial:** validated republication, no preservation test | No | **Strongest requirement-B collision found.** It independently arrives at quarantine-before-repair. Added 2026-08-07; post-dates the original cutoff. |
+| [Governed Evolving Memory](https://arxiv.org/abs/2605.26252v1) | No | **Partial:** formal correctness conditions for dependency consistency and provenance preservation | No | No | Argues record-level stores cannot satisfy those conditions. |
+| [Always-On Agents / AOEP-v0](https://arxiv.org/abs/2606.30306v1) | No | Governance obligations scored, not implemented | **Partial:** a deterministic evaluation contract scoring state mutation and recovery rather than answer quality | No | **Closest conformance-protocol collision.** |
+| [memorywire](https://arxiv.org/abs/2606.01138v3) | **Partial:** vendor-neutral wire format with forget and expire operations | No | No | No | Relevant to the vendor-neutral framing, not to importer repair. |
 | [TMLS Agent Memory and State](https://www.tmls.nyc/research/agent-memory-state) | No cross-importer update channel | **Yes as an architecture pattern:** provenance-led invalidation and recomputation of derived facts, graph edges, and vectors | Partial regression guidance | No | Eliminates provenance-led rebuild as the novel mechanism. |
 | [Agentic Unlearning](https://arxiv.org/html/2602.17692v1) | No cross-vendor post-export delivery | **Yes for unlearning:** blocks targets and traverses dependencies across raw memory, summaries, reflections, graphs, and vectors | Partial negative/preservation objectives; not benign replacement activation | No callback to an origin | Eliminates dependency-aware deletion/unlearning as the central invention. |
 | [MaRS](https://arxiv.org/html/2512.12856v1) | No cross-importer delivery | **Yes for erasure:** typed provenance graph, propagation, and summary regeneration | Partial erasure and utility evaluation | No | Establishes graph-based retention, deletion, regeneration, and audit semantics. |
@@ -80,6 +84,19 @@ That is a substantial collision with any claim that lineage-aware correction, ho
 Inspeximus publicly describes keyed supersession, an `echo_guard`, revert, lineage-aware retraction, residue scans, preservation behavior, and content-free signed erasure receipts. These mechanisms apply to explicitly keyed or successfully extractor-keyed assertions. Its README reports that raw conversational prose is rarely keyed reliably and supersession therefore mostly does not fire there.
 
 LLM Errata does not claim to improve or replace these local systems. It proposes the conformance boundary between an origin and multiple importers.
+
+### MemoRepair: the closest requirement-B collision
+
+[MemoRepair](https://arxiv.org/abs/2605.07242v1) (2026-05-08) was found in the 2026-08-07 supplementary screen, after the original cutoff. It is the strongest single result against any broad reading of requirement B, and it should be read before the older dependency-aware-rebuild sources below.
+
+It defines a repair contract in which invalidated descendants are withdrawn *before* repair and republication is restricted to validated, predecessor-closed successors. That is the same ordering this proposal calls quarantine-before-repair, arrived at independently. It reports invalidated-memory exposure falling from 69.8–94.3% to 0%, conditional on complete influence provenance, and reports that dropping 1% of influence edges yields 17.7% leaked invalidated state.
+
+Two consequences, and they pull in opposite directions:
+
+- Quarantine-before-repair is no longer distinctive. It should not be presented as a contribution of this proposal.
+- The 1%-to-17.7% amplification is the strongest quantitative support yet for the rule that a required store left unresolved must prevent a green aggregate. Incomplete lineage does not degrade gracefully.
+
+MemoRepair has no cross-boundary delivery to a prior importer, no preservation test, and no receipt, so requirements A, the preservation leg of C, and D still hold.
 
 ### Dependency-aware rebuild is established
 

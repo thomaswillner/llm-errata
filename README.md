@@ -93,6 +93,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 
 | File | Purpose |
 |---|---|
+| [prototype/](prototype/README.md) | **Runnable Phase 1 demo.** Three stores, one supersession, a receipt that refuses to go green. |
 | [IDEA.md](IDEA.md) | Complete, copy-pasteable idea file and architecture. |
 | [RESEARCH.md](RESEARCH.md) | Research scope, search protocol, rejected candidates, limits, and falsifiers. |
 | [PRIOR_ART.md](PRIOR_ART.md) | Feature-collision matrix and source-by-source comparison. |
@@ -133,6 +134,20 @@ each one.
 never evaluated). Inconclusive is not a pass. `make` reports its own exit `2`
 for any failed recipe, so `make claim` prints which of the two occurred; a
 script that needs to branch on the distinction should call the guard directly.
+
+## Run it
+
+```bash
+make demo
+```
+
+Standard library only, no network, no API key. It exits `2` on purpose: both
+inspectable stores are repaired, all three probes pass, and the aggregate is
+still `partial` because one required store cannot show its own state.
+
+That refusal is the point. Remove the opaque store and the same repair reports
+`verified` — there is a test asserting exactly that, so the non-green result
+cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 

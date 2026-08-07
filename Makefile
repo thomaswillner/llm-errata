@@ -1,13 +1,13 @@
 PYTHON ?= python3
 
 .DEFAULT_GOAL := check
-.PHONY: check lint claim test links all help
+.PHONY: check lint claim test demo links all help
 
 help: ## Show the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-8s %s\n", $$1, $$2}'
 
-check: lint claim test ## Everything that must pass before a change is complete
+check: lint claim test demo ## Everything that must pass before a change is complete
 
 lint: ## Structure, encoding, Markdown, links, licence, release metadata
 	$(PYTHON) scripts/validate_repo.py
@@ -27,7 +27,17 @@ claim: ## Anchored guard on the bounded novelty claim and its invariants
 	exit $$status
 
 test: ## Self-tests, including the negative cases each checker must reject
-	$(PYTHON) -m unittest discover -s tests -t tests
+	$(PYTHON) -m unittest discover -s tests -t .
+
+demo: ## Run the Phase 1 conformance demo (exits 2 on purpose)
+	@$(PYTHON) -m prototype.demo; \
+	status=$$?; \
+	if [ $$status -ne 2 ]; then \
+		echo "DEMO ERROR: expected exit 2 (repair incomplete, reported honestly),"; \
+		echo "            got exit $$status. Exit 0 means the aggregate went green"; \
+		echo "            with an opaque store in scope; anything else is a crash."; \
+		exit 1; \
+	fi
 
 links: ## Liveness of every cited external URL (network required)
 	$(PYTHON) scripts/check_links.py

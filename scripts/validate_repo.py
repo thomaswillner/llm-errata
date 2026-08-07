@@ -48,6 +48,12 @@ REQUIRED_FILES = (
     "tests/test_validate_repo.py",
     "tests/test_claim_guard.py",
     ".github/workflows/validate.yml",
+    "prototype/README.md",
+    "prototype/controller.py",
+    "prototype/adapters.py",
+    "prototype/errata.py",
+    "tests/test_controller.py",
+    "tests/test_demo.py",
 )
 
 TEXT_SUFFIXES = {
