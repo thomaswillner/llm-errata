@@ -76,8 +76,14 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertIn("Markdown fences", result.stdout)
 
     def test_version_disagreement_is_rejected(self) -> None:
+        # Derived from the current version rather than hardcoded. An earlier
+        # version of this test wrote a literal "0.2.0", which silently stopped
+        # testing anything the moment 0.2.0 was released: it set VERSION to the
+        # value it already had, so nothing disagreed and the check passed.
         def mutate(root: Path) -> None:
-            (root / "VERSION").write_text("0.2.0\n", encoding="utf-8")
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major = int(current.split(".")[0])
+            (root / "VERSION").write_text(f"{major + 1}.0.0\n", encoding="utf-8")
 
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
