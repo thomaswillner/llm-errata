@@ -13,11 +13,11 @@
 | Field | Value |
 |---|---|
 | Author | Thomas Rainer Willner |
-| Version | 0.1.0 |
+| Version | 0.3.0 |
 | Status | Public concept proposal / Request for Comment |
-| Published | 2026-08-01 |
+| Published | 2026-08-07 |
 | Research reviewed through | 2026-08-01 |
-| License | Apache-2.0 |
+| License | Personal use only, see [LICENSE](LICENSE). Releases up to 0.2.0 were Apache-2.0. |
 
 This is an independent proposal. It does not represent the position of the author's employer or any organization referenced in this repository.
 
@@ -191,4 +191,14 @@ The public research record exposes the decision criteria and evidence trail. It 
 
 Copyright © 2026 Thomas Rainer Willner.
 
-Licensed under the [Apache License 2.0](LICENSE).
+Licensed for personal, non-commercial evaluation and study. See [LICENSE](LICENSE).
+
+You may read, run, study, quote, and cite this work. Commercial use,
+redistribution, derivative works, and implementing the specifications in
+`spec/` require written permission, which is not unreasonably withheld for
+research and standards work.
+
+Version 0.2.0 and earlier were published under the Apache License 2.0. That
+grant is irrevocable for those releases and is not withdrawn here.
+
+Third-party files under `spec/vendor/` keep their own licences.

@@ -6,7 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.2.0...HEAD)
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.3.0...HEAD)
+
+## [0.3.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.3.0) - 2026-08-07
+
+### Changed — licence
+
+- **Relicensed to a personal-use licence.** Reading, running, studying, quoting, and citing are permitted. Commercial use, redistribution, derivative works, and implementing the specifications in `spec/` require written permission.
+- **Version 0.2.0 and earlier remain under the Apache License 2.0.** That grant is irrevocable: anyone who obtained those releases keeps their Apache-2.0 rights to them permanently, and nothing here withdraws it. The licence file, the notice, and `scripts/validate_repo.py` all assert that this sentence stays present, so it cannot be quietly dropped later.
+- No patent licence is granted. That is a deliberate difference from the earlier releases.
+- Third-party files under `spec/vendor/` are unaffected and keep their own terms. The JSON-Schema-Test-Suite is Copyright (c) 2012 Julian Berman, MIT, and its licence file now ships alongside it.
+
+This narrows the project's own stated direction, which is recorded rather than glossed: `CONTRIBUTING.md` invites reference implementations, `ROADMAP.md` Phase 2 defines success as two independent implementations, and Phase 5 contemplates a standards path. All three now require the author's permission. Prior-art challenges, corrections, and design critique need no permission and remain the most valuable contribution.
+
 
 ### Added — the Phase 2 conformance surface
 

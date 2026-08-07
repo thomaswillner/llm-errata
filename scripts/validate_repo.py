@@ -368,12 +368,18 @@ def check_publication_metadata(reporter: Reporter) -> None:
     notice_text = read_utf8(notice_path)
     reporter.check(
         "license and notice",
-        "Apache License" in license_text
-        and "Version 2.0" in license_text
+        "Personal Use Licence" in license_text
         and "Copyright 2026 Thomas Rainer Willner" in license_text
-        and "Copyright 2026 Thomas Rainer Willner" in notice_text,
-        "Apache-2.0 license and author notice are present",
-        "Restore the Apache License 2.0 text and Thomas Rainer Willner copyright notice.",
+        and "Copyright 2026 Thomas Rainer Willner" in notice_text
+        # The Apache-2.0 grant on 0.2.0 and earlier is irrevocable. Deleting
+        # the sentence that says so would misrepresent the rights of anyone who
+        # already holds those releases.
+        and "Apache License 2.0" in license_text
+        and "irrevocable" in license_text,
+        "personal-use licence, author notice, and the irrevocable prior grant are present",
+        "Restore the Personal Use Licence, the Thomas Rainer Willner copyright "
+        "notice, and the statement that the Apache-2.0 grant on earlier releases "
+        "is irrevocable.",
     )
 
 

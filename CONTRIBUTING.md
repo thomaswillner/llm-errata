@@ -79,7 +79,9 @@ Before opening a large pull request, open an issue describing the proposed chang
 - the tests or review performed;
 - known limitations and unresolved questions.
 
-By submitting a contribution, you agree that it may be distributed under the repository's Apache License 2.0. You must have the right to submit the material. Cite rather than copy third-party text unless its license clearly permits inclusion.
+By submitting a contribution, you grant the copyright holder a perpetual, worldwide, irrevocable, royalty-free licence to use, modify, and relicense it, and you confirm you have the right to submit the material. You retain your own copyright. See [LICENSE](LICENSE). Cite rather than copy third-party text unless its licence clearly permits inclusion.
+
+Note that this repository is licensed for personal use. Prior-art challenges, corrections, and design critique are welcome and need no permission. Implementing the specifications in `spec/` does require written permission, which is not unreasonably withheld for research and standards work.
 
 ## Security findings
 

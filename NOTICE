@@ -1,9 +1,18 @@
 LLM Errata
-Copyright 2026 Thomas Rainer Willner
+Copyright 2026 Thomas Rainer Willner. All rights reserved.
+
+Licensed for personal, non-commercial evaluation and study. See LICENSE.
+
+Version 0.2.0 and earlier were published under the Apache License 2.0. That
+grant is irrevocable for those releases and is not withdrawn by the current
+licence.
 
 This repository contains an independent public concept proposal and does not
 represent the position of the author's employer or any organization referenced
 in the documentation.
 
-The repository includes references and links to third-party works. Those works
-remain subject to their respective licenses and terms.
+Files under spec/vendor/ are third-party works under their own licences. The
+JSON-Schema-Test-Suite is Copyright (c) 2012 Julian Berman, MIT Licence.
+
+The repository references and links to third-party works. Those works remain
+subject to their respective licences and terms.

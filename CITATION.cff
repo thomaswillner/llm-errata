@@ -5,9 +5,10 @@ type: software
 authors:
   - family-names: "Willner"
     given-names: "Thomas Rainer"
-version: 0.2.0
+version: 0.3.0
 date-released: 2026-08-07
-license: Apache-2.0
+license: LicenseRef-LLM-Errata-Personal-Use
+license-url: "https://github.com/thomaswillner/llm-errata/blob/main/LICENSE"
 abstract: >-
   An independent, vendor-neutral proposal for post-export AI-memory update
   delivery, importer-side descendant quarantine and repair, behavioral
