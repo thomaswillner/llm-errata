@@ -95,7 +95,8 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 
 | File | Purpose |
 |---|---|
-| [prototype/](prototype/README.md) | **Runnable Phase 1 demo.** Three stores, one supersession, a receipt that refuses to go green. |
+| [prototype/](prototype/README.md) | **Runnable demo and CLI.** Three stores, one supersession, a receipt that refuses to go green. |
+| [spec/](spec/README.md) | The wire schema for errata and receipts, with conformance vectors. |
 | [IDEA.md](IDEA.md) | Complete, copy-pasteable idea file and architecture. |
 | [RESEARCH.md](RESEARCH.md) | Research scope, search protocol, rejected candidates, limits, and falsifiers. |
 | [PRIOR_ART.md](PRIOR_ART.md) | Feature-collision matrix and source-by-source comparison. |
@@ -142,7 +143,8 @@ script that needs to branch on the distinction should call the guard directly.
 ## Run it
 
 ```bash
-make demo
+make demo        # the narrated three-store scenario
+make cli-demo    # the same lifecycle through the errata command line
 ```
 
 Standard library only, no network, no API key. It exits `2` on purpose: both

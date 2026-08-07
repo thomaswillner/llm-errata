@@ -10,3 +10,5 @@ build/
 
 # Local build tracker (see docs/agents/issue-tracker.md)
 .scratch/
+.cli-demo/
+.errata/

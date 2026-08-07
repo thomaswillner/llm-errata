@@ -66,6 +66,18 @@ class LineageLedger:
     def artifacts(self) -> tuple[Artifact, ...]:
         return tuple(self._artifacts.values())
 
+    def artifact_ids(self) -> frozenset[str]:
+        return frozenset(self._artifacts)
+
+    def roots_seen(self) -> frozenset[str]:
+        """Every root this importer has actually accepted.
+
+        An erratum naming anything else is ambiguous: the importer cannot tell
+        which local state it is supposed to act on.
+        """
+
+        return frozenset(self._root_of.values())
+
     def descendants(self, root: str) -> set[str]:
         """Every artifact reachable from `root` through recorded derivation."""
 

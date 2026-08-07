@@ -102,6 +102,8 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
+**Status:** items 1 through 5 implemented, not yet externally reviewed. `spec/` carries the schemas and vectors, `prototype/cli.py` the control plane, `prototype/sqlite_store.py` a real transactional store, and `prototype/residue.py` the substrate-evidence rule. Item 6, model-assisted semantic probes, is deliberately not started.
+
 Only after the file-backed proof passes:
 
 1. Define a compact, deterministic schema for errata and receipts.

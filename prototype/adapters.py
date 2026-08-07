@@ -130,6 +130,11 @@ class MarkdownAdapter:
     def content(self, artifact_id: str) -> str:
         return self._ledger.artifact(artifact_id).content
 
+    def source_artifact(self, artifact_id: str) -> str:
+        """The ledger artifact this store item derives from. Here, itself."""
+
+        return artifact_id
+
     def release(self, artifact_id: str) -> None:
         """Un-gate without repairing. Only a non-conforming strategy does this."""
 

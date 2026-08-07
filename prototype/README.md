@@ -39,6 +39,10 @@ non-green result cannot be mistaken for a bug in the aggregation.
 | `receipts.py` | Coverage-aware receipts and the aggregation rule. |
 | `scenario.py` | The synthetic fixture. |
 | `demo.py` | The narrated run. |
+| `schema.py` | The dependency-free validator for the published wire schema. |
+| `sqlite_store.py` | A real transactional store, with durable quarantine and a residue scan. |
+| `residue.py` | Substrate evidence: `verified` requires a clean scan, not an API acknowledgement. |
+| `cli.py`, `workspace.py` | The `errata` command line over an on-disk workspace. |
 
 ## The eight scenarios
 
@@ -63,9 +67,41 @@ are the cheap tricks the repair triad exists to defeat:
 - **Append-only** — add the replacement and leave the old value retrievable.
   The positive probe passes; the negative probe catches it.
 
+## The command line
+
+```bash
+make cli-demo
+```
+
+A full lifecycle without importing Python: `init`, `export`, `derive`,
+`publish`, `pull`, `plan`, `repair`, `test`, `attest`, `audit`, `verify`.
+
+Exit codes are part of the interface. `0` is success, `1` is a refusal or a
+failed check, and **`2` means the repair ran and the result is not verified**.
+`2` is not a lesser `1`: it is the case the whole proposal exists to make
+expressible, so it is a distinct code rather than a warning on stdout.
+
+Running it against a real SQLite store produces the result that matters:
+
+```text
+test      negative=pass  positive=pass  preserve=pass
+stores    prompt_cache   unknown
+          sqlite         failed
+aggregate FAILED
+```
+
+Every probe passed. The store still reports `failed`, because the residue scan
+finds the retired value in `store.sqlite3-wal` after the row is gone and the API
+reports it deleted. That is Ghost Vectors, reproduced with nothing but the
+standard library.
+
 ## What this is not
 
-- **Not a wire protocol.** No schema is published yet. That is Phase 2.
+- **A published wire schema, with limits.** `spec/` carries JSON Schemas for the
+  erratum and the receipt plus 19 conformance vectors, so another implementation
+  can be checked against the same contract. The bundled validator implements a
+  subset and refuses unknown keywords rather than ignoring them. See
+  [spec/README.md](../spec/README.md).
 - **Real signatures, with one caveat.** `ed25519.py` is Ed25519 per RFC 8032,
   standard library only, checked against the RFC's published test vectors
   including the 1023-byte message. An owner publishes a verification key and no

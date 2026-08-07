@@ -1,7 +1,7 @@
 PYTHON ?= python3
 
 .DEFAULT_GOAL := check
-.PHONY: check lint claim test demo links all help
+.PHONY: check lint claim test demo cli-demo links all help
 
 help: ## Show the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -38,6 +38,32 @@ demo: ## Run the Phase 1 conformance demo (exits 2 on purpose)
 		echo "            with an opaque store in scope; anything else is a crash."; \
 		exit 1; \
 	fi
+
+cli-demo: ## Drive a full lifecycle through the CLI in a scratch workspace
+	@rm -rf .cli-demo && mkdir -p .cli-demo
+	@set -e; cd .cli-demo; \
+	 export PYTHONPATH=..; \
+	 run() { $(PYTHON) -m prototype.cli --workspace ws "$$@"; }; \
+	 run init >/dev/null; \
+	 run export --root mem_01HX --artifact fact:diet --content "is vegetarian" >/dev/null; \
+	 run export --root mem_02KP --artifact fact:venue --content "prefers quiet restaurants" >/dev/null; \
+	 run derive --artifact summary:dining --inputs fact:diet fact:venue --content "is vegetarian; prefers quiet restaurants" >/dev/null; \
+	 run publish --root mem_01HX --operation supersede --replacement "eats meat again" --negative vegetarian --positive "eats meat again" --preserve "quiet restaurants"; \
+	 set +e; \
+	 run repair; status=$$?; \
+	 run audit; \
+	 run verify; verified=$$?; \
+	 set -e; \
+	 if [ $$verified -ne 0 ]; then \
+		echo "CLI DEMO ERROR: a receipt failed signature or schema verification"; \
+		exit 1; \
+	 fi; \
+	 if [ $$status -ne 2 ]; then \
+		echo "CLI DEMO ERROR: repair should exit 2 (repaired, not verified), got $$status"; \
+		exit 1; \
+	 fi
+	@rm -rf .cli-demo
+	@echo "cli-demo: repair exited 2 and every receipt verified, as required"
 
 links: ## Liveness of every cited external URL (network required)
 	$(PYTHON) scripts/check_links.py

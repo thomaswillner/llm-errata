@@ -43,36 +43,53 @@ class RebuildStrategy:
     name = "rebuild"
 
     def apply(self, importer, erratum: Erratum, gated: dict[str, list[str]]) -> None:
+        """Retire what the erratum invalidates, rebuild what merely mixed it.
+
+        Store-agnostic on purpose. An earlier version keyed on the literal
+        names "markdown" and "vector", so a third store was gated and then
+        never repaired: it stayed quarantined, the positive probe failed, and
+        the aggregate came back `failed` for a repair that had simply not been
+        attempted. Adding a store must not require editing this file.
+        """
+
         ledger = importer.ledger
         replacement = erratum.replacement
-
-        markdown_ids = gated.get("markdown", [])
-        raw = [item for item in markdown_ids if not ledger.artifact(item).inputs]
-        derived = [item for item in markdown_ids if ledger.artifact(item).inputs]
-
         # Only a supersession retains the old value, and only as scoped
         # history. `valid_from` is the instant it stopped being true.
         superseded_at = (
             erratum.valid_from if erratum.operation is Operation.SUPERSEDE else None
         )
-        for artifact_id in raw:
-            importer.markdown.retire(artifact_id, superseded_at=superseded_at)
-        retired = set(raw)
 
-        for artifact_id in derived:
-            importer.markdown.rebuild(
-                artifact_id,
-                inputs=ledger.valid_inputs(artifact_id, retired=retired),
-                replacement=replacement,
+        def source_of(adapter, item: str) -> str:
+            resolve = getattr(adapter, "source_artifact", None) or getattr(
+                adapter, "source_of", None
             )
+            return resolve(item) if resolve else item
 
-        for entry_id in gated.get("vector", []):
-            source = importer.vector.source_of(entry_id)
-            if source in retired:
-                importer.vector.retire(entry_id)
-            else:
-                importer.vector.rebuild(
-                    entry_id,
+        # Pass one: retire everything that descends directly from the root, so
+        # pass two knows which inputs are no longer valid.
+        retired: set[str] = set()
+        for store, items in gated.items():
+            adapter = importer.adapter(store)
+            for item in items:
+                source = source_of(adapter, item)
+                if source in ledger.artifact_ids() and ledger.artifact(source).inputs:
+                    continue
+                try:
+                    adapter.retire(item, superseded_at=superseded_at)
+                except TypeError:
+                    adapter.retire(item)
+                retired.add(source)
+
+        # Pass two: rebuild the mixed artifacts from what survived.
+        for store, items in gated.items():
+            adapter = importer.adapter(store)
+            for item in items:
+                source = source_of(adapter, item)
+                if source in retired:
+                    continue
+                adapter.rebuild(
+                    item,
                     inputs=ledger.valid_inputs(source, retired=retired),
                     replacement=replacement,
                 )

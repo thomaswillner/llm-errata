@@ -8,6 +8,22 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.2.0...HEAD)
 
+### Added — the Phase 2 conformance surface
+
+- **A published wire schema.** `spec/` carries JSON Schemas for the erratum and the receipt, 19 conformance vectors, and a manifest naming the rule each invalid vector must trip. An invalid vector is not satisfied by being rejected; it must be rejected for the stated reason, and the set must trip at least four distinct rules.
+- **`prototype/schema.py`**, a dependency-free validator. Unknown keywords raise rather than being ignored: skipping a keyword accepts instances the published schema rejects, which is worse than having no validator. The official JSON-Schema-Test-Suite is vendored unmodified and found four real bugs on first run — `enum` and `const` treating `False` as equal to `0`, `$ref` dropping its sibling keywords under draft 2020-12, `1.0` rejected as an integer, and an uncompilable ECMA-262 pattern crashing instead of refusing.
+- **`prototype/sqlite_store.py`**, a real transactional store. Quarantine commits in its own transaction *before* any rebuild, so a failed repair rolls back with the gate still shut, and the gate survives the process. That is the storage-layer reason for the ordering the proposal insists on, rather than an assertion about code.
+- **`prototype/residue.py`**, substrate evidence. `verified` now requires a clean scan of the store's own bytes, not an API acknowledgement. Residue found is `failed`, per IDEA.md's own definition. A scan that did not run is not a scan that came back clean, and the rule may only ever make a result worse — applying it to an `unknown` store would be an upgrade.
+- **`prototype/cli.py`** and `prototype/workspace.py`: `init`, `export`, `derive`, `publish`, `pull`, `plan`, `repair`, `test`, `attest`, `audit`, `verify`, over ordinary files. `make cli-demo` drives the whole lifecycle. Exit `2` means the repair ran and the result is not verified — a distinct code, because that case is the entire proposal.
+
+### Fixed
+
+- `RebuildStrategy` keyed on the literal store names `markdown` and `vector`, so a third store was quarantined and then never repaired: it stayed gated, the positive probe failed, and the aggregate reported `failed` for a repair that had simply not been attempted. It is now store-agnostic, and adding a store no longer means editing it.
+
+### Note
+
+Running the CLI against SQLite produces the result the whole design is for: all three probes pass, and the store still reports `failed`, because the retired value is readable in `store.sqlite3-wal` after the row is gone and the API says it is deleted. That is [Ghost Vectors](https://arxiv.org/abs/2606.18497v1) reproduced with the standard library. The design very nearly shipped the same bug — the plan specified scanning the database file, in WAL mode, where the value is not.
+
 ### Added
 
 - **Real signatures.** `prototype/ed25519.py` implements Ed25519 per RFC 8032 using only the standard library, checked against the RFC's published test vectors including the 1023-byte message. The previous keyed MAC was symmetric and therefore could not give the property this proposal actually requires: an owner publishing a verification key that no holder of it can forge against. A forged erratum is durable memory poisoning, so that was the wrong primitive for the trust boundary.
