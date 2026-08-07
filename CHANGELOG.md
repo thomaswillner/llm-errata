@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.1.0...HEAD)
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.2.0...HEAD)
+
+## [0.2.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.2.0) - 2026-08-07
+
+First public release. Version 0.1.0 was written on 2026-08-01 and never published; it is kept as a dated entry below because the prior-art claim is stated as of that date and the research record must not be back-dated to match a later release.
 
 ### Added
 

@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: "Willner"
     given-names: "Thomas Rainer"
-version: 0.1.0
-date-released: 2026-08-01
+version: 0.2.0
+date-released: 2026-08-07
 license: Apache-2.0
 abstract: >-
   An independent, vendor-neutral proposal for post-export AI-memory update

@@ -21,7 +21,7 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 4. Check every claim in `PRIOR_ART.md` against the cited primary or authoritative source.
 5. Request a public archive snapshot for each source listed as unpinned in `SOURCES.md`, then replace `none` with the snapshot URL. These are the sources the collision matrix depends on most and the ones most likely to change.
 6. Confirm that no employer, customer, personal, confidential, or credential material is present.
-7. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag all say `0.1.0`.
+7. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag agree with each other. Never re-tag existing content with an older version: the prior-art claim is dated, and a release tag that back-dates it corrupts the only thing this repository is for.
 8. Enable GitHub Issues.
 9. Enable GitHub private vulnerability reporting before pointing readers to `SECURITY.md`.
 10. Decide whether GitHub Discussions should be enabled for design debate; keep factual corrections and prior-art challenges in Issues so they remain traceable.
