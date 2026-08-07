@@ -2,6 +2,20 @@
 
 This file governs coding, research, review, and documentation work in the LLM Errata repository. It is model-agnostic: every automated or human-assisted agent must follow the same evidence, safety, and validation rules.
 
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `.scratch/<feature>/`, git-ignored, private to the build. Public intake is GitHub Issues once the repository is published. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, unchanged: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repository root. See `docs/agents/domain.md`.
+
 ## Preserve the core proposal
 
 LLM Errata is a vendor-neutral conformance proposal for what happens after an update to imported AI memory crosses a system boundary. Its core contract is:

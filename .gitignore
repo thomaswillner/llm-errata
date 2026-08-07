@@ -7,3 +7,6 @@ __pycache__/
 dist/
 build/
 
+
+# Local build tracker (see docs/agents/issue-tracker.md)
+.scratch/
