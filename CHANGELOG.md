@@ -8,6 +8,16 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.2.0...HEAD)
 
+### Added
+
+- **Real signatures.** `prototype/ed25519.py` implements Ed25519 per RFC 8032 using only the standard library, checked against the RFC's published test vectors including the 1023-byte message. The previous keyed MAC was symmetric and therefore could not give the property this proposal actually requires: an owner publishing a verification key that no holder of it can forge against. A forged erratum is durable memory poisoning, so that was the wrong primitive for the trust boundary.
+- Non-canonical scalars (`S >= L`) are rejected, so a receipt cannot be altered into a second valid signature.
+- `THREAT_MODEL.md`: actors, what is defended and where, and what is not — a lying importer, a store whose substrate contradicts its API, unregistered copies, semantic re-derivation, probe identifiability, key compromise. The sharpest open problem is stated as one: coverage honesty has no adversary, and an adapter is trusted to characterise itself.
+
+### Note on the test vectors
+
+The first version of `tests/test_ed25519.py` recited RFC 8032 TEST 1 from memory and got the secret key wrong, then spent an hour attributing the mismatch to the curve arithmetic. The implementation had been correct throughout. The vectors are now extracted from the published RFC text, and the Ed25519ph vectors are excluded because they pre-hash the message and are a different algorithm.
+
 ## [0.2.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.2.0) - 2026-08-07
 
 First public release. Version 0.1.0 was written on 2026-08-01 and never published; it is kept as a dated entry below because the prior-art claim is stated as of that date and the research record must not be back-dated to match a later release.

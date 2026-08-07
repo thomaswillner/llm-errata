@@ -99,6 +99,8 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [IDEA.md](IDEA.md) | Complete, copy-pasteable idea file and architecture. |
 | [RESEARCH.md](RESEARCH.md) | Research scope, search protocol, rejected candidates, limits, and falsifiers. |
 | [PRIOR_ART.md](PRIOR_ART.md) | Feature-collision matrix and source-by-source comparison. |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | What the design defends against, what it does not, and what it can only make visible. |
+| [HARD_PROBLEMS.md](HARD_PROBLEMS.md) | Screen of the three problems the proposal declares out of scope, with verdicts. |
 | [SOURCES.md](SOURCES.md) | Pinned source record: versions, commits, access dates, and the sources that remain unpinned. |
 | [ROADMAP.md](ROADMAP.md) | Smallest credible implementation, acceptance gates, and standards path. |
 | [AGENTS.md](AGENTS.md) | Model-agnostic rules for coding and research agents working in this repository. |

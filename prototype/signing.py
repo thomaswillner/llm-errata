@@ -1,36 +1,35 @@
 """Authentication for errata and receipts.
 
-**This is a demo signer, and it is not the real thing.**
+Signatures are real Ed25519, per RFC 8032, implemented in
+[`ed25519.py`](ed25519.py) using only the standard library and checked against
+the RFC's published test vectors. That matters for this proposal specifically:
+an owner publishes a public key, and any importer verifies an erratum against
+it without being able to forge one. A symmetric MAC cannot provide that, and an
+earlier version of this module used one.
 
-`DemoSigner` is a keyed MAC over a canonical serialisation. It authenticates
-that a message came from a holder of the key and detects any tampering, which
-is what the Phase 1 scenarios need to exercise: forgery, replay, rollback, and
-post-signature edits.
+What the signature does and does not establish is the same either way, and the
+distinction is load-bearing:
 
-It is symmetric, so it gives no third-party non-repudiation. A verifier must
-hold the same secret the signer holds, which means it cannot support the
-property a real deployment needs — an owner publishing a public key that any
-importer can verify against without being able to forge.
+- It authenticates **who** attested to **which bytes**.
+- It says nothing about whether the attestation is truthful or complete. A
+  compromised importer can sign an honest-looking receipt over a repair it
+  never performed. That is a trust boundary, not a bug, and `THREAT_MODEL.md`
+  treats it as one.
 
-Two reasons it ships this way rather than using Ed25519:
-
-- The repository installs nothing. Every checker and this prototype are Python
-  standard library only, so a green run cannot be an artefact of the toolchain,
-  and `hashlib`/`hmac` are the strongest primitives available under that rule.
-- Hand-rolling Ed25519 inside a repository about verification honesty would be
-  a worse trade than declaring the limitation.
-
-`Signer` and `VerificationKey` are the seam. Phase 2 replaces `DemoSigner` with
-an Ed25519 implementation without touching any caller.
+`Signer` and `VerificationKey` are the seam. The bundled implementation is a
+reference, not a hardened one: it is not constant-time, so a deployment holding
+keys an attacker can attack by timing should link libsodium and substitute a
+signer here. No caller changes.
 """
 
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
+
+from prototype import ed25519
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -62,20 +61,20 @@ def commitment(*parts: str) -> str:
 
 @dataclass(frozen=True)
 class VerificationKey:
-    """What a verifier needs in order to check a signature.
-
-    In the demo this carries the shared secret, because `DemoSigner` is
-    symmetric. `key_id` is the field that survives the move to Ed25519.
-    """
+    """A published Ed25519 public key. Safe to distribute: it cannot sign."""
 
     key_id: str
-    _secret: bytes
+    public_bytes: bytes
 
     def verify(self, payload: dict[str, Any], signature: str) -> bool:
-        expected = hmac.new(
-            self._secret, canonical_bytes(payload), hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
+        try:
+            raw = bytes.fromhex(signature)
+        except ValueError:
+            return False
+        return ed25519.verify(self.public_bytes, canonical_bytes(payload), raw)
+
+    def to_hex(self) -> str:
+        return self.public_bytes.hex()
 
 
 class Signer(Protocol):  # pragma: no cover - structural type
@@ -95,19 +94,32 @@ class Signer(Protocol):  # pragma: no cover - structural type
     def sign_erratum(self, erratum: Erratum) -> Erratum: ...
 
 
-class DemoSigner:
-    def __init__(self, secret: bytes, key_id: str = "demo-key-1") -> None:
-        self._secret = secret
+class Ed25519Signer:
+    """Holds a seed and signs with it. The seed never leaves this object."""
+
+    def __init__(self, seed: bytes, key_id: str = "key-1") -> None:
+        if len(seed) != 32:
+            # Deterministic derivation from a short label keeps fixtures
+            # readable and reproducible. Real keys are generated, not derived
+            # from a string, and nothing here should be reused outside tests.
+            seed = hashlib.sha256(seed).digest()
+        self._seed = seed
         self._key_id = key_id
 
     @property
     def public(self) -> VerificationKey:
-        return VerificationKey(key_id=self._key_id, _secret=self._secret)
+        return VerificationKey(
+            key_id=self._key_id, public_bytes=ed25519.public_key(self._seed)
+        )
 
     def sign(self, payload: dict[str, Any]) -> str:
-        return hmac.new(
-            self._secret, canonical_bytes(payload), hashlib.sha256
-        ).hexdigest()
+        return ed25519.sign(self._seed, canonical_bytes(payload)).hex()
 
     def sign_erratum(self, erratum: Erratum) -> Erratum:
         return erratum.replace(signature=self.sign(erratum.signable()))
+
+
+#: Retained so existing fixtures keep working. The name is deliberately no
+#: longer accurate about the algorithm: what was demo-grade was the MAC, and
+#: that is gone.
+DemoSigner = Ed25519Signer

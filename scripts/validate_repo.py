@@ -30,6 +30,8 @@ REQUIRED_FILES = (
     "RESEARCH.md",
     "PRIOR_ART.md",
     "SOURCES.md",
+    "THREAT_MODEL.md",
+    "HARD_PROBLEMS.md",
     "ROADMAP.md",
     "AGENTS.md",
     "CONTRIBUTING.md",
@@ -52,6 +54,8 @@ REQUIRED_FILES = (
     "prototype/controller.py",
     "prototype/adapters.py",
     "prototype/errata.py",
+    "prototype/ed25519.py",
+    "tests/test_ed25519.py",
     "tests/test_controller.py",
     "tests/test_demo.py",
 )

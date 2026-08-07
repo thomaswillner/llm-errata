@@ -66,11 +66,16 @@ are the cheap tricks the repair triad exists to defeat:
 ## What this is not
 
 - **Not a wire protocol.** No schema is published yet. That is Phase 2.
-- **Not real cryptography.** `signing.py` is a keyed MAC, documented in the
-  module as demo-only. It authenticates and detects tampering, which is what
-  these scenarios exercise, but it is symmetric, so it gives no third-party
-  non-repudiation. The `Signer` and `VerificationKey` seam exists so Ed25519
-  drops in without touching a caller.
+- **Real signatures, with one caveat.** `ed25519.py` is Ed25519 per RFC 8032,
+  standard library only, checked against the RFC's published test vectors
+  including the 1023-byte message. An owner publishes a verification key and no
+  holder of it can forge — the property a MAC cannot give and the erratum feed
+  requires. It is a reference implementation and **not constant-time**, so a
+  deployment with attacker-facing signing keys should link libsodium and
+  substitute a `Signer`. No caller changes.
+- **Not proof that a repair happened.** The signature says who attested to
+  which bytes. A compromised importer can sign an honest-looking receipt over a
+  repair it never performed. See [THREAT_MODEL.md](../THREAT_MODEL.md).
 - **Not a semantic guarantee.** The probes are behavioural checks over a
   declared scope. They are evidence that the retired proposition did not
   surface in this sample, and nothing more. The embedding is a deterministic
