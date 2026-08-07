@@ -1,0 +1,34 @@
+{
+  "importer": "travel-planner",
+  "erratum_id": "err_0001",
+  "sequence": 1,
+  "target_root": "mem_01HX",
+  "operation": "supersede",
+  "pre_state_root": "not-a-digest",
+  "post_state_root": "0397835561846e8f0ac0c239710f752a",
+  "stores": {
+    "markdown": "verified",
+    "vector": "verified",
+    "prompt_cache": "unknown"
+  },
+  "dispositions": {
+    "markdown": {
+      "fact:diet": "retired",
+      "summary:dining": "rebuilt"
+    }
+  },
+  "triad": {
+    "negative": "pass",
+    "positive": "pass",
+    "preserve": "pass"
+  },
+  "aggregate": "partial",
+  "limitations": [
+    "prompt_cache: store exposes no enumeration interface"
+  ],
+  "history_retained": true,
+  "adapter_versions": {
+    "markdown": "0.1.0"
+  },
+  "signature": "abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab"
+}

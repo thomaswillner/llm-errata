@@ -1,0 +1,13 @@
+{
+  "erratum_id": "err_0001",
+  "sequence": 1,
+  "target_root": "mem_01HX",
+  "valid_from": "2026-08-01T00:00:00Z",
+  "operation": "redact",
+  "replacement": "x",
+  "postconditions": {
+    "negative": "no vegetarian-only assumption",
+    "positive": "current diet uses the replacement",
+    "preserve": "quiet restaurants and budget remain active"
+  }
+}

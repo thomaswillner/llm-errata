@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-errata.org/spec/receipt.schema.json",
+  "title": "LLM Errata repair receipt",
+  "description": "What an importer returns after acting on an erratum. It states what was checked and what remained outside the verified boundary.",
+  "type": "object",
+  "required": ["importer", "erratum_id", "sequence", "target_root", "operation", "pre_state_root", "post_state_root", "stores", "dispositions", "triad", "aggregate", "limitations", "history_retained", "adapter_versions"],
+  "additionalProperties": false,
+  "$defs": {
+    "coverage": {
+      "enum": ["verified", "partial", "unknown", "failed"],
+      "description": "The four terminal results. `pending` is a lifecycle state and is deliberately absent."
+    },
+    "probe": {"enum": ["pass", "fail"]},
+    "stateRoot": {"type": "string", "pattern": "^[0-9a-f]{32}$"}
+  },
+  "properties": {
+    "importer": {"type": "string", "minLength": 1},
+    "erratum_id": {"type": "string", "minLength": 1},
+    "sequence": {"type": "integer", "minimum": 1},
+    "target_root": {"type": "string", "minLength": 1},
+    "operation": {"enum": ["correct", "supersede", "erase"]},
+    "pre_state_root": {"$ref": "#/$defs/stateRoot"},
+    "post_state_root": {"$ref": "#/$defs/stateRoot"},
+    "stores": {
+      "type": "object",
+      "description": "One entry per required store. A store outside the required scope is omitted, never scored.",
+      "additionalProperties": {"$ref": "#/$defs/coverage"}
+    },
+    "dispositions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {"enum": ["retired", "rebuilt", "quarantined-only", "untouched"]}
+      }
+    },
+    "triad": {
+      "type": "object",
+      "required": ["negative", "preserve"],
+      "additionalProperties": false,
+      "properties": {
+        "negative": {"$ref": "#/$defs/probe"},
+        "positive": {"$ref": "#/$defs/probe"},
+        "preserve": {"$ref": "#/$defs/probe"}
+      }
+    },
+    "aggregate": {"$ref": "#/$defs/coverage"},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "history_retained": {"type": "boolean"},
+    "adapter_versions": {"type": "object", "additionalProperties": {"type": "string"}},
+    "signature": {"type": ["string", "null"], "pattern": "^[0-9a-f]{128}$"}
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "description": "Conformance vectors for the LLM Errata wire schema. Every entry states whether it must validate, and an invalid entry names the text that must appear in the rejection.",
+  "vectors": [
+    {
+      "file": "erratum-correct-valid.json",
+      "schema": "erratum",
+      "valid": true
+    },
+    {
+      "file": "erratum-supersede-valid.json",
+      "schema": "erratum",
+      "valid": true
+    },
+    {
+      "file": "erratum-erase-valid.json",
+      "schema": "erratum",
+      "valid": true
+    },
+    {
+      "file": "erratum-erase-with-replacement-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "oneOf",
+      "why": "erasure has no positive replacement"
+    },
+    {
+      "file": "erratum-supersede-without-replacement-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "oneOf",
+      "why": "supersession must state what is true instead"
+    },
+    {
+      "file": "erratum-supersede-without-positive-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "oneOf",
+      "why": "the positive leg of the triad cannot be evaluated"
+    },
+    {
+      "file": "erratum-sequence-zero-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "minimum",
+      "why": "sequences start at 1"
+    },
+    {
+      "file": "erratum-unknown-operation-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "not one of",
+      "why": "the three operations are closed"
+    },
+    {
+      "file": "erratum-additional-property-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "additional property",
+      "why": "an unsigned field would not be covered by the signature"
+    },
+    {
+      "file": "erratum-bad-timestamp-invalid.json",
+      "schema": "erratum",
+      "valid": false,
+      "rejected_by": "does not match",
+      "why": "validity intervals must be machine-comparable"
+    },
+    {
+      "file": "receipt-partial-valid.json",
+      "schema": "receipt",
+      "valid": true
+    },
+    {
+      "file": "receipt-verified-valid.json",
+      "schema": "receipt",
+      "valid": true
+    },
+    {
+      "file": "receipt-failed-valid.json",
+      "schema": "receipt",
+      "valid": true
+    },
+    {
+      "file": "receipt-unknown-valid.json",
+      "schema": "receipt",
+      "valid": true
+    },
+    {
+      "file": "receipt-unknown-coverage-value-invalid.json",
+      "schema": "receipt",
+      "valid": false,
+      "rejected_by": "not one of",
+      "why": "coverage is a closed vocabulary"
+    },
+    {
+      "file": "receipt-pending-as-result-invalid.json",
+      "schema": "receipt",
+      "valid": false,
+      "rejected_by": "not one of",
+      "why": "pending is a lifecycle state, never a result"
+    },
+    {
+      "file": "receipt-missing-state-root-invalid.json",
+      "schema": "receipt",
+      "valid": false,
+      "rejected_by": "missing required property",
+      "why": "a receipt must bind pre- and post-repair state"
+    },
+    {
+      "file": "receipt-bad-state-root-invalid.json",
+      "schema": "receipt",
+      "valid": false,
+      "rejected_by": "does not match",
+      "why": "a state root is a fixed-width digest"
+    },
+    {
+      "file": "receipt-unknown-disposition-invalid.json",
+      "schema": "receipt",
+      "valid": false,
+      "rejected_by": "not one of",
+      "why": "every descendant gets one of four explicit dispositions"
+    }
+  ]
+}

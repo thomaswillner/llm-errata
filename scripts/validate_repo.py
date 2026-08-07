@@ -55,6 +55,12 @@ REQUIRED_FILES = (
     "prototype/adapters.py",
     "prototype/errata.py",
     "prototype/ed25519.py",
+    "prototype/schema.py",
+    "spec/erratum.schema.json",
+    "spec/receipt.schema.json",
+    "spec/vectors/manifest.json",
+    "spec/README.md",
+    "tests/test_schema.py",
     "tests/test_ed25519.py",
     "tests/test_controller.py",
     "tests/test_demo.py",
@@ -149,9 +155,17 @@ def relative(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
+#: Third-party files that must stay byte-identical to upstream. Reformatting a
+#: vendored conformance suite would destroy the only thing that makes it
+#: evidence: that this repository did not write it.
+VENDORED = ("vendor",)
+
+
 def iter_text_files() -> Iterable[Path]:
     for path in sorted(ROOT.rglob("*"), key=lambda item: item.as_posix()):
         if not path.is_file() or ".git" in path.parts:
+            continue
+        if any(part in VENDORED for part in path.parts):
             continue
         if path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_NAMES:
             yield path

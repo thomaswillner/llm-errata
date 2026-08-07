@@ -1,0 +1,12 @@
+{
+  "erratum_id": "err_0001",
+  "sequence": 1,
+  "target_root": "mem_01HX",
+  "valid_from": "2026-08-01T00:00:00Z",
+  "operation": "erase",
+  "replacement": "smuggled",
+  "postconditions": {
+    "negative": "the value never surfaces",
+    "preserve": "unrelated preferences still work"
+  }
+}
