@@ -120,13 +120,19 @@ make links    # liveness of every cited external URL (needs network)
 | Command | Question | Failure means |
 |---|---|---|
 | `make lint` | Is the repository well formed? | A file, link, encoding, fence, or metadata field is wrong. |
-| `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. Exit `2` means *inconclusive*, which is not a pass. |
+| `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. |
 | `make test` | Do those checkers reject what they claim to reject? | A checker has stopped catching a fault it is supposed to catch. |
 
 The third one exists because a check that has never failed has not been shown to
 work. The self-tests build corpora that misstate the proposal — an inverted
 quarantine ordering, an asserted world first — and require the guard to reject
 each one.
+
+`scripts/claim_guard.py` distinguishes *failed* (exit `1`) from *inconclusive*
+(exit `2`, meaning a guarded file was missing or unreadable, so the claim was
+never evaluated). Inconclusive is not a pass. `make` reports its own exit `2`
+for any failed recipe, so `make claim` prints which of the two occurred; a
+script that needs to branch on the distinction should call the guard directly.
 
 ## Current maturity
 
