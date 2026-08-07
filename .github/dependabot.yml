@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # The repository has no runtime dependencies by design: every checker is
+  # Python standard library only. The action versions in .github/workflows are
+  # the sole supply-chain surface, so they are the only thing tracked here.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    labels:
+      - maintenance

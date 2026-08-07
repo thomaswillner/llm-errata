@@ -1,0 +1,34 @@
+name: links
+
+# Link rot is a research-integrity fault here, not a cosmetic one: the novelty
+# claim is a dated statement about public sources. This runs on a schedule
+# rather than on every pull request because it depends on third-party
+# availability and would otherwise fail for reasons unrelated to a change.
+
+on:
+  schedule:
+    # Mondays, 07:00 UTC.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  liveness:
+    name: cited source liveness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Exit 2 means the run reached nothing at all and proves nothing. It is
+      # surfaced as a failure so that a network outage is never mistaken for a
+      # clean bill of health.
+      - name: Check every cited URL
+        run: make links
