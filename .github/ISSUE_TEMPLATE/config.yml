@@ -1,0 +1,8 @@
+# Blank issues stay enabled: a prior-art collision that does not fit any form
+# is still worth reporting, and a form should never be the reason it is not.
+#
+# No contact_links are declared. GitHub surfaces "Report a security
+# vulnerability" here automatically once private vulnerability reporting is
+# enabled (see PUBLISHING.md), and PUBLISHING.md forbids putting a repository
+# URL in the documentation before that URL exists.
+blank_issues_enabled: true

@@ -1,0 +1,13 @@
+# Rename to CODEOWNERS and replace the handle once the repository is public.
+#
+# The bounded novelty statement and the source comparison are the artifacts a
+# reader is trusting. PUBLISHING.md requires review before either changes, and
+# this file is how that requirement is enforced rather than remembered.
+
+*                   @GITHUB_HANDLE
+
+/PRIOR_ART.md       @GITHUB_HANDLE
+/RESEARCH.md        @GITHUB_HANDLE
+/SOURCES.md         @GITHUB_HANDLE
+/scripts/           @GITHUB_HANDLE
+/tests/             @GITHUB_HANDLE

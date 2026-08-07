@@ -1,0 +1,92 @@
+name: Prior-art challenge
+description: Report public work that overlaps or defeats the bounded novelty claim
+title: "prior art: "
+labels: ["prior-art"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most valuable issue you can open. A convincing collision
+        should narrow or retire the claim, and that is a success for the
+        project, not an attack on it.
+
+        The claim under challenge is the **conjunction** of four requirements.
+        A source that implements one or two of them is a partial collision and
+        is still worth reporting — say which.
+
+  - type: dropdown
+    id: requirements
+    attributes:
+      label: Which requirements does the earlier work satisfy?
+      description: Select every requirement the source actually documents.
+      multiple: true
+      options:
+        - "A — post-export update delivery to a prior importer"
+        - "B — importer-side quarantine and repair of the known descendant closure"
+        - "C — negative, positive, and preservation tests"
+        - "D — signed, coverage-aware callback bound to the erratum and pre/post state"
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Stable URL, repository path, RFC/draft number, or patent number.
+      placeholder: "https://example.org/spec/v1.0/  or  RFC 9943  or  arXiv 2605.11032v1"
+    validations:
+      required: true
+
+  - type: input
+    id: date
+    attributes:
+      label: Date of the source
+      description: Publication, release, draft revision, or commit date.
+      placeholder: "2026-05-04"
+    validations:
+      required: true
+
+  - type: input
+    id: pin
+    attributes:
+      label: Version pin
+      description: Commit SHA, draft revision, arXiv version, or archive snapshot URL. Leave blank only if the source has no stable identifier.
+    validations:
+      required: false
+
+  - type: textarea
+    id: where
+    attributes:
+      label: Where the source defines or implements each selected requirement
+      description: Quote or cite the exact section. A citation on its own does not establish a collision.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: completeness
+    attributes:
+      label: Is this a complete collision?
+      options:
+        - "Complete — the source requires all four together"
+        - "Partial — it covers some requirements"
+        - "Adjacent — same mechanisms, different problem"
+    validations:
+      required: true
+
+  - type: textarea
+    id: difference
+    attributes:
+      label: Remaining difference, if any
+      description: What the source does not require, in update delivery, descendant repair, verification, or receipt semantics.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: evidence
+    attributes:
+      label: Evidence check
+      options:
+        - label: This is a primary source (specification, documentation, source code, paper, or patent record), not a search snippet or a generated summary.
+          required: true
+        - label: I have read the material I am citing, and I am reporting what it says rather than what it implies.
+          required: true

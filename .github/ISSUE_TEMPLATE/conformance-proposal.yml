@@ -1,0 +1,62 @@
+name: Conformance proposal
+description: Propose or change normative behaviour, a schema, or a test
+title: "conformance: "
+labels: ["conformance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CONTRIBUTING.md lists what a conformance change must state. This form
+        asks for the same things in a fixed order so proposals can be compared.
+
+  - type: input
+    id: actor
+    attributes:
+      label: Actor and system boundary
+      placeholder: "Importer, at the retrieval gate"
+    validations:
+      required: true
+
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: Normative behaviour
+      description: Use MUST, SHOULD, or MAY. State observable inputs, outputs, and state transitions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure, timeout, replay, partial coverage, and unobservable-store behaviour
+      description: What happens when the happy path does not hold. A proposal without this is incomplete.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Negative, positive, and preservation tests
+    validations:
+      required: true
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and privacy consequences
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariant check
+      options:
+        - label: Quarantine still precedes repair.
+          required: true
+        - label: Correction, supersession, and erasure remain distinct.
+          required: true
+        - label: No path converts unknown or partial coverage into aggregate success.
+          required: true
+        - label: No erasure evidence retains the value it claims to erase.
+          required: true

@@ -1,0 +1,51 @@
+name: Factual correction
+description: Correct a statement about a source, a figure, a status, or a date
+title: "correction: "
+labels: ["correction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for anything the repository states that is wrong: a
+        mischaracterised source, a wrong figure, a draft described as a
+        standard, a stale date, a dead link.
+
+  - type: input
+    id: location
+    attributes:
+      label: Where
+      description: File and line, or the exact sentence.
+      placeholder: "PRIOR_ART.md, collision matrix, EngramSpec row"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: What the repository currently says
+    validations:
+      required: true
+
+  - type: textarea
+    id: correct
+    attributes:
+      label: What it should say, and why
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Supporting source
+      description: Stable URL plus version, revision, or commit where available.
+    validations:
+      required: true
+
+  - type: input
+    id: accessed
+    attributes:
+      label: Access date
+      description: Required for mutable pages, per CONTRIBUTING.md.
+      placeholder: "2026-08-07"
+    validations:
+      required: false

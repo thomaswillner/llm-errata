@@ -1,0 +1,54 @@
+name: Implementation or failure report
+description: Report an adapter, an interoperability result, or an invariant that did not survive contact
+title: "implementation: "
+labels: ["implementation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Negative results are wanted. ROADMAP.md commits to publishing
+        unsuccessful experiments, and an invariant that cannot be implemented is
+        more useful than one that has never been tried.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What are you reporting?
+      options:
+        - "An adapter or reference implementation"
+        - "An interoperability result between two implementations"
+        - "An invariant that proved impractical or impossible"
+        - "A measurement against the roadmap metrics"
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Stores, adapters, and scope
+      description: Which stores were covered, and which were opaque.
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Include coverage results per store, and say what was reported as unknown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data check
+      options:
+        - label: Fixtures contain no real personal, customer, employer, credential, or confidential data.
+          required: true
