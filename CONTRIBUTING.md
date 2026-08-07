@@ -67,6 +67,10 @@ Never submit secrets, personal data, proprietary customer material, or confident
 
 ## Issues and pull requests
 
+Run `make check` before opening a pull request; CI runs the same three steps. If a citation was added or changed, run `make links` too, and record the pin and access date in [SOURCES.md](SOURCES.md).
+
+If a checker is wrong, fix it in its own pull request with a test that fails before the fix. Widening an anchor, deleting a test, or adding a quotation exception so that an unrelated change passes is not an acceptable fix.
+
 Before opening a large pull request, open an issue describing the proposed change and its evidence. Keep each pull request focused. In its description, include:
 
 - the problem being addressed;

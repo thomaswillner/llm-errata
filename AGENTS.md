@@ -101,12 +101,24 @@ Before presenting work as complete:
 
 1. Review the diff and confirm that requested scope is covered without unrelated rewrites.
 2. Recheck the core claim, three operation meanings, quarantine-before-repair order, repair triad, coverage honesty, and bounded novelty wording.
-3. Verify every added or changed factual claim against an appropriate primary source.
+3. Verify every added or changed factual claim against an appropriate primary source, and record the pin and access date in `SOURCES.md`.
 4. Run:
 
    ```bash
-   python3 scripts/validate_repo.py
+   make check
    ```
+
+   This runs three things, and each answers a different question:
+
+   - `scripts/validate_repo.py` — is the repository structurally well formed?
+   - `scripts/claim_guard.py` — does the documentation still state the bounded claim? It anchors to exact sentences in named files, because keyword presence over the whole corpus cannot tell a hedge from its inversion.
+   - `tests/` — do those two checkers actually reject the faults they claim to catch? A checker that has only ever passed has not been shown to work.
+
+   Run `make links` as well whenever a citation is added or changed.
 
 5. Run any additional tests relevant to changed implementation files.
 6. Report validation failures, unresolved evidence gaps, and unsupported coverage honestly. Do not suppress or relabel a failing check.
+
+   `claim_guard.py` exits `2` for *inconclusive* when a guarded file is missing or unreadable. Inconclusive is not a pass. Treat it as a blocker and say so.
+
+   If a guard is wrong, fix the guard in its own change with a test that fails first. Never widen an anchor, delete a test, or add an entry to `ALLOWED_QUOTATIONS` in order to make an unrelated change pass.

@@ -29,9 +29,11 @@ REQUIRED_FILES = (
     "IDEA.md",
     "RESEARCH.md",
     "PRIOR_ART.md",
+    "SOURCES.md",
     "ROADMAP.md",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "SECURITY.md",
     "CITATION.cff",
     "CHANGELOG.md",
@@ -39,6 +41,13 @@ REQUIRED_FILES = (
     "VERSION",
     "LICENSE",
     "NOTICE",
+    "Makefile",
+    "scripts/validate_repo.py",
+    "scripts/claim_guard.py",
+    "scripts/check_links.py",
+    "tests/test_validate_repo.py",
+    "tests/test_claim_guard.py",
+    ".github/workflows/validate.yml",
 )
 
 TEXT_SUFFIXES = {

@@ -15,16 +15,21 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 
 ## Before making the repository public
 
-1. Run `python3 scripts/validate_repo.py` from the repository root.
-2. Review the author name, date, independent-publication disclaimer, and AI-assisted research disclosure.
-3. Check every claim in `PRIOR_ART.md` against the cited primary or authoritative source.
-4. Confirm that no employer, customer, personal, confidential, or credential material is present.
-5. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag all say `0.1.0`.
-6. Enable GitHub Issues.
-7. Enable GitHub private vulnerability reporting before pointing readers to `SECURITY.md`.
-8. Decide whether GitHub Discussions should be enabled for design debate; keep factual corrections and prior-art challenges in Issues so they remain traceable.
-9. Protect `main` from force pushes once external contributions begin.
-10. Require review before merging changes to the bounded novelty statement or source comparison.
+1. Run `make check` from the repository root. It must exit zero. Exit `2` from the claim guard is *inconclusive*, not a pass.
+2. Run `make links`. Every cited URL must resolve or be reported as `blocked`, never `dead`.
+3. Review the author name, date, independent-publication disclaimer, and AI-assisted research disclosure.
+4. Check every claim in `PRIOR_ART.md` against the cited primary or authoritative source.
+5. Request a public archive snapshot for each source listed as unpinned in `SOURCES.md`, then replace `none` with the snapshot URL. These are the sources the collision matrix depends on most and the ones most likely to change.
+6. Confirm that no employer, customer, personal, confidential, or credential material is present.
+7. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag all say `0.1.0`.
+8. Enable GitHub Issues.
+9. Enable GitHub private vulnerability reporting before pointing readers to `SECURITY.md`.
+10. Decide whether GitHub Discussions should be enabled for design debate; keep factual corrections and prior-art challenges in Issues so they remain traceable.
+11. Protect `main` from force pushes once external contributions begin.
+12. Require review before merging changes to the bounded novelty statement or source comparison.
+13. Rename `.github/CODEOWNERS.example` to `.github/CODEOWNERS` and replace `@GITHUB_HANDLE` with the real account, so step 12 is enforced rather than remembered.
+14. Confirm the `validate` workflow has run green on `main` at least once, and make it a required status check for pull requests.
+15. Create the `prior-art`, `correction`, `conformance`, `implementation`, and `maintenance` labels used by the issue forms and Dependabot.
 
 ## Suggested first commit
 
@@ -52,6 +57,8 @@ docs: publish LLM Errata concept and research record
 > I am publishing LLM Errata as an open concept and request for technical challenge. The premise is simple: an imported AI memory should be treated as a dependency, not a dead copy. When its source is corrected, superseded, or erased, importers should quarantine known descendants, repair affected state, run negative–positive–preservation checks, and report what they could not verify. The repository includes the complete idea, the prior-art collisions that narrowed it, the research method, and explicit conditions under which the proposal should be changed or abandoned.
 
 Link to the repository only after its final public URL exists. Do not invent or reserve a URL in the documentation before publication.
+
+This is also why the repository ships no CI badge and no changelog compare links: both require the public URL. Add them in the first post-publication commit.
 
 ## After publication
 
