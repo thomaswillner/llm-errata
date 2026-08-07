@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Deterministic, dependency-free validation for the LLM Errata repository."""
+"""Deterministic, dependency-free linting for the LLM Errata repository.
+
+Scope: repository structure, encoding, Markdown well-formedness, link
+resolution, licence, and release metadata. These are mechanical properties.
+
+Out of scope: whether the documentation still states the bounded claim. Keyword
+presence over the concatenated corpus cannot tell a hedge from its inversion,
+so that question belongs to `claim_guard.py`, which anchors to exact sentences
+in named files and is itself proved by negative tests in `tests/`.
+
+Run both, plus the self-tests, with `make check`.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +18,7 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Iterable
 from urllib.parse import unquote
 
 
@@ -175,84 +186,20 @@ def check_version(reporter: Reporter) -> str | None:
     path = ROOT / "VERSION"
     if not path.is_file():
         return None
-    version = read_utf8(path).strip()
+    raw = read_utf8(path)
+    version = raw.strip()
     reporter.check(
         "VERSION",
-        version == "0.1.0",
+        re.fullmatch(r"\d+\.\d+\.\d+", version) is not None and raw.endswith("\n"),
         f"VERSION is {version!r}",
-        "Set VERSION to exactly 0.1.0 followed by a newline.",
+        "Set VERSION to a bare MAJOR.MINOR.PATCH string followed by a newline.",
     )
     return version
 
 
-def check_core_content(reporter: Reporter) -> None:
+def check_canonical_links(reporter: Reporter) -> None:
     markdown_paths = sorted(ROOT.rglob("*.md"), key=lambda item: item.as_posix())
     documents = {relative(path): read_utf8(path) for path in markdown_paths}
-    combined = "\n".join(documents.values())
-    lowered = combined.casefold()
-
-    requirements: tuple[tuple[str, Callable[[str], bool], str], ...] = (
-        (
-            "dependency thesis",
-            lambda value: "an imported memory is a dependency, not a copy" in value,
-            "Include the exact core thesis: 'An imported memory is a dependency, not a copy.'",
-        ),
-        (
-            "three operations",
-            lambda value: all(
-                term in value for term in ("correction", "supersession", "erasure")
-            ),
-            "Define correction, supersession, and erasure as distinct operations.",
-        ),
-        (
-            "quarantine ordering",
-            lambda value: re.search(
-                r"quarantin\w*.{0,240}\bbefore\b.{0,160}\brepair\w*",
-                value,
-                flags=re.DOTALL,
-            )
-            is not None,
-            "State explicitly that affected memory is quarantined before repair.",
-        ),
-        (
-            "repair triad",
-            lambda value: all(term in value for term in ("negative", "positive", "preservation")),
-            "Preserve the negative, positive, and preservation checks.",
-        ),
-        (
-            "coverage-aware receipt",
-            lambda value: all(term in value for term in ("signed", "coverage-aware", "receipt")),
-            "Describe the signed, coverage-aware receipt or callback.",
-        ),
-        (
-            "bounded novelty",
-            lambda value: "novel synthesis" in value
-            and "world first" in value
-            and "patentability" in value,
-            "Keep the bounded 'novel synthesis' wording and reject world-first and patentability claims.",
-        ),
-        (
-            "semantic-proof limit",
-            lambda value: "mathematical proof" in value
-            and ("does not" in value or "none is" in value),
-            "State that signatures, lineage, and probes do not provide mathematical semantic proof.",
-        ),
-        (
-            "honest coverage states",
-            lambda value: all(
-                term in value for term in ("verified", "partial", "unknown", "failed")
-            ),
-            "Retain explicit verified, partial, unknown, and failed coverage states.",
-        ),
-    )
-
-    for label, predicate, fix in requirements:
-        reporter.check(
-            f"core content — {label}",
-            predicate(lowered),
-            f"{label} is present across Markdown documentation",
-            fix,
-        )
 
     for label, url in CANONICAL_LINKS.items():
         locations = sorted(name for name, text in documents.items() if url in text)
@@ -436,9 +383,9 @@ def check_citation(reporter: Reporter, repository_version: str | None) -> None:
     citation_version = values.get("version")
     reporter.check(
         "CITATION.cff release version",
-        repository_version == "0.1.0" and citation_version == repository_version,
+        citation_version is not None and citation_version == repository_version,
         f"citation version {citation_version!r} matches VERSION {repository_version!r}",
-        "Set CITATION.cff version and VERSION to 0.1.0.",
+        "Set CITATION.cff version to the same value as VERSION.",
     )
 
     released = values.get("date-released")
@@ -471,7 +418,7 @@ def main() -> int:
 
     check_required_files(reporter)
     repository_version = check_version(reporter)
-    check_core_content(reporter)
+    check_canonical_links(reporter)
     check_markdown_fences(reporter)
     check_trailing_whitespace(reporter)
     check_local_paths(reporter)
