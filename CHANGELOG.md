@@ -8,6 +8,11 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.3.0...HEAD)
 
+### Added — production-readiness evidence
+
+- Added a fail-closed production-readiness ledger and human verification matrix. Local green tests cannot produce `PROD_READY`; every required gate must pass, and external gates require dated evidence naming an independent producer.
+- Added drift checks binding README maturity and SECURITY support policy to `VERSION`. The current verdict remains `NOT_PROD_READY`: only G1, document consistency, is complete.
+
 ## [0.3.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.3.0) - 2026-08-07
 
 ### Changed — licence

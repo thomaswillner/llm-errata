@@ -159,7 +159,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and Phase 2 items 1 through 5 are implemented; neither has completed external conformance review, and Phase 2 item 6 remains unstarted.
 
-Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. The human evidence matrix is added with continuous enforcement in the next task.
+Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 
 ## Review requests
 

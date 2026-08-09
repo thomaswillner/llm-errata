@@ -1,13 +1,13 @@
 PYTHON ?= python3
 
 .DEFAULT_GOAL := check
-.PHONY: check lint claim test demo cli-demo links all help
+.PHONY: check lint claim readiness test demo cli-demo links all help
 
 help: ## Show the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-8s %s\n", $$1, $$2}'
 
-check: lint claim test demo ## Everything that must pass before a change is complete
+check: lint claim readiness test demo ## Everything that must pass before a change is complete
 
 lint: ## Structure, encoding, Markdown, links, licence, release metadata
 	$(PYTHON) scripts/validate_repo.py
@@ -25,6 +25,9 @@ claim: ## Anchored guard on the bounded novelty claim and its invariants
 		echo "claim_guard.py exit $$status: FAILED."; \
 	fi; \
 	exit $$status
+
+readiness: ## Validate production-readiness evidence without upgrading the verdict
+	$(PYTHON) scripts/check_readiness.py
 
 test: ## Self-tests, including the negative cases each checker must reject
 	$(PYTHON) -m unittest discover -s tests -t .

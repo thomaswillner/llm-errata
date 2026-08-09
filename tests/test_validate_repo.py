@@ -32,6 +32,14 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("required files", result.stdout)
 
+    def test_missing_production_readiness_matrix_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            (root / "PRODUCTION_READINESS.md").unlink()
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("required files", result.stdout)
+
     def test_broken_repository_relative_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             rewrite(root / "README.md", "(PRIOR_ART.md)", "(PRIOR_ARTS.md)")
