@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+ standard library, JSON, Markdown, Make, GitHub Actions, `unittest`.
 
-**Plan revision:** 2. Task 3 creates `PRODUCTION_READINESS.md`; Task 2 must not link that file before it exists.
+**Plan revision:** 3. Task 3 creates `PRODUCTION_READINESS.md`; Task 2 must not link that file before it exists. Final-review remediation adds malformed-type, complete SECURITY-policy, matrix-parity, and cross-document verification gates.
 
 ## Global Constraints
 
@@ -445,3 +445,39 @@ This plan completes only G1. Subsequent independently reviewed plans are require
 5. `production-operations`: deployment, rollback, recovery, observability, privacy, compatibility, load, denial-of-service, and incident-response evidence.
 
 No later plan may mark its gate `PASS` from implementation alone. External gates require their declared independent or operational evidence.
+
+---
+
+## Final-review remediation — one bounded fix wave
+
+**Files:**
+- Modify: `scripts/check_readiness.py`
+- Modify: `tests/test_readiness.py`
+- Modify: `scripts/validate_repo.py`
+- Modify: `tests/test_validate_repo.py`
+- Modify: `readiness/production-readiness.json`
+- Modify: `PRODUCTION_READINESS.md`
+- Modify: `README.md`
+- Modify: `AGENTS.md`
+- Modify: `CONTRIBUTING.md`
+
+**Required behavior:**
+
+1. `schema_version` must be an `int` whose type is exactly `int`; booleans and floats fail.
+2. Gate IDs must be strings before set membership or dictionary lookup. List, dictionary, null, boolean, and numeric IDs return exit `1`, identify gate index/rule, and emit no traceback on stderr.
+3. SECURITY’s Supported versions table must contain exactly one `Yes` row: current `major.minor.x`. The `major.minor-1.x and earlier` row and `Unreleased development revisions` row must remain `No`. Negative tests flip each unsupported row to `Yes` and require failure.
+4. `scripts/check_readiness.py` must compare `PRODUCTION_READINESS.md` with ledger for project version, verdict, and exact G1–G6 status mapping. Missing, duplicate, malformed, or contradictory matrix fields fail with actionable output. Negative tests independently mutate matrix version, verdict, and G2 status.
+5. README, AGENTS, and CONTRIBUTING must describe four `make check` components: structure/metadata, bounded claim, readiness-evidence honesty, and self-tests. Each must state that readiness-check exit `0` validates structural honesty and does not mean `PROD_READY`.
+6. After new negative tests pass, G1 remains `PASS`; G2–G6 remain `BLOCKED`; overall verdict remains `NOT_PROD_READY`.
+
+**Verification:**
+
+```bash
+python3 -m unittest tests.test_readiness tests.test_validate_repo -v
+python3 scripts/check_readiness.py
+python3 scripts/validate_repo.py
+make check
+git diff --check
+```
+
+Every command must exit `0`; malformed-input tests must additionally assert empty stderr.
