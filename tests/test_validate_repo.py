@@ -89,6 +89,25 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("CITATION.cff release version", result.stdout)
 
+    def test_readme_maturity_version_drift_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            rewrite(root / "README.md", f"Version {current}", "Version 0.0.0")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("README maturity version", result.stdout)
+
+    def test_security_supported_version_drift_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            rewrite(root / "SECURITY.md", f"| {major}.{minor}.x | Yes |", "| 0.0.x | Yes |")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
     def test_missing_canonical_source_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             for name in ("IDEA.md", "PRIOR_ART.md", "RESEARCH.md", "ROADMAP.md"):

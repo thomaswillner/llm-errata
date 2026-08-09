@@ -8,9 +8,15 @@
       "id": "G1",
       "name": "Version and security document consistency",
       "class": "internal",
-      "status": "BLOCKED",
+      "status": "PASS",
       "criterion": "README maturity and SECURITY supported-version policy match VERSION and are protected by negative tests.",
-      "evidence": [{"kind": "repository", "ref": "VERSION"}]
+      "evidence": [
+        {"kind": "repository", "ref": "VERSION"},
+        {"kind": "repository", "ref": "README.md"},
+        {"kind": "repository", "ref": "SECURITY.md"},
+        {"kind": "repository", "ref": "scripts/validate_repo.py"},
+        {"kind": "repository", "ref": "tests/test_validate_repo.py"}
+      ]
     },
     {
       "id": "G2",

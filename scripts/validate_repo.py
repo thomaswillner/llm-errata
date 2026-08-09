@@ -383,6 +383,42 @@ def check_publication_metadata(reporter: Reporter) -> None:
     )
 
 
+def check_document_version_alignment(
+    reporter: Reporter, repository_version: str | None
+) -> None:
+    readme_path = ROOT / "README.md"
+    security_path = ROOT / "SECURITY.md"
+    version_match = (
+        re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", repository_version)
+        if repository_version is not None
+        else None
+    )
+    if version_match is None or not all(
+        path.is_file() for path in (readme_path, security_path)
+    ):
+        return
+
+    major, minor, _ = version_match.groups()
+    maturity = re.search(
+        r"(?ms)^## Current maturity\s*$\n(.*?)(?=^## |\Z)",
+        read_utf8(readme_path),
+    )
+    reporter.check(
+        "README maturity version",
+        maturity is not None and f"Version {repository_version}" in maturity.group(1),
+        f"Current maturity states Version {repository_version}",
+        "Update README.md's Current maturity section to state the VERSION value exactly.",
+    )
+
+    supported_version = f"| {major}.{minor}.x | Yes |"
+    reporter.check(
+        "SECURITY supported version",
+        supported_version in read_utf8(security_path),
+        f"SECURITY.md supports {major}.{minor}.x",
+        "Update SECURITY.md's supported-version table to match VERSION major.minor.x.",
+    )
+
+
 def check_citation(reporter: Reporter, repository_version: str | None) -> None:
     path = ROOT / "CITATION.cff"
     if not path.is_file():
@@ -469,6 +505,7 @@ def main() -> int:
     check_local_paths(reporter)
     check_local_links(reporter)
     check_publication_metadata(reporter)
+    check_document_version_alignment(reporter, repository_version)
     check_citation(reporter, repository_version)
     return reporter.finish()
 
