@@ -88,13 +88,16 @@ def markdown_row_cells(line: str) -> list[str] | None:
 def markdown_value(value: str) -> str:
     while True:
         for marker in ("**", "__", "`"):
+            content = value[len(marker) : -len(marker)]
             if (
                 value.startswith(marker)
                 and value.endswith(marker)
-                and len(value) > 2 * len(marker)
-                and value.count(marker) % 2 == 0
+                and bool(content)
+                and value[len(marker)] != marker[0]
+                and value[-len(marker) - 1] != marker[0]
+                and marker not in content
             ):
-                value = value[len(marker) : -len(marker)]
+                value = content
                 break
         else:
             return value

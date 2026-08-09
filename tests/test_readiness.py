@@ -53,6 +53,18 @@ class ReadinessCheckerPasses(unittest.TestCase):
         self.assertEqual(markdown_value("G2**"), "G2**")
         self.assertEqual(markdown_value("**G2** trailing"), "**G2** trailing")
 
+    def test_ambiguous_delimiter_runs_are_not_canonicalized(self) -> None:
+        for value in (
+            "***G2**",
+            "**G2***",
+            "__G2___",
+            "`G2```",
+            "```G2`",
+            "```G2```",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(markdown_value(value), value)
+
 
 class ReadinessCheckerFailsClosed(unittest.TestCase):
     def _mutated(self, mutate):
@@ -107,6 +119,15 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
                 "| Version | 0.3.0 |",
                 "| Version | 9.9.9 |",
             )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix project version")
+
+    def test_formatted_duplicate_matrix_project_version_is_rejected(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write("| **Version** | **9.9.9** |\n")
 
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "matrix project version")
