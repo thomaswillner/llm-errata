@@ -293,7 +293,7 @@ Replace README maturity section with current facts:
 
 Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and Phase 2 items 1 through 5 are implemented; neither has completed external conformance review, and Phase 2 item 6 remains unstarted.
 
-Current production-readiness verdict: **NOT_PROD_READY**. See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the evidence matrix and [ROADMAP.md](ROADMAP.md) for implementation and kill criteria.
+Current production-readiness verdict: **NOT_PROD_READY**. See [PRODUCTION_READINESS.md](../../../PRODUCTION_READINESS.md) for the evidence matrix and [ROADMAP.md](../../../ROADMAP.md) for implementation and kill criteria.
 ```
 
 Retain the existing review-request list after this paragraph. Remove the obsolete “next milestone” bullet list because those items are already implemented.
