@@ -86,28 +86,33 @@ def markdown_row_cells(line: str) -> list[str] | None:
 
 
 def markdown_value(value: str) -> str:
-    for marker in ("**", "`"):
-        if (
-            value.startswith(marker)
-            and value.endswith(marker)
-            and len(value) > 2 * len(marker)
-        ):
-            return value[len(marker) : -len(marker)]
-    return value
+    while True:
+        for marker in ("**", "__", "`"):
+            if (
+                value.startswith(marker)
+                and value.endswith(marker)
+                and len(value) > 2 * len(marker)
+                and value.count(marker) % 2 == 0
+            ):
+                value = value[len(marker) : -len(marker)]
+                break
+        else:
+            return value
 
 
 def validate_matrix(
     text: str, payload: dict[str, object], reporter: Reporter
 ) -> None:
     lines = text.splitlines()
+    matrix_rows = [
+        row for line in lines if (row := markdown_row_cells(line)) is not None
+    ]
 
     version_rows = [
-        markdown_row_cells(line)
-        for line in lines
-        if re.match(r"^\|\s*Version\s*\|", line)
+        row for row in matrix_rows if markdown_value(row[0]) == "Version"
     ]
     matrix_versions = [
-        row[1] if row is not None and len(row) == 2 else None
+        markdown_value(row[1]) if len(row) == 2 else None
         for row in version_rows
     ]
     ledger_version = payload.get("project_version")
@@ -118,12 +123,10 @@ def validate_matrix(
     )
 
     verdict_rows = [
-        markdown_row_cells(line)
-        for line in lines
-        if re.match(r"^\|\s*Verdict\s*\|", line)
+        row for row in matrix_rows if markdown_value(row[0]) == "Verdict"
     ]
     matrix_verdicts = [
-        markdown_value(row[1]) if row is not None and len(row) == 2 else None
+        markdown_value(row[1]) if len(row) == 2 else None
         for row in verdict_rows
     ]
     ledger_verdict = payload.get("verdict")
@@ -155,18 +158,16 @@ def validate_matrix(
     else:
         ledger_rows_valid = False
 
-    matrix_rows = [
-        markdown_row_cells(line)
-        for line in lines
-        if re.match(r"^\|\s*G\d+\s*\|", line)
+    gate_rows = [
+        row for row in matrix_rows if re.fullmatch(r"G\d+", markdown_value(row[0]))
     ]
     matrix_statuses: dict[str, str] = {}
     matrix_rows_valid = True
-    for row in matrix_rows:
-        if row is None or len(row) != 5:
+    for row in gate_rows:
+        if len(row) != 5:
             matrix_rows_valid = False
             continue
-        gate_id = row[0]
+        gate_id = markdown_value(row[0])
         status = markdown_value(row[2])
         if gate_id not in REQUIRED_GATES or gate_id in matrix_statuses:
             matrix_rows_valid = False
@@ -176,7 +177,7 @@ def validate_matrix(
     statuses_match = (
         ledger_rows_valid
         and matrix_rows_valid
-        and len(matrix_rows) == len(REQUIRED_GATES)
+        and len(gate_rows) == len(REQUIRED_GATES)
         and set(ledger_statuses) == REQUIRED_GATES
         and matrix_statuses == ledger_statuses
     )

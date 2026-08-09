@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from scripts.check_readiness import markdown_value
 from tests.support import (
     EXIT_FAIL,
     EXIT_OK,
@@ -23,6 +24,34 @@ class ReadinessCheckerPasses(unittest.TestCase):
         with repo_copy() as root:
             result = run_checker(root, SCRIPT)
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
+
+    def test_consistently_formatted_canonical_matrix_cells_are_accepted(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            lines = path.read_text(encoding="utf-8").splitlines()
+            formatted = []
+            for line in lines:
+                if line.startswith("| Version |"):
+                    formatted.append("| **Version** | `**0.3.0**` |")
+                elif line.startswith("| Verdict |"):
+                    formatted.append("| `Verdict` | __**NOT_PROD_READY**__ |")
+                elif line.startswith("| G"):
+                    cells = line[1:-1].split("|")
+                    cells[0] = f" `**{cells[0].strip()}**` "
+                    cells[2] = f" __{cells[2].strip()}__ "
+                    formatted.append("|" + "|".join(cells) + "|")
+                else:
+                    formatted.append(line)
+            path.write_text("\n".join(formatted) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_OK, result.stdout)
+        self.assertEqual(result.stderr, "")
+
+    def test_partial_or_unbalanced_decoration_is_not_canonicalized(self) -> None:
+        self.assertEqual(markdown_value("**G2"), "**G2")
+        self.assertEqual(markdown_value("G2**"), "G2**")
+        self.assertEqual(markdown_value("**G2** trailing"), "**G2** trailing")
 
 
 class ReadinessCheckerFailsClosed(unittest.TestCase):
@@ -93,6 +122,15 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "matrix verdict")
 
+    def test_bold_duplicate_matrix_verdict_is_rejected(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write("| **Verdict** | **PROD_READY** |\n")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix verdict")
+
     def test_matrix_gate_status_contradiction_is_rejected(self) -> None:
         def mutate(root):
             path = root / "PRODUCTION_READINESS.md"
@@ -107,6 +145,20 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
                 raise AssertionError("G2 matrix row does not contain BLOCKED status")
             lines[index] = lines[index].replace("| `BLOCKED` |", "| `PASS` |", 1)
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix gate statuses")
+
+    def test_code_formatted_duplicate_matrix_gate_is_rejected(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            lines = path.read_text(encoding="utf-8").splitlines()
+            matches = [line for line in lines if line.startswith("| G2 |")]
+            if len(matches) != 1:
+                raise AssertionError(f"expected one G2 matrix row, got {len(matches)}")
+            duplicate = matches[0].replace("| G2 |", "| `G2` |", 1)
+            duplicate = duplicate.replace("| `BLOCKED` |", "| `PASS` |", 1)
+            path.write_text("\n".join(lines + [duplicate]) + "\n", encoding="utf-8")
 
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "matrix gate statuses")
