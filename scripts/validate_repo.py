@@ -403,17 +403,48 @@ def check_document_version_alignment(
         r"(?ms)^## Current maturity\s*$\n(.*?)(?=^## |\Z)",
         read_utf8(readme_path),
     )
+    expected_maturity_version = re.compile(
+        rf"(?m)^Version {re.escape(repository_version)}(?=\s|$)"
+    )
     reporter.check(
         "README maturity version",
-        maturity is not None and f"Version {repository_version}" in maturity.group(1),
+        maturity is not None
+        and expected_maturity_version.search(maturity.group(1)) is not None,
         f"Current maturity states Version {repository_version}",
         "Update README.md's Current maturity section to state the VERSION value exactly.",
     )
 
-    supported_version = f"| {major}.{minor}.x | Yes |"
+    supported_section = re.search(
+        r"(?ms)^## Supported versions\s*$\n(.*?)(?=^## |\Z)",
+        read_utf8(security_path),
+    )
+    supported_table = (
+        re.search(
+            r"(?m)^\| Version \| Supported \|[ \t]*\n"
+            r"^\|---\|---\|[ \t]*\n"
+            r"((?:^\|[^\n]*\|[ \t]*(?:\n|\Z))*)",
+            supported_section.group(1),
+        )
+        if supported_section is not None
+        else None
+    )
+    supported_row_lines = []
+    supported_rows = []
+    if supported_table is not None:
+        supported_row_lines = supported_table.group(1).splitlines()
+        for row in supported_row_lines:
+            cells = [cell.strip() for cell in row.split("|")]
+            if len(cells) == 4 and cells[0] == cells[-1] == "":
+                supported_rows.append((cells[1], cells[2]))
+    supported_semver_yes = [
+        version
+        for version, status in supported_rows
+        if status == "Yes" and re.fullmatch(r"\d+\.\d+\.x", version) is not None
+    ]
     reporter.check(
         "SECURITY supported version",
-        supported_version in read_utf8(security_path),
+        supported_semver_yes == [f"{major}.{minor}.x"]
+        and f"| {major}.{minor}.x | Yes |" in supported_row_lines,
         f"SECURITY.md supports {major}.{minor}.x",
         "Update SECURITY.md's supported-version table to match VERSION major.minor.x.",
     )
