@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.11+ standard library, JSON, Markdown, Make, GitHub Actions, `unittest`.
 
+**Plan revision:** 2. Task 3 creates `PRODUCTION_READINESS.md`; Task 2 must not link that file before it exists.
+
 ## Global Constraints
 
 - Current project version is `0.3.0` and current verdict remains `NOT_PROD_READY`.
@@ -293,10 +295,10 @@ Replace README maturity section with current facts:
 
 Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and Phase 2 items 1 through 5 are implemented; neither has completed external conformance review, and Phase 2 item 6 remains unstarted.
 
-Current production-readiness verdict: **NOT_PROD_READY**. See [PRODUCTION_READINESS.md](../../../PRODUCTION_READINESS.md) for the evidence matrix and [ROADMAP.md](../../../ROADMAP.md) for implementation and kill criteria.
+Current production-readiness verdict: **NOT_PROD_READY**. `ROADMAP.md` defines implementation and kill criteria. The human evidence matrix is added with continuous enforcement in the next task.
 ```
 
-Retain the existing review-request list after this paragraph. Remove the obsolete “next milestone” bullet list because those items are already implemented.
+Retain the existing review-request list after this paragraph. Remove the obsolete “next milestone” bullet list because those items are already implemented. In the actual root README, render `ROADMAP.md` as a Markdown link targeting the root-level `ROADMAP.md`. Do not link `PRODUCTION_READINESS.md` in Task 2 because Task 3 owns and creates that file.
 
 Change SECURITY supported versions to:
 
@@ -341,6 +343,7 @@ git commit -m "fix: align release and security metadata"
 
 **Files:**
 - Create: `PRODUCTION_READINESS.md`
+- Modify: `README.md`
 - Modify: `Makefile`
 - Modify: `.github/workflows/validate.yml`
 - Modify: `CHANGELOG.md`
@@ -375,6 +378,8 @@ Create `PRODUCTION_READINESS.md` with:
 - statement that local tests and agent reviews are not external evidence;
 - approval boundaries for external review, third-party systems, real data, and final verdict change;
 - exact command `make readiness` and explanation that exit `0` validates honesty of state, not readiness itself.
+
+After creating the file, update README’s current-maturity paragraph: replace the sentence saying the human evidence matrix arrives in the next task with a Markdown link whose text and root-level target are both `PRODUCTION_READINESS.md`. Preserve the existing root-level `ROADMAP.md` link.
 
 - [ ] **Step 3: Integrate Make targets**
 
@@ -423,7 +428,7 @@ Expected: validator count increases for the new required files and version-align
 - [ ] **Step 7: Commit Task 3**
 
 ```bash
-git add PRODUCTION_READINESS.md Makefile .github/workflows/validate.yml CHANGELOG.md scripts/validate_repo.py tests/test_validate_repo.py
+git add PRODUCTION_READINESS.md README.md Makefile .github/workflows/validate.yml CHANGELOG.md scripts/validate_repo.py tests/test_validate_repo.py
 git commit -m "docs: enforce production readiness evidence"
 ```
 
