@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+ standard library, JSON, Markdown, Make, GitHub Actions, `unittest`.
 
-**Plan revision:** 3. Task 3 creates `PRODUCTION_READINESS.md`; Task 2 must not link that file before it exists. Final-review remediation adds malformed-type, complete SECURITY-policy, matrix-parity, and cross-document verification gates.
+**Plan revision:** 4. Task 3 creates `PRODUCTION_READINESS.md`; Task 2 must not link that file before it exists. Final-review remediation adds malformed-type, complete SECURITY-policy, matrix-parity, and cross-document verification gates. User-authorized revision 4 closes formatted-Markdown matrix contradictions before publication.
 
 ## Global Constraints
 
@@ -481,3 +481,36 @@ git diff --check
 ```
 
 Every command must exit `0`; malformed-input tests must additionally assert empty stderr.
+
+---
+
+## Plan revision 4 — formatted matrix normalization
+
+**Authorization:** User approved plan revision 4 and instructed that reviewed work be documented and pushed.
+
+**Files:**
+- Modify: `scripts/check_readiness.py`
+- Modify: `tests/test_readiness.py`
+- Modify: `CHANGELOG.md`
+
+**Required behavior:**
+
+1. Normalize presentation-only Markdown decoration before classifying matrix labels, gate IDs, verdicts, and statuses. At minimum, balanced `**strong**`, `__strong__`, and inline-code backticks must unwrap recursively around the complete cell value.
+2. A visible formatted duplicate version/verdict field must be counted as a duplicate, not ignored.
+3. A visible formatted `G1`–`G6` row must participate in duplicate and parity validation; a formatted contradictory status must fail.
+4. Malformed or partially wrapped formatting must not be silently interpreted as a different canonical field.
+5. Add negative tests that append `**Verdict** = **PROD_READY**` and a code-formatted duplicate `G2 = PASS` while canonical rows remain. Both must exit `1`, identify matrix parity/duplication on stdout, and emit empty stderr.
+6. Add focused positive tests proving canonical rows remain valid and consistently formatted canonical cells normalize without changing the current verdict.
+7. Record under CHANGELOG Unreleased that matrix parity now canonicalizes presentation formatting before duplicate/contradiction checks.
+8. Preserve `0.3.0`, `NOT_PROD_READY`, G1 `PASS`, G2–G6 `BLOCKED`, dependency-free runtime, and every core proposal invariant.
+
+**Verification:**
+
+```bash
+python3 -m unittest tests.test_readiness -v
+python3 scripts/check_readiness.py
+make check
+git diff --check
+```
+
+Every command must exit `0`; the two exploit regressions must show RED before normalization and GREEN after it.
