@@ -54,6 +54,17 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL)
         self.assertIn("PROD_READY", result.stdout)
 
+    def test_required_external_gate_cannot_be_reclassified_internal(self) -> None:
+        def mutate(payload):
+            for gate in payload["gates"]:
+                gate["class"] = "internal"
+                gate["status"] = "PASS"
+            payload["verdict"] = "PROD_READY"
+
+        result = self._mutated(mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL)
+        self.assertIn("expected class", result.stdout)
+
     def test_external_pass_without_independent_evidence_is_rejected(self) -> None:
         def mutate(payload):
             gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
@@ -84,6 +95,23 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = self._mutated(mutate)
         self.assertEqual(result.returncode, EXIT_FAIL)
         self.assertIn("observed date", result.stdout)
+
+    def test_local_producer_is_not_independent_external_evidence(self) -> None:
+        def mutate(payload):
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["status"] = "PASS"
+            gate["evidence"].append(
+                {
+                    "kind": "external",
+                    "ref": "urn:example:review",
+                    "producer": "local implementer",
+                    "observed": "2026-08-09",
+                }
+            )
+
+        result = self._mutated(mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL)
+        self.assertIn("independence", result.stdout)
 
 
 if __name__ == "__main__":

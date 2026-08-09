@@ -13,9 +13,21 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "readiness" / "production-readiness.json"
 REQUIRED_GATES = {"G1", "G2", "G3", "G4", "G5", "G6"}
+EXPECTED_CLASSES = {
+    "G1": "internal",
+    "G2": "external",
+    "G3": "external",
+    "G4": "external",
+    "G5": "external",
+    "G6": "external",
+}
 VERDICTS = {"NOT_PROD_READY", "PROD_READY"}
 STATUSES = {"PASS", "FAIL", "BLOCKED"}
 CLASSES = {"internal", "external"}
+NON_INDEPENDENT_PRODUCER_RE = re.compile(
+    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo)(?:$|[\s:_-])",
+    re.IGNORECASE,
+)
 
 
 class Reporter:
@@ -109,10 +121,10 @@ def validate_ledger(
     )
 
     all_pass = True
-    for gate in gates:
+    for gate_index, gate in enumerate(gates):
         if not isinstance(gate, dict):
             all_pass = False
-            reporter.check("gate structure", False, "gate must be an object")
+            reporter.check(f"gate[{gate_index}] structure", False, "gate must be an object")
             continue
         gate_id = gate.get("id", "<missing>")
         prefix = f"gate {gate_id}"
@@ -139,6 +151,16 @@ def validate_ledger(
             "name, class, status, criterion, and non-empty evidence are valid",
         )
         if not fields_valid:
+            all_pass = False
+
+        expected_class = EXPECTED_CLASSES.get(gate_id)
+        class_binding_valid = expected_class is None or gate_class == expected_class
+        reporter.check(
+            f"{prefix} expected class",
+            class_binding_valid,
+            f"required class is {expected_class!r}, got {gate_class!r}",
+        )
+        if not class_binding_valid:
             all_pass = False
 
         valid_external_entries = 0
@@ -175,7 +197,12 @@ def validate_ledger(
                     evidence_valid = evidence_valid and repository_valid
                 elif kind == "external":
                     reference_valid = valid_external_ref(entry.get("ref"))
-                    producer_valid = isinstance(entry.get("producer"), str) and bool(entry["producer"].strip())
+                    producer = entry.get("producer")
+                    producer_valid = (
+                        isinstance(producer, str)
+                        and bool(producer.strip())
+                        and NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
+                    )
                     observed_valid = valid_iso_date(entry.get("observed"))
                     reporter.check(
                         f"{entry_name} external reference",
@@ -185,7 +212,7 @@ def validate_ledger(
                     reporter.check(
                         f"{entry_name} producer",
                         producer_valid,
-                        "independent producer is required",
+                        "independent external producer is required; structural validation cannot prove real-world independence",
                     )
                     reporter.check(
                         f"{entry_name} observed date",
