@@ -117,22 +117,27 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 Everything is Python standard library only. There is nothing to install.
 
 ```bash
-make check    # structure, bounded claim, and the self-tests for both
+make check    # structure/metadata, bounded claim, readiness-evidence honesty, and self-tests
 make links    # liveness of every cited external URL (needs network)
 ```
 
-`make check` runs three separate things because they answer different questions:
+`make check` runs four validation components because they answer different questions:
 
 | Command | Question | Failure means |
 |---|---|---|
-| `make lint` | Is the repository well formed? | A file, link, encoding, fence, or metadata field is wrong. |
+| `make lint` | Are repository structure and metadata well formed? | A file, link, encoding, fence, or metadata field is wrong. |
 | `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. |
+| `make readiness` | Is the recorded readiness evidence structurally honest and synchronized with the human matrix? | The ledger is malformed, evidence is insufficient for a recorded status, or the matrix contradicts the ledger. |
 | `make test` | Do those checkers reject what they claim to reject? | A checker has stopped catching a fault it is supposed to catch. |
 
-The third one exists because a check that has never failed has not been shown to
+The self-tests exist because a check that has never failed has not been shown to
 work. The self-tests build corpora that misstate the proposal — an inverted
 quarantine ordering, an asserted world first — and require the guard to reject
 each one.
+
+Readiness-check exit `0` validates structural honesty of the recorded evidence.
+It does **not** mean `PROD_READY`; consult the ledger and human matrix for the
+current verdict.
 
 `scripts/claim_guard.py` distinguishes *failed* (exit `1`) from *inconclusive*
 (exit `2`, meaning a guarded file was missing or unreadable, so the claim was

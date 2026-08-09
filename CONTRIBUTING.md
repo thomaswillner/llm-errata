@@ -67,7 +67,7 @@ Never submit secrets, personal data, proprietary customer material, or confident
 
 ## Issues and pull requests
 
-Run `make check` before opening a pull request; CI runs the same three steps. If a citation was added or changed, run `make links` too, and record the pin and access date in [SOURCES.md](SOURCES.md).
+Run `make check` before opening a pull request; CI covers the same four validation components: repository structure and metadata, the bounded claim, readiness-evidence honesty, and checker self-tests. Readiness-check exit `0` validates structural honesty of the recorded evidence; it does **not** mean `PROD_READY`. If a citation was added or changed, run `make links` too, and record the pin and access date in [SOURCES.md](SOURCES.md).
 
 If a checker is wrong, fix it in its own pull request with a test that fails before the fix. Widening an anchor, deleting a test, or adding a quotation exception so that an unrelated change passes is not an acceptable fix.
 

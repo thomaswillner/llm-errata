@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "readiness" / "production-readiness.json"
+MATRIX = ROOT / "PRODUCTION_READINESS.md"
 REQUIRED_GATES = {"G1", "G2", "G3", "G4", "G5", "G6"}
 EXPECTED_CLASSES = {
     "G1": "internal",
@@ -78,13 +79,122 @@ def valid_external_ref(value: object) -> bool:
     return value.startswith("urn:") or (parsed.scheme == "https" and bool(parsed.netloc))
 
 
+def markdown_row_cells(line: str) -> list[str] | None:
+    if not line.startswith("|") or not line.endswith("|"):
+        return None
+    return [cell.strip() for cell in line[1:-1].split("|")]
+
+
+def markdown_value(value: str) -> str:
+    for marker in ("**", "`"):
+        if (
+            value.startswith(marker)
+            and value.endswith(marker)
+            and len(value) > 2 * len(marker)
+        ):
+            return value[len(marker) : -len(marker)]
+    return value
+
+
+def validate_matrix(
+    text: str, payload: dict[str, object], reporter: Reporter
+) -> None:
+    lines = text.splitlines()
+
+    version_rows = [
+        markdown_row_cells(line)
+        for line in lines
+        if re.match(r"^\|\s*Version\s*\|", line)
+    ]
+    matrix_versions = [
+        row[1] if row is not None and len(row) == 2 else None
+        for row in version_rows
+    ]
+    ledger_version = payload.get("project_version")
+    reporter.check(
+        "matrix project version",
+        isinstance(ledger_version, str) and matrix_versions == [ledger_version],
+        f"ledger {ledger_version!r}, matrix rows {matrix_versions!r}",
+    )
+
+    verdict_rows = [
+        markdown_row_cells(line)
+        for line in lines
+        if re.match(r"^\|\s*Verdict\s*\|", line)
+    ]
+    matrix_verdicts = [
+        markdown_value(row[1]) if row is not None and len(row) == 2 else None
+        for row in verdict_rows
+    ]
+    ledger_verdict = payload.get("verdict")
+    reporter.check(
+        "matrix verdict",
+        isinstance(ledger_verdict, str) and matrix_verdicts == [ledger_verdict],
+        f"ledger {ledger_verdict!r}, matrix rows {matrix_verdicts!r}",
+    )
+
+    ledger_statuses: dict[str, str] = {}
+    ledger_rows_valid = True
+    raw_gates = payload.get("gates")
+    if isinstance(raw_gates, list):
+        for gate in raw_gates:
+            if not isinstance(gate, dict):
+                ledger_rows_valid = False
+                continue
+            gate_id = gate.get("id")
+            status = gate.get("status")
+            if (
+                not isinstance(gate_id, str)
+                or gate_id not in REQUIRED_GATES
+                or not isinstance(status, str)
+                or gate_id in ledger_statuses
+            ):
+                ledger_rows_valid = False
+                continue
+            ledger_statuses[gate_id] = status
+    else:
+        ledger_rows_valid = False
+
+    matrix_rows = [
+        markdown_row_cells(line)
+        for line in lines
+        if re.match(r"^\|\s*G\d+\s*\|", line)
+    ]
+    matrix_statuses: dict[str, str] = {}
+    matrix_rows_valid = True
+    for row in matrix_rows:
+        if row is None or len(row) != 5:
+            matrix_rows_valid = False
+            continue
+        gate_id = row[0]
+        status = markdown_value(row[2])
+        if gate_id not in REQUIRED_GATES or gate_id in matrix_statuses:
+            matrix_rows_valid = False
+            continue
+        matrix_statuses[gate_id] = status
+
+    statuses_match = (
+        ledger_rows_valid
+        and matrix_rows_valid
+        and len(matrix_rows) == len(REQUIRED_GATES)
+        and set(ledger_statuses) == REQUIRED_GATES
+        and matrix_statuses == ledger_statuses
+    )
+    reporter.check(
+        "matrix gate statuses",
+        statuses_match,
+        f"ledger {ledger_statuses!r}, matrix {matrix_statuses!r}; "
+        "all rows must be unique, well formed, and exact",
+    )
+
+
 def validate_ledger(
     payload: dict[str, object], repository_version: str, reporter: Reporter
 ) -> None:
     schema_version = payload.get("schema_version")
     reporter.check(
         "schema version",
-        schema_version == 1,
+        type(schema_version) is int and schema_version == 1,
         f"expected 1, got {schema_version!r}",
     )
 
@@ -127,6 +237,14 @@ def validate_ledger(
             reporter.check(f"gate[{gate_index}] structure", False, "gate must be an object")
             continue
         gate_id = gate.get("id", "<missing>")
+        gate_id_valid = isinstance(gate_id, str)
+        reporter.check(
+            f"gate[{gate_index}] ID",
+            gate_id_valid,
+            f"ID must be a string, got {gate_id!r}",
+        )
+        if not gate_id_valid:
+            all_pass = False
         prefix = f"gate {gate_id}"
         name = gate.get("name")
         gate_class = gate.get("class")
@@ -153,7 +271,7 @@ def validate_ledger(
         if not fields_valid:
             all_pass = False
 
-        expected_class = EXPECTED_CLASSES.get(gate_id)
+        expected_class = EXPECTED_CLASSES.get(gate_id) if gate_id_valid else None
         class_binding_valid = expected_class is None or gate_class == expected_class
         reporter.check(
             f"{prefix} expected class",
@@ -252,7 +370,13 @@ def main() -> int:
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
         reporter.check("readiness ledger", False, str(error))
         return reporter.finish()
+    try:
+        matrix_text = MATRIX.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        reporter.check("production readiness matrix", False, str(error))
+        return reporter.finish()
     validate_ledger(payload, repository_version, reporter)
+    validate_matrix(matrix_text, payload, reporter)
     print(f"Current verdict: {payload.get('verdict', '<missing>')}")
     return reporter.finish()
 

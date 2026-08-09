@@ -5,7 +5,14 @@ from __future__ import annotations
 import json
 import unittest
 
-from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, run_checker
+from tests.support import (
+    EXIT_FAIL,
+    EXIT_OK,
+    check_after,
+    repo_copy,
+    rewrite,
+    run_checker,
+)
 
 
 SCRIPT = "check_readiness.py"
@@ -28,10 +35,112 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
 
         return check_after(SCRIPT, apply)
 
+    def assert_rejected_without_traceback(self, result, rule: str) -> None:
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn(rule, result.stdout)
+        self.assertEqual(result.stderr, "")
+
+    def test_non_integer_schema_versions_are_rejected(self) -> None:
+        for invalid in (True, 1.0):
+            with self.subTest(schema_version=invalid):
+                result = self._mutated(
+                    lambda payload, value=invalid: payload.update(schema_version=value)
+                )
+                self.assert_rejected_without_traceback(result, "schema version")
+
+    def test_unhashable_gate_ids_are_rejected_without_traceback(self) -> None:
+        for invalid in (["G1"], {"value": "G1"}):
+            with self.subTest(gate_id=invalid):
+                def mutate(payload, value=invalid):
+                    payload["gates"][0]["id"] = value
+
+                result = self._mutated(mutate)
+                self.assert_rejected_without_traceback(result, "gate[0] ID")
+
+    def test_non_string_scalar_gate_ids_are_rejected_without_traceback(self) -> None:
+        for invalid in (None, True, 1, 1.0):
+            with self.subTest(gate_id=invalid):
+                def mutate(payload, value=invalid):
+                    payload["gates"][0]["id"] = value
+
+                result = self._mutated(mutate)
+                self.assert_rejected_without_traceback(result, "gate[0] ID")
+
     def test_project_version_drift_is_rejected(self) -> None:
         result = self._mutated(lambda payload: payload.update(project_version="9.9.9"))
         self.assertEqual(result.returncode, EXIT_FAIL)
         self.assertIn("project version", result.stdout)
+
+    def test_matrix_project_version_contradiction_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "| Version | 0.3.0 |",
+                "| Version | 9.9.9 |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix project version")
+
+    def test_matrix_verdict_contradiction_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "| Verdict | **NOT_PROD_READY** |",
+                "| Verdict | **PROD_READY** |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix verdict")
+
+    def test_matrix_gate_status_contradiction_is_rejected(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            lines = path.read_text(encoding="utf-8").splitlines()
+            matches = [
+                index for index, line in enumerate(lines) if line.startswith("| G2 |")
+            ]
+            if len(matches) != 1:
+                raise AssertionError(f"expected one G2 matrix row, got {len(matches)}")
+            index = matches[0]
+            if "| `BLOCKED` |" not in lines[index]:
+                raise AssertionError("G2 matrix row does not contain BLOCKED status")
+            lines[index] = lines[index].replace("| `BLOCKED` |", "| `PASS` |", 1)
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix gate statuses")
+
+    def test_missing_matrix_project_version_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(root / "PRODUCTION_READINESS.md", "| Version | 0.3.0 |\n", "")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix project version")
+
+    def test_duplicate_matrix_verdict_is_rejected(self) -> None:
+        def mutate(root):
+            row = "| Verdict | **NOT_PROD_READY** |"
+            rewrite(root / "PRODUCTION_READINESS.md", row, f"{row}\n{row}")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix verdict")
+
+    def test_malformed_matrix_gate_row_is_rejected(self) -> None:
+        def mutate(root):
+            path = root / "PRODUCTION_READINESS.md"
+            lines = path.read_text(encoding="utf-8").splitlines()
+            matches = [
+                index for index, line in enumerate(lines) if line.startswith("| G2 |")
+            ]
+            if len(matches) != 1:
+                raise AssertionError(f"expected one G2 matrix row, got {len(matches)}")
+            index = matches[0]
+            lines[index] = lines[index].replace("| `BLOCKED` |", "| BLOCKED ", 1)
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "matrix gate statuses")
 
     def test_missing_required_gate_is_rejected(self) -> None:
         def mutate(payload):

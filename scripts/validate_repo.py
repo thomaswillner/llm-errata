@@ -440,17 +440,23 @@ def check_document_version_alignment(
             cells = [cell.strip() for cell in row.split("|")]
             if len(cells) == 4 and cells[0] == cells[-1] == "":
                 supported_rows.append((cells[1], cells[2]))
-    supported_semver_yes = [
+    supported_yes = [
         version
         for version, status in supported_rows
-        if status == "Yes" and re.fullmatch(r"\d+\.\d+\.x", version) is not None
+        if status == "Yes"
     ]
+    previous_minor = int(minor) - 1
+    required_unsupported_rows = {
+        (f"{major}.{previous_minor}.x and earlier", "No"),
+        ("Unreleased development revisions", "No"),
+    }
     reporter.check(
         "SECURITY supported version",
-        supported_semver_yes == [f"{major}.{minor}.x"]
-        and f"| {major}.{minor}.x | Yes |" in supported_row_lines,
+        supported_yes == [f"{major}.{minor}.x"]
+        and required_unsupported_rows.issubset(set(supported_rows)),
         f"SECURITY.md supports {major}.{minor}.x",
-        "Update SECURITY.md's supported-version table to match VERSION major.minor.x.",
+        "Keep exactly one Yes row for VERSION major.minor.x and No rows for "
+        "the prior-version family and unreleased revisions.",
     )
 
 

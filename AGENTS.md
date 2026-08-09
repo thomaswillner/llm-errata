@@ -122,11 +122,14 @@ Before presenting work as complete:
    make check
    ```
 
-   This runs three things, and each answers a different question:
+   This runs four validation components, and each answers a different question:
 
-   - `scripts/validate_repo.py` — is the repository structurally well formed?
+   - `scripts/validate_repo.py` — are repository structure and metadata well formed?
    - `scripts/claim_guard.py` — does the documentation still state the bounded claim? It anchors to exact sentences in named files, because keyword presence over the whole corpus cannot tell a hedge from its inversion.
-   - `tests/` — do those two checkers actually reject the faults they claim to catch? A checker that has only ever passed has not been shown to work.
+   - `scripts/check_readiness.py` — is readiness evidence structurally honest and synchronized with `PRODUCTION_READINESS.md`?
+   - `tests/` — do the checkers actually reject the faults they claim to catch? A checker that has only ever passed has not been shown to work.
+
+   Readiness-check exit `0` validates structural honesty of the recorded evidence. It does **not** mean `PROD_READY`; the ledger and human matrix state the current verdict.
 
    Run `make links` as well whenever a citation is added or changed.
 

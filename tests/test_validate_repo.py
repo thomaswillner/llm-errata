@@ -136,6 +136,30 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("SECURITY supported version", result.stdout)
 
+    def test_earlier_security_versions_cannot_be_supported(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "SECURITY.md",
+                "| 0.2.x and earlier | No |",
+                "| 0.2.x and earlier | Yes |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
+    def test_unreleased_security_revisions_cannot_be_supported(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "SECURITY.md",
+                "| Unreleased development revisions | No |",
+                "| Unreleased development revisions | Yes |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
     def test_missing_canonical_source_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             for name in ("IDEA.md", "PRIOR_ART.md", "RESEARCH.md", "ROADMAP.md"):

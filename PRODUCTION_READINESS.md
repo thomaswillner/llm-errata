@@ -8,13 +8,13 @@
 | Verdict | **NOT_PROD_READY** |
 | Ledger | `readiness/production-readiness.json` |
 
-Build health means the repository's deterministic structural checks, bounded-claim guard, and self-tests pass. Production readiness is a separate, evidence-based decision: it requires every gate below to pass with the evidence stated for that gate. Green local tests and agent reviews are useful internal evidence, but neither is external evidence and neither can change an external gate to `PASS`.
+Build health means the repository's deterministic structure/metadata checks, bounded-claim guard, readiness-evidence honesty check, and self-tests pass. Production readiness is a separate, evidence-based decision: it requires every gate below to pass with the evidence stated for that gate. Green local tests and agent reviews are useful internal evidence, but neither is external evidence and neither can change an external gate to `PASS`.
 
 ## Readiness matrix
 
 | Gate | Criterion | Current status | Current evidence | Next evidence required |
 |---|---|---|---|---|
-| G1 | README maturity and SECURITY supported-version policy match VERSION and negative tests protect those bindings. | `PASS` | `VERSION`, `README.md`, `SECURITY.md`, `scripts/validate_repo.py`, and `tests/test_validate_repo.py`. | Maintain document and test consistency with each release. |
+| G1 | VERSION, SECURITY support policy, readiness matrix, and check documentation remain aligned; negative tests protect every machine-enforced binding. | `PASS` | `VERSION`, `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `PRODUCTION_READINESS.md`, readiness ledger, both checkers, and their focused tests. | Maintain document, ledger, matrix, checker, and test consistency with each release. |
 | G2 | Phase 2 item 6 is implemented and an independent reviewer evaluates the complete conformance surface. | `BLOCKED` | `ROADMAP.md` records Phase 2 scope; no qualifying independent review is recorded. | Dated independent external conformance-review result covering complete Phase 2 surface. |
 | G3 | Production signing uses an audited constant-time library through the Signer seam, with independent security review of key lifecycle. | `BLOCKED` | `THREAT_MODEL.md` records current security scope; no qualifying production cryptography evidence is recorded. | Dated independent security review and evidence of audited production signer, rotation, recovery, and delegation. |
 | G4 | Two independently authored adapters consume the same erratum and a third-party validator evaluates their receipts consistently. | `BLOCKED` | `ROADMAP.md` records this dependency; no independent implementations or validator result are recorded. | Dated evidence from two independent adapters and separately produced third-party validator result. |
