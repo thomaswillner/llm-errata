@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "project_version": "0.3.0",
+  "verdict": "NOT_PROD_READY",
+  "last_reviewed": "2026-08-09",
+  "gates": [
+    {
+      "id": "G1",
+      "name": "Version and security document consistency",
+      "class": "internal",
+      "status": "BLOCKED",
+      "criterion": "README maturity and SECURITY supported-version policy match VERSION and are protected by negative tests.",
+      "evidence": [{"kind": "repository", "ref": "VERSION"}]
+    },
+    {
+      "id": "G2",
+      "name": "Phase 2 complete with external conformance review",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Phase 2 item 6 is implemented and an independent reviewer evaluates the complete conformance surface.",
+      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+    },
+    {
+      "id": "G3",
+      "name": "Audited constant-time production cryptography",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Production signing uses an audited constant-time library through the Signer seam and independent security review covers key lifecycle.",
+      "evidence": [{"kind": "repository", "ref": "THREAT_MODEL.md"}]
+    },
+    {
+      "id": "G4",
+      "name": "Two independent implementations and third-party validator",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Two independently authored adapters consume the same erratum and a third-party validator evaluates their receipts consistently.",
+      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+    },
+    {
+      "id": "G5",
+      "name": "Three-system Phase 3 interoperability experiment",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "One user-controlled synthetic root completes the declared experiment across three independently operated memory systems.",
+      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+    },
+    {
+      "id": "G6",
+      "name": "Operational production gates",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Security, observability, recovery, compatibility, performance, deployment, and rollback gates pass with current operational evidence.",
+      "evidence": [{"kind": "repository", "ref": "SECURITY.md"}]
+    }
+  ]
+}
