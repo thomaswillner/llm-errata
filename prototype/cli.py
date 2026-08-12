@@ -23,9 +23,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from prototype.adapters import Coverage, OpaqueAdapter
+from prototype.checkpoints import CheckpointError
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_feed
 from prototype.lineage import LineageLedger
@@ -210,26 +212,58 @@ def cmd_plan(ws: Workspace, args: argparse.Namespace) -> int:
         store.close()
 
 
+def _next_pending(ws: Workspace, importer: Importer) -> Erratum | None:
+    errata = read_feed(ws.feed_path.read_text(encoding="utf-8"))
+    pending = [item for item in errata if item.sequence > importer.last_sequence]
+    return pending[0] if pending else None
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def cmd_quarantine(ws: Workspace, args: argparse.Namespace) -> int:
+    importer, store = _importer(ws)
+    try:
+        erratum = _next_pending(ws, importer)
+        if erratum is None:
+            print("nothing to quarantine")
+            return EXIT_OK
+        path = ws.checkpoint_path(erratum.sequence, erratum.erratum_id)
+        try:
+            if path.exists():
+                checkpoint = ws.load_checkpoint(erratum.sequence, erratum.erratum_id)
+                validated = importer.observe(erratum)
+                importer._validate_checkpoint(validated, checkpoint)
+            else:
+                checkpoint = importer.quarantine(erratum)
+                path = ws.write_checkpoint(checkpoint)
+        except (CheckpointError, FeedError, OSError, ValueError) as error:
+            print(f"refused: {error}", file=sys.stderr)
+            return EXIT_REFUSED
+        print(f"checkpoint: {path.relative_to(ws.root)}")
+        print(f"digest: {checkpoint.checkpoint_digest}")
+        return EXIT_OK
+    finally:
+        store.close()
+
+
 def cmd_repair(ws: Workspace, args: argparse.Namespace) -> int:
     importer, store = _importer(ws)
     try:
-        errata = read_feed(ws.feed_path.read_text(encoding="utf-8"))
-        pending = [e for e in errata if e.sequence > importer.last_sequence]
-        if not pending:
+        erratum = _next_pending(ws, importer)
+        if erratum is None:
             print("nothing to repair")
             return EXIT_OK
-
-        last: Receipt | None = None
-        for erratum in pending:
-            try:
-                last = importer.repair(erratum)
-            except FeedError as error:
-                print(f"refused: {error}", file=sys.stderr)
-                return EXIT_REFUSED
+        try:
+            checkpoint = ws.load_checkpoint(erratum.sequence, erratum.erratum_id)
+            last = importer.repair_quarantined(erratum, checkpoint)
             ws.write_receipt(last)
             ws.record_applied(last.target_root, last.sequence)
-
-        assert last is not None
+            ws.consume_checkpoint(last.sequence, last.erratum_id, _now())
+        except (CheckpointError, FeedError, OSError, ValueError) as error:
+            print(f"refused: checkpoint admission failed: {error}", file=sys.stderr)
+            return EXIT_REFUSED
         for event in importer.journal:
             if event.phase in (Phase.QUARANTINE_COMPLETE, Phase.TEST):
                 print(f"  {event.phase.value}: {event.detail}")
@@ -327,6 +361,7 @@ COMMANDS = {
     "publish": cmd_publish,
     "pull": cmd_pull,
     "plan": cmd_plan,
+    "quarantine": cmd_quarantine,
     "repair": cmd_repair,
     "test": cmd_test,
     "attest": cmd_attest,
@@ -374,7 +409,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("pull", help="list errata not yet applied")
     sub.add_parser("plan", help="show what a repair would touch, without touching it")
-    sub.add_parser("repair", help="quarantine, rebuild, probe, and attest")
+    sub.add_parser("quarantine", help="gate the next erratum and persist a checkpoint")
+    sub.add_parser("repair", help="rebuild, probe, and attest from a checkpoint")
     sub.add_parser("test", help="show the repair triad from the latest receipt")
     sub.add_parser("attest", help="print the latest receipt")
 

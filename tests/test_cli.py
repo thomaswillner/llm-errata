@@ -58,6 +58,11 @@ class CliCase(unittest.TestCase):
             "--positive", "eats meat again", "--preserve", "quiet restaurants",
         )
 
+    def quarantine_and_repair(self) -> subprocess.CompletedProcess[str]:
+        quarantine = self.run_cli("quarantine")
+        self.assertEqual(quarantine.returncode, EXIT_OK, quarantine.stdout + quarantine.stderr)
+        return self.run_cli("repair")
+
 
 class WorkspaceLifecycle(CliCase):
     def test_commands_refuse_before_init(self) -> None:
@@ -100,10 +105,30 @@ class PublishRefusesIllFormedErrata(CliCase):
 
 
 class RepairReportsHonestly(CliCase):
-    def test_repair_exits_inconclusive_rather_than_claiming_success(self) -> None:
+    def test_repair_without_checkpoint_is_refused_without_mutation(self) -> None:
         self.seed()
         self.publish_supersession()
         result = self.run_cli("repair")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("checkpoint", result.stderr)
+        self.assertEqual(list((self.cwd / ".errata" / "receipts").glob("*.json")), [])
+
+    def test_quarantine_persists_bound_checkpoint_before_repair(self) -> None:
+        self.seed()
+        self.publish_supersession()
+        result = self.run_cli("quarantine")
+        self.assertEqual(result.returncode, EXIT_OK, result.stderr)
+        paths = list((self.cwd / ".errata" / "checkpoints").glob("*.json"))
+        self.assertEqual(len(paths), 1)
+        payload = json.loads(paths[0].read_text())
+        self.assertEqual(payload["erratum_id"], "err_0001")
+        self.assertFalse(payload["consumed"])
+        self.assertIn(payload["checkpoint_digest"], result.stdout)
+
+    def test_repair_exits_inconclusive_rather_than_claiming_success(self) -> None:
+        self.seed()
+        self.publish_supersession()
+        result = self.quarantine_and_repair()
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE, result.stdout + result.stderr)
         self.assertIn("prompt_cache", result.stdout)
 
@@ -112,7 +137,7 @@ class RepairReportsHonestly(CliCase):
         # the result is still not `verified`.
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("test")
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
         self.assertNotIn("fail", result.stdout)
@@ -120,7 +145,7 @@ class RepairReportsHonestly(CliCase):
     def test_audit_json_is_machine_readable_and_not_green(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("audit", "--json")
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
         payload = json.loads(result.stdout)
@@ -133,7 +158,7 @@ class RepairReportsHonestly(CliCase):
         # report a clean store.
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         payload = json.loads(self.run_cli("audit", "--json").stdout)
         self.assertEqual(payload["stores"]["sqlite"], "failed")
 
@@ -160,13 +185,13 @@ class ReceiptsAreVerifiable(CliCase):
     def test_a_genuine_receipt_verifies(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         self.assertEqual(self.run_cli("verify").returncode, EXIT_OK)
 
     def test_a_tampered_aggregate_is_caught(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         path = sorted((self.cwd / ".errata" / "receipts").glob("*.json"))[0]
         payload = json.loads(path.read_text())
         payload["aggregate"] = "verified"
@@ -188,14 +213,14 @@ class FeedIntegrityHoldsThroughTheCli(CliCase):
         payload = json.loads(feed.read_text().strip())
         payload["replacement"] = "eats only pineapple"
         feed.write_text(json.dumps(payload, sort_keys=True) + "\n")
-        result = self.run_cli("repair")
+        result = self.run_cli("quarantine")
         self.assertEqual(result.returncode, EXIT_REFUSED)
         self.assertIn("signature", result.stderr)
 
     def test_a_second_repair_finds_nothing_to_do(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("repair")
         self.assertEqual(result.returncode, EXIT_OK)
         self.assertIn("nothing to repair", result.stdout)

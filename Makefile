@@ -52,6 +52,7 @@ cli-demo: ## Drive a full lifecycle through the CLI in a scratch workspace
 	 run export --root mem_02KP --artifact fact:venue --content "prefers quiet restaurants" >/dev/null; \
 	 run derive --artifact summary:dining --inputs fact:diet fact:venue --content "is vegetarian; prefers quiet restaurants" >/dev/null; \
 	 run publish --root mem_01HX --operation supersede --replacement "eats meat again" --negative vegetarian --positive "eats meat again" --preserve "quiet restaurants"; \
+	 run quarantine; \
 	 set +e; \
 	 run repair; status=$$?; \
 	 run audit; \
