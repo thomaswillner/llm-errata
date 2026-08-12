@@ -170,6 +170,39 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "matrix gate statuses")
 
+    def test_g2_matrix_criterion_drift_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "All Phase 2 items, including provider-neutral semantic probes, are implemented and an independent reviewer evaluates the complete conformance surface.",
+                "Internal Phase 2 implementation is enough.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "G2 matrix criterion")
+
+    def test_g2_matrix_current_evidence_drift_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "Internal Phase 2 implementation is recorded in repository evidence; no qualifying independent review is recorded.",
+                "local tests prove readiness.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "G2 matrix current evidence")
+
+    def test_g2_matrix_next_evidence_drift_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "Dated independent external conformance-review result covering complete Phase 2 surface.",
+                "Local tests are enough.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "G2 matrix next evidence")
+
     def test_code_formatted_duplicate_matrix_gate_is_rejected(self) -> None:
         def mutate(root):
             path = root / "PRODUCTION_READINESS.md"

@@ -68,6 +68,28 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("G2 independent review gate", result.stdout)
 
+    def test_g2_pass_rejects_malformed_external_review_evidence(self) -> None:
+        invalid_reviews = (
+            {"ref": "", "producer": "Independent reviewer", "observed": "2026-08-09"},
+            {"ref": "ftp://example.invalid/review", "producer": "Independent reviewer", "observed": "2026-08-09"},
+            {"ref": "urn:example:review", "producer": "local implementer", "observed": "2026-08-09"},
+            {"ref": "urn:example:review", "producer": "Independent reviewer", "observed": "invalid"},
+            {"ref": "urn:example:review", "producer": "Independent reviewer", "observed": "2999-01-01"},
+        )
+        for review in invalid_reviews:
+            with self.subTest(review=review):
+                def mutate(root: Path, evidence: dict[str, str] = review) -> None:
+                    path = root / "readiness" / "production-readiness.json"
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+                    gate["status"] = "PASS"
+                    gate["evidence"].append({"kind": "external", **evidence})
+                    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("G2 independent review gate", result.stdout)
+
     def test_broken_repository_relative_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             rewrite(root / "README.md", "(PRIOR_ART.md)", "(PRIOR_ARTS.md)")

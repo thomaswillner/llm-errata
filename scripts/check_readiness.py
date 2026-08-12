@@ -29,6 +29,14 @@ NON_INDEPENDENT_PRODUCER_RE = re.compile(
     r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo)(?:$|[\s:_-])",
     re.IGNORECASE,
 )
+G2_MATRIX_CURRENT_EVIDENCE = (
+    "Internal Phase 2 implementation is recorded in repository evidence; "
+    "no qualifying independent review is recorded."
+)
+G2_MATRIX_NEXT_EVIDENCE = (
+    "Dated independent external conformance-review result covering complete "
+    "Phase 2 surface."
+)
 
 
 class Reporter:
@@ -77,6 +85,24 @@ def valid_external_ref(value: object) -> bool:
     except ValueError:
         return False
     return value.startswith("urn:") or (parsed.scheme == "https" and bool(parsed.netloc))
+
+
+def valid_external_evidence(entry: object, *, today: date | None = None) -> bool:
+    """Return whether one external evidence entry meets readiness semantics."""
+
+    if not isinstance(entry, dict):
+        return False
+    producer = entry.get("producer")
+    observed = entry.get("observed")
+    if not valid_external_ref(entry.get("ref")):
+        return False
+    if not isinstance(producer, str) or not producer.strip():
+        return False
+    if NON_INDEPENDENT_PRODUCER_RE.search(producer) is not None:
+        return False
+    if not valid_iso_date(observed):
+        return False
+    return date.fromisoformat(observed) <= (today or date.today())
 
 
 def markdown_row_cells(line: str) -> list[str] | None:
@@ -189,6 +215,33 @@ def validate_matrix(
         statuses_match,
         f"ledger {ledger_statuses!r}, matrix {matrix_statuses!r}; "
         "all rows must be unique, well formed, and exact",
+    )
+
+    g2_gate = next(
+        (gate for gate in raw_gates if isinstance(gate, dict) and gate.get("id") == "G2"),
+        None,
+    ) if isinstance(raw_gates, list) else None
+    g2_row = next(
+        (row for row in gate_rows if len(row) == 5 and markdown_value(row[0]) == "G2"),
+        None,
+    )
+    g2_criterion = g2_gate.get("criterion") if isinstance(g2_gate, dict) else None
+    reporter.check(
+        "G2 matrix criterion",
+        isinstance(g2_criterion, str)
+        and g2_row is not None
+        and markdown_value(g2_row[1]) == g2_criterion,
+        "G2 matrix criterion exactly matches the readiness ledger",
+    )
+    reporter.check(
+        "G2 matrix current evidence",
+        g2_row is not None and markdown_value(g2_row[3]) == G2_MATRIX_CURRENT_EVIDENCE,
+        "G2 matrix uses the canonical internal-evidence statement",
+    )
+    reporter.check(
+        "G2 matrix next evidence",
+        g2_row is not None and markdown_value(g2_row[4]) == G2_MATRIX_NEXT_EVIDENCE,
+        "G2 matrix requires dated independent external review",
     )
 
 
@@ -325,7 +378,10 @@ def validate_ledger(
                         and bool(producer.strip())
                         and NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
                     )
-                    observed_valid = valid_iso_date(entry.get("observed"))
+                    observed_valid = (
+                        valid_iso_date(entry.get("observed"))
+                        and date.fromisoformat(entry["observed"]) <= date.today()
+                    )
                     reporter.check(
                         f"{entry_name} external reference",
                         reference_valid,
@@ -339,9 +395,9 @@ def validate_ledger(
                     reporter.check(
                         f"{entry_name} observed date",
                         observed_valid,
-                        "observed must be an ISO YYYY-MM-DD date",
+                        "observed must be an ISO YYYY-MM-DD date that is not future-dated",
                     )
-                    entry_valid = reference_valid and producer_valid and observed_valid
+                    entry_valid = valid_external_evidence(entry)
                     evidence_valid = evidence_valid and entry_valid
                     if entry_valid:
                         valid_external_entries += 1
