@@ -27,6 +27,7 @@ readiness gate. Last verified: 2026-08-12.
 | Final three-system nomination call | [Issue #6 completion update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5272475614) | Publishes the immutable Phase 2 target and exact nomination fields. No system authorization or experiment evidence exists; G5 remains `BLOCKED`. |
 | Interested-party review follow-up | [Inspeximus maintainer reply](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5272476094) | Acknowledges the source-grounded correction and points to the final review target. Conflict disclosure remains controlling; a future review from this maintainer cannot satisfy G2 alone. |
 | Phase 2 completion announcement | [Discussion #9 completion update](https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17993648) | Announces internal completion and routes falsifiers to Issues #4, #5, #6, and #10. Publication only; it records no external acceptance or readiness-gate change. |
+| Six-step readiness checkpoint | [PR #8 checkpoint](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272526975) | Audits every approved production-readiness step against exact internal and external evidence. Records `NOT_PROD_READY`, the external blockers, PR #3 status, validation, and publication boundaries without claiming certification. |
 
 One targeted invitation now has the interested-party response recorded above;
 it is not an acceptance of an independent reviewer role and does not satisfy
