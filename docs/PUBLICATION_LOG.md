@@ -1,7 +1,7 @@
 # Publication log
 
 This log records publication and outreach evidence. It does not upgrade a
-readiness gate. Last verified: 2026-08-12.
+readiness gate. Last verified: 2026-08-13.
 
 ## GitHub public calls
 
@@ -22,10 +22,13 @@ readiness gate. Last verified: 2026-08-12.
 | Independent implementation call | [Issue #5](https://github.com/thomaswillner/llm-errata/issues/5) and its [implementation update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246) | Open call for independently authored adapters and a separately produced validator. |
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
 | GitHub Discussions announcement | [Discussion #9](https://github.com/thomaswillner/llm-errata/discussions/9), `LLM Errata needs falsifiers, independent reviewers, adapters, and real memory systems` | Created 2026-08-12 after Discussions was enabled (`has_discussions=true`). It links the repository, public issues, and PR #8; states Phase 2 incomplete, G2 `BLOCKED`, and `NOT_PROD_READY`. Publication/invitation only: no response yet and not external evidence. |
-| Complete Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Internal Phase 2 surface is complete and locally validated. Published for independent review; publication and internal tests do not satisfy G2. |
+| Historical Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Stale: this target predated the accepted prior-art corrections and must not be used for a current review. Preserved as historical publication evidence. |
+| Corrected complete Phase 2 review target | Commit [`08b95263c9ed700c43aea0b285696956cc23e878`](https://github.com/thomaswillner/llm-errata/commit/08b95263c9ed700c43aea0b285696956cc23e878), digest `03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14` | Complete corrected specification, prior-art, licensing, and cryptographic-qualification surface. Checkout and committed-source digests match; exact-target CI passed Python 3.11 and 3.13. Internal evidence does not satisfy G2. |
 | Final independent-implementation call | [Issue #5 completion update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5272475120) | Publishes the immutable Phase 2 commit and digest for two independent adapters and a separate validator. No implementation has been accepted; G4 remains `BLOCKED`. |
 | Final three-system nomination call | [Issue #6 completion update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5272475614) | Publishes the immutable Phase 2 target and exact nomination fields. No system authorization or experiment evidence exists; G5 remains `BLOCKED`. |
 | Interested-party review follow-up | [Inspeximus maintainer reply](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5272476094) | Acknowledges the source-grounded correction and points to the final review target. Conflict disclosure remains controlling; a future review from this maintainer cannot satisfy G2 alone. |
+| Stale-target finding | [Inspeximus maintainer correction](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5273206921) | Correctly found that the prior frozen commit predated the accepted prior-art corrections. This is interested-party feedback, not independent G2 evidence; the finding required a new immutable target. |
+| Corrected maintainer reply | [Human reply and re-frozen target](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5273960394) | Acknowledges the publication defect, publishes corrected commit and digest, answers the licence question, and preserves the conflict boundary. DanceNitra's offered review remains interested-party evidence and requires a separate disinterested reviewer. |
 | Phase 2 completion announcement | [Discussion #9 completion update](https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17993648) | Announces internal completion and routes falsifiers to Issues #4, #5, #6, and #10. Publication only; it records no external acceptance or readiness-gate change. |
 | Six-step readiness checkpoint | [PR #8 checkpoint](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272526975) | Audits every approved production-readiness step against exact internal and external evidence. Records `NOT_PROD_READY`, the external blockers, PR #3 status, validation, and publication boundaries without claiming certification. |
 
@@ -34,12 +37,18 @@ it is not an acceptance of an independent reviewer role and does not satisfy
 G2. No adapter, validator, operated-system approval, or CODEOWNER volunteer has
 accepted.
 
-The complete conformance review target is source commit
-[`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2)
+The current complete conformance review target is source commit
+[`08b95263c9ed700c43aea0b285696956cc23e878`](https://github.com/thomaswillner/llm-errata/commit/08b95263c9ed700c43aea0b285696956cc23e878)
 with canonical Phase 2 surface digest
-`9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804`.
+`03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14`.
 The digest was recomputed both from the checkout and from `git show` at that
-commit with an exact match. Earlier source commit
+commit with an exact match. The exact-target [GitHub Actions run
+31646616085](https://github.com/thomaswillner/llm-errata/actions/runs/31646616085)
+passed Python 3.11 and Python 3.13. The previously frozen source commit
+[`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2)
+and digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804`
+are historical and stale because they predate the accepted prior-art
+corrections. Earlier source commit
 [`35052868cde8b6f16fc6c20b4136ae0277f9a00e`](https://github.com/thomaswillner/llm-errata/commit/35052868cde8b6f16fc6c20b4136ae0277f9a00e)
 and digest `a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`
 remain historical pre-completion checkpoints, not current review targets.
@@ -97,6 +106,6 @@ external evidence. Phase 2 is internally complete: explicit quarantine
 checkpoints, key rotation, concurrent conflicts, invalid targets,
 confidentiality, semantic probes, and every-field receipt binding are covered.
 G2 remains `BLOCKED` pending a dated independent external review of exact commit
-`50e895fbfec544b16c94caa07bf2d1f4049a42e2` and digest
-`9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804`.
+`08b95263c9ed700c43aea0b285696956cc23e878` and digest
+`03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14`.
 Repository verdict remains `NOT_PROD_READY`.
