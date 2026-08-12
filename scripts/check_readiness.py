@@ -27,26 +27,25 @@ EXPECTED_CLASSES = {
 VERDICTS = {"NOT_PROD_READY", "PROD_READY"}
 STATUSES = {"PASS", "FAIL", "BLOCKED"}
 CLASSES = {"internal", "external"}
-NON_INDEPENDENT_PRODUCER_RE = re.compile(
+GENERIC_NON_INDEPENDENT_PRODUCER_RE = re.compile(
+    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo)(?:$|[\s:_-])",
+    re.IGNORECASE,
+)
+G2_NON_INDEPENDENT_PRODUCER_RE = re.compile(
     r"(?:^|[\s:_-])(author|owner|implementer|contributor|maintainer|thomas|willner|project|reference|local|agent|repository|repo|self)(?:$|[\s:_-])",
     re.IGNORECASE,
 )
 URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
 G2_ATTESTATION = "llm-errata-independent-review-v1"
-G2_SURFACE_FILES = (
-    "spec/erratum.schema.json",
-    "spec/receipt.schema.json",
-    "spec/vectors/manifest.json",
-    "prototype/cli.py",
-    "prototype/adapters.py",
-    "prototype/sqlite_store.py",
-    "prototype/residue.py",
-    "prototype/semantic.py",
-    "spec/semantic/probes.json",
-    "spec/semantic/verifier-config.json",
-    "spec/semantic/observations.json",
-    "SECURITY.md",
-    "THREAT_MODEL.md",
+G2_REQUIRED_TESTS = (
+    "tests/test_adapters.py",
+    "tests/test_cli.py",
+    "tests/test_controller.py",
+    "tests/test_ed25519.py",
+    "tests/test_errata_feed.py",
+    "tests/test_schema.py",
+    "tests/test_semantic.py",
+    "tests/test_sqlite_store.py",
 )
 G2_SCOPE = frozenset(
     {
@@ -141,22 +140,63 @@ def valid_g2_identity_ref(value: object) -> bool:
     return parsed.scheme == "https" and bool(parsed.netloc) and parsed.path not in {"", "/"}
 
 
-def g2_surface_digest(root: Path = ROOT) -> str:
-    """SHA-256 of sorted `path + NUL + bytes` canonical Phase 2 surface."""
+def g2_surface_files(root: Path = ROOT) -> tuple[str, ...]:
+    """Return comprehensive sorted first-party Phase 2 review manifest."""
+
+    groups = (
+        tuple(sorted((root / "prototype").glob("*.py"))),
+        (root / "prototype" / "README.md",),
+        (root / "spec" / "README.md",),
+        tuple(sorted((root / "spec").glob("*.schema.json"))),
+        tuple(sorted((root / "spec" / "vectors").glob("*.json"))),
+        tuple(sorted((root / "spec" / "semantic").glob("*.json"))),
+        tuple(root / path for path in ("ROADMAP.md", "THREAT_MODEL.md", "SECURITY.md")),
+        tuple(root / path for path in G2_REQUIRED_TESTS),
+    )
+    if any(not group for group in groups) or any(not path.is_file() for group in groups for path in group):
+        raise OSError("canonical G2 surface is incomplete")
+    return tuple(
+        sorted(path.relative_to(root).as_posix() for group in groups for path in group)
+    )
+
+
+def surface_digest_from_bytes(entries: list[tuple[str, bytes]]) -> str:
+    """SHA-256 over `relative path + NUL + raw bytes + NUL` ordered entries."""
 
     digest = hashlib.sha256()
-    for relative in G2_SURFACE_FILES:
+    for relative, content in entries:
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update((root / relative).read_bytes())
+        digest.update(content)
+        digest.update(b"\0")
     return digest.hexdigest()
 
 
+def g2_surface_digest(root: Path = ROOT) -> str:
+    return surface_digest_from_bytes(
+        [(relative, (root / relative).read_bytes()) for relative in g2_surface_files(root)]
+    )
+
+
+def g2_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
+    if not reviewed_commit_exists(commit, root):
+        raise OSError("reviewed commit is unavailable")
+    entries = []
+    for relative in g2_surface_files(root):
+        result = subprocess.run(
+            ["git", "show", f"{commit}:{relative}"], cwd=root, capture_output=True, check=False
+        )
+        if result.returncode != 0:
+            raise OSError(f"reviewed commit lacks {relative}")
+        entries.append((relative, result.stdout))
+    return surface_digest_from_bytes(entries)
+
+
 def reviewed_commit_exists(value: str, root: Path = ROOT) -> bool:
-    """Check commit existence when this checkout has live Git metadata."""
+    """Fail closed unless checkout has Git metadata and commit exists."""
 
     if not (root / ".git").exists():
-        return True
+        return False
     result = subprocess.run(
         ["git", "cat-file", "-e", f"{value}^{{commit}}"],
         cwd=root,
@@ -178,14 +218,16 @@ def valid_external_evidence(entry: object, *, today: date | None = None) -> bool
         return False
     if not isinstance(producer, str) or not producer.strip():
         return False
-    if NON_INDEPENDENT_PRODUCER_RE.search(producer) is not None:
+    if GENERIC_NON_INDEPENDENT_PRODUCER_RE.search(producer) is not None:
         return False
     if not valid_iso_date(observed):
         return False
     return date.fromisoformat(observed) <= (today or date.today())
 
 
-def valid_g2_review_evidence(entry: object, *, today: date | None = None) -> bool:
+def valid_g2_review_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
     """Validate a qualifying independent review of complete Phase 2 surface."""
 
     if not valid_external_evidence(entry, today=today) or not isinstance(entry, dict):
@@ -199,7 +241,7 @@ def valid_g2_review_evidence(entry: object, *, today: date | None = None) -> boo
             and entry.get("review_type") == "phase2-conformance"
             and isinstance(reviewed_commit, str)
             and re.fullmatch(r"[0-9a-f]{40}", reviewed_commit) is not None
-            and reviewed_commit_exists(reviewed_commit)
+            and G2_NON_INDEPENDENT_PRODUCER_RE.search(entry["producer"]) is None
             and isinstance(scope, list)
             and all(isinstance(token, str) for token in scope)
             and len(scope) == len(set(scope))
@@ -210,16 +252,19 @@ def valid_g2_review_evidence(entry: object, *, today: date | None = None) -> boo
             and isinstance(entry.get("producer_identity"), str)
             and valid_g2_identity_ref(entry["producer_identity"])
             and entry.get("independence_attestation") == G2_ATTESTATION
-            and entry.get("surface_digest") == g2_surface_digest()
+            and entry.get("surface_digest") == g2_surface_digest(root)
+            and entry.get("surface_digest") == g2_surface_digest_at_commit(reviewed_commit, root)
         )
     except OSError:
         return False
 
 
-def qualifying_g2_review_evidence(entry: object, *, today: date | None = None) -> bool:
+def qualifying_g2_review_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
     """Return whether a valid G2 review can satisfy a G2 PASS gate."""
 
-    return valid_g2_review_evidence(entry, today=today) and entry.get("result") in {
+    return valid_g2_review_evidence(entry, today=today, root=root) and entry.get("result") in {
         "pass",
         "pass-with-findings",
     }
@@ -497,12 +542,16 @@ def validate_ledger(
                     producer_valid = (
                         isinstance(producer, str)
                         and bool(producer.strip())
-                        and NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
+                        and GENERIC_NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
                     )
                     observed_valid = (
                         valid_iso_date(entry.get("observed"))
                         and date.fromisoformat(entry["observed"]) <= date.today()
                     )
+                    if gate_id == "G2" and isinstance(producer, str):
+                        producer_valid = producer_valid and (
+                            G2_NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
+                        )
                     reporter.check(
                         f"{entry_name} external reference",
                         reference_valid,
@@ -520,11 +569,11 @@ def validate_ledger(
                     )
                     entry_valid = valid_external_evidence(entry)
                     if gate_id == "G2":
-                        entry_valid = valid_g2_review_evidence(entry)
+                        entry_valid = valid_g2_review_evidence(entry, root=ROOT)
                     evidence_valid = evidence_valid and entry_valid
                     if entry_valid:
                         valid_external_entries += 1
-                    if gate_id == "G2" and qualifying_g2_review_evidence(entry):
+                    if gate_id == "G2" and qualifying_g2_review_evidence(entry, root=ROOT):
                         valid_g2_reviews += 1
                 else:
                     reporter.check(entry_name, False, "kind must be repository or external")

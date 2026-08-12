@@ -413,13 +413,13 @@ def check_g2_independent_review_gate(reporter: Reporter) -> None:
         qualifying_external_review = any(
             isinstance(entry, dict)
             and entry.get("kind") == "external"
-            and qualifying_g2_review_evidence(entry)
+            and qualifying_g2_review_evidence(entry, root=ROOT)
             for entry in evidence
         ) if isinstance(evidence, list) else False
         g2_external_entries_valid = all(
             not isinstance(entry, dict)
             or entry.get("kind") != "external"
-            or valid_g2_review_evidence(entry)
+            or valid_g2_review_evidence(entry, root=ROOT)
             for entry in evidence
         ) if isinstance(evidence, list) else False
         valid = g2_external_entries_valid and (

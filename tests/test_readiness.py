@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.check_readiness import (
     g2_surface_digest,
+    g2_surface_digest_at_commit,
     qualifying_g2_review_evidence,
     valid_external_evidence,
+    valid_g2_review_evidence,
     markdown_value,
 )
 from tests.support import (
@@ -66,6 +71,70 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 }
             )
         )
+
+    def test_g2_review_binds_current_committed_surface(self) -> None:
+        with repo_copy() as source, tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            shutil.copytree(source, root)
+            for command in (
+                ("git", "init"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-m", "surface baseline"),
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            commit = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            review = self._complete_review(root, commit)
+            self.assertTrue(valid_g2_review_evidence(review, root=root))
+            controller = root / "prototype" / "controller.py"
+            controller.write_bytes(controller.read_bytes() + b"\n# digest mutation\n")
+            self.assertNotEqual(g2_surface_digest(root), review["surface_digest"])
+            self.assertFalse(valid_g2_review_evidence(review, root=root))
+
+    def test_g2_review_requires_git_metadata(self) -> None:
+        with repo_copy() as root:
+            review = self._complete_review(root, "a" * 40)
+            self.assertFalse(valid_g2_review_evidence(review, root=root))
+
+    def test_g2_review_rejects_nonexistent_commit(self) -> None:
+        with repo_copy() as source, tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            shutil.copytree(source, root)
+            for command in (
+                ("git", "init"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-m", "surface baseline"),
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            self.assertFalse(valid_g2_review_evidence(self._complete_review(root, "a" * 40), root=root))
+
+    @staticmethod
+    def _complete_review(root: Path, commit: str) -> dict[str, object]:
+        return {
+            "kind": "external",
+            "ref": "https://reviews.example.org/phase2/report",
+            "producer": "Independent Systems Lab",
+            "observed": "2026-08-12",
+            "review_type": "phase2-conformance",
+            "reviewed_commit": commit,
+            "scope": [
+                "schemas", "vectors", "cli", "adapter-interface",
+                "transactional-store", "substrate-evidence", "semantic-probes",
+                "security-boundaries",
+            ],
+            "result": "pass-with-findings",
+            "relationship": "independent-third-party",
+            "conflicts": [],
+            "producer_identity": "https://identity.example.org/reviewer",
+            "independence_attestation": "llm-errata-independent-review-v1",
+            "surface_digest": g2_surface_digest(root),
+        }
 
     def test_consistently_formatted_canonical_matrix_cells_are_accepted(self) -> None:
         def mutate(root):

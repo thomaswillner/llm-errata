@@ -75,29 +75,41 @@ path. `observed` cannot be future-dated. `conflicts` is always an array,
 including when empty. Scope must contain each token exactly once. A qualifying
 pass requires `pass` or `pass-with-findings` plus every listed scope token.
 
-`surface_digest` is SHA-256 over each file below in listed order, appending the
-UTF-8 repository-relative path, one NUL byte, then the file's raw bytes:
+`surface_digest` is SHA-256 over sorted canonical paths. For every path, append
+its UTF-8 repository-relative path, one NUL byte, raw bytes, then one final NUL
+byte. Canonical path enumeration is:
 
 ```text
-spec/erratum.schema.json
-spec/receipt.schema.json
-spec/vectors/manifest.json
-prototype/cli.py
-prototype/adapters.py
-prototype/sqlite_store.py
-prototype/residue.py
-prototype/semantic.py
-spec/semantic/probes.json
-spec/semantic/verifier-config.json
-spec/semantic/observations.json
-SECURITY.md
+all first-party prototype/*.py
+prototype/README.md
+spec/README.md
+all first-party spec/*.schema.json
+all first-party spec/vectors/*.json
+all first-party spec/semantic/*.json
+ROADMAP.md
 THREAT_MODEL.md
+SECURITY.md
+tests/test_adapters.py
+tests/test_cli.py
+tests/test_controller.py
+tests/test_ed25519.py
+tests/test_errata_feed.py
+tests/test_schema.py
+tests/test_semantic.py
+tests/test_sqlite_store.py
 ```
 
-The checker validates schema, claimed relationship, report identity, commit
-binding, and surface digest. It cannot prove the reviewer is independent or
-that conflicts are complete; a human must verify those claims before changing
-the readiness verdict.
+Vendor files under `spec/vendor/` are excluded. All named groups must be
+nonempty. Use `python3 -c 'from scripts.check_readiness import
+g2_surface_digest; print(g2_surface_digest())'` from repository root to print
+current digest.
+
+The checker requires live Git metadata, verifies `reviewed_commit` is a commit,
+reads each canonical file at that commit with `git show`, and requires supplied
+digest to match both commit and current worktree. It validates schema, claimed
+relationship, and report identity. It cannot prove reviewer independence or
+complete conflict disclosure; a human must verify those claims before changing
+readiness verdict.
 
 Open a GitHub issue for public findings. Security-sensitive findings must follow
 `SECURITY.md`. Review invitations and automated reviews are not independent
