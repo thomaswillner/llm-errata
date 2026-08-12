@@ -64,6 +64,24 @@ def _timestamp(value: object, *, name: str) -> str:
     return text
 
 
+def _freeze_json(value: object) -> object:
+    """Copy and recursively freeze JSON-compatible configuration values."""
+
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    return value
+
+
 class ProbeKind(str, Enum):
     """The repair-triad question represented by a semantic probe."""
 
@@ -89,6 +107,17 @@ class SemanticCoverage(str, Enum):
     FAILED = "failed"
 
 
+class SemanticOperation(str, Enum):
+    """Canonical operation vocabulary retained by semantic evidence."""
+
+    CORRECTION = "correction"
+    SUPERSESSION = "supersession"
+    ERASURE = "erasure"
+
+
+ERASURE_PROMPT_TEMPLATE = "erasure-content-free-v1"
+
+
 @dataclass(frozen=True)
 class SemanticProbe:
     """One declared, provider-neutral question over a bounded scope.
@@ -100,7 +129,7 @@ class SemanticProbe:
 
     probe_id: str
     kind: ProbeKind
-    operation: str
+    operation: SemanticOperation
     scope: str
     prompt_template: str
     required: bool = True
@@ -109,19 +138,25 @@ class SemanticProbe:
         _nonempty_string(self.probe_id, name="probe_id")
         if not isinstance(self.kind, ProbeKind):
             raise ValueError("kind must be a ProbeKind")
-        _nonempty_string(self.operation, name="operation")
+        if not isinstance(self.operation, SemanticOperation):
+            raise ValueError("operation must be a SemanticOperation")
         _nonempty_string(self.scope, name="scope")
         _nonempty_string(self.prompt_template, name="prompt_template")
         if not isinstance(self.required, bool):
             raise ValueError("required must be boolean")
-        if self.operation == "erase" and self.kind is ProbeKind.POSITIVE:
+        if self.operation is SemanticOperation.ERASURE and self.kind is ProbeKind.POSITIVE:
             raise ValueError("erasure has no positive replacement probe")
+        if (
+            self.operation is SemanticOperation.ERASURE
+            and self.prompt_template != ERASURE_PROMPT_TEMPLATE
+        ):
+            raise ValueError("erasure probes must use the fixed content-free prompt template")
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "probe_id": self.probe_id,
             "kind": self.kind.value,
-            "operation": self.operation,
+            "operation": self.operation.value,
             "scope": self.scope,
             "prompt_template": self.prompt_template,
             "required": self.required,
@@ -140,10 +175,14 @@ class SemanticProbe:
             kind = ProbeKind(payload["kind"])
         except (TypeError, ValueError) as error:
             raise ValueError("semantic probe kind is invalid") from error
+        try:
+            operation = SemanticOperation(payload["operation"])
+        except (TypeError, ValueError) as error:
+            raise ValueError("semantic probe operation is invalid") from error
         return cls(
             probe_id=_nonempty_string(payload["probe_id"], name="probe_id"),
             kind=kind,
-            operation=_nonempty_string(payload["operation"], name="operation"),
+            operation=operation,
             scope=_nonempty_string(payload["scope"], name="scope"),
             prompt_template=_nonempty_string(
                 payload["prompt_template"], name="prompt_template"
@@ -169,8 +208,8 @@ class VerifierConfig:
         sampling = _mapping(self.sampling, name="sampling")
         # Serializing here rejects NaN, functions, and other non-portable values
         # before a digest can be advertised as a stable binding.
-        _canonical_json(dict(sampling))
-        object.__setattr__(self, "sampling", MappingProxyType(dict(sampling)))
+        normalized = json.loads(_canonical_json(dict(sampling)))
+        object.__setattr__(self, "sampling", _freeze_json(normalized))
         if self.seed is not None and (not isinstance(self.seed, int) or isinstance(self.seed, bool)):
             raise ValueError("seed must be an integer or null")
 
@@ -179,7 +218,7 @@ class VerifierConfig:
             "provider": self.provider,
             "model": self.model,
             "prompt_template_version": self.prompt_template_version,
-            "sampling": dict(self.sampling),
+            "sampling": _thaw_json(self.sampling),
             "seed": self.seed,
         }
 
@@ -339,7 +378,7 @@ class SemanticProbeReport:
             coverage = SemanticCoverage(payload["coverage"])
         except (TypeError, ValueError) as error:
             raise ValueError("semantic probe report coverage is invalid") from error
-        return cls(
+        report = cls(
             config_digest=_sha256(payload["config_digest"], name="config_digest"),
             coverage=coverage,
             probes=tuple(SemanticProbe.from_dict(item) for item in payload["probes"]),
@@ -350,6 +389,47 @@ class SemanticProbeReport:
                 _nonempty_string(item, name="limitation") for item in payload["limitations"]
             ),
         )
+        expected = _coverage_for(
+            report.probes, report.observations, report.config_digest, report.limitations
+        )
+        if report.coverage is not expected:
+            raise ValueError("semantic probe report coverage contradicts its evidence")
+        return report
+
+
+def _required_triad(probes: Sequence[SemanticProbe]) -> tuple[SemanticOperation, set[ProbeKind]]:
+    operations = {probe.operation for probe in probes}
+    if len(operations) != 1:
+        raise ValueError("all probes in a report must have one operation")
+    operation = next(iter(operations))
+    required_kinds = {probe.kind for probe in probes if probe.required}
+    expected = (
+        {ProbeKind.NEGATIVE, ProbeKind.PRESERVATION}
+        if operation is SemanticOperation.ERASURE
+        else {ProbeKind.NEGATIVE, ProbeKind.POSITIVE, ProbeKind.PRESERVATION}
+    )
+    if required_kinds != expected:
+        raise ValueError(f"required probe triad must be exactly {sorted(item.value for item in expected)}")
+    return operation, expected
+
+
+def _coverage_for(
+    probes: Sequence[SemanticProbe],
+    observations: Sequence[SemanticObservation],
+    config_digest: str,
+    limitations: Sequence[str],
+) -> SemanticCoverage:
+    required = {probe.probe_id for probe in probes if probe.required}
+    valid_fails = {
+        item.probe_id
+        for item in observations
+        if item.probe_id in required
+        and item.config_digest == config_digest
+        and item.verdict is ObservationVerdict.FAIL
+    }
+    if valid_fails:
+        return SemanticCoverage.FAILED
+    return SemanticCoverage.UNKNOWN if limitations else SemanticCoverage.VERIFIED
 
 
 class SemanticProbeRunner:
@@ -367,18 +447,38 @@ class SemanticProbeRunner:
         ids = [item.probe_id for item in declared]
         if len(ids) != len(set(ids)):
             raise ValueError("probe IDs must be unique")
+        _required_triad(declared)
+        adapter_limitations: list[str] = []
 
         if isinstance(verifier, RecordedSemanticVerifier):
             received = verifier.observations
         elif hasattr(verifier, "evaluate"):
-            received = tuple(verifier.evaluate(item, config) for item in declared)  # type: ignore[union-attr]
-            received = tuple(item for item in received if item is not None)
+            received_items: list[SemanticObservation] = []
+            adapter_limitations = []
+            for item in declared:
+                try:
+                    result = verifier.evaluate(item, config)  # type: ignore[union-attr]
+                except Exception as error:
+                    adapter_limitations.append(
+                        f"provider error for probe {item.probe_id}: {type(error).__name__}"
+                    )
+                    continue
+                if result is None:
+                    continue
+                if not isinstance(result, SemanticObservation):
+                    adapter_limitations.append(
+                        f"malformed verifier result for probe {item.probe_id}"
+                    )
+                    continue
+                received_items.append(result)
+            received = tuple(received_items)
         else:
             received = tuple(verifier)
+            adapter_limitations = []
         if not all(isinstance(item, SemanticObservation) for item in received):
             raise ValueError("observations must be SemanticObservation instances")
 
-        limitations: list[str] = []
+        limitations: list[str] = list(adapter_limitations)
         declared_by_id = {item.probe_id: item for item in declared}
         received_by_id: dict[str, list[SemanticObservation]] = {}
         for item in received:
@@ -412,19 +512,7 @@ class SemanticProbeRunner:
                 )
             valid[probe.probe_id] = record
 
-        required = tuple(probe for probe in declared if probe.required)
-        if not required:
-            limitations.append("no required semantic probes were declared")
-
-        if limitations:
-            coverage = SemanticCoverage.UNKNOWN
-        elif any(
-            valid[probe.probe_id].verdict is ObservationVerdict.FAIL
-            for probe in required
-        ):
-            coverage = SemanticCoverage.FAILED
-        else:
-            coverage = SemanticCoverage.VERIFIED
+        coverage = _coverage_for(declared, received, config.digest, limitations)
 
         return SemanticProbeReport(
             config_digest=config.digest,
