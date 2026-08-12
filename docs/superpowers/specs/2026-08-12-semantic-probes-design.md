@@ -89,4 +89,3 @@ must continue to run without network access or API keys.
 Implementation completes Phase 2 item 6 internally. G2 remains `BLOCKED` until
 an independent reviewer evaluates the schemas, vectors, CLI, adapters,
 cryptographic boundaries, and semantic-probe layer as one conformance surface.
-

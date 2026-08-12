@@ -69,4 +69,3 @@ specialists to review the exact four-part conjunction and identify collisions.
 For every successful post, record channel, URL, publication timestamp, account,
 source commit, exact copy digest, and moderation state. A submitted or queued
 post is not recorded as publicly available until its URL is accessible.
-

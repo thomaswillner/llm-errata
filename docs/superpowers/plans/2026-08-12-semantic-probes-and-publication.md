@@ -92,4 +92,3 @@
 - [ ] Push `agent/g2-publication` and create a draft PR targeting `agent/prod-readiness` until PR #3 merges.
 - [ ] Create GitHub issues for independent review, implementation permission/recruitment, and Phase 3 system nominations.
 - [ ] Publish authenticated external announcements where platform access and rules permit, then record exact URLs without upgrading readiness gates.
-

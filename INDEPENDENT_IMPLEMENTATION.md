@@ -36,4 +36,3 @@ The current personal-use licence requires written permission to implement the
 specification. Open a GitHub issue naming the research or standards scope,
 repository, organization, requested version, and intended publication. A
 permission grant does not imply technical endorsement.
-

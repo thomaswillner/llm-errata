@@ -110,4 +110,3 @@ prohibit the submission, credentials are unavailable, a reviewer is not
 independent, or implementation requires an unapproved licence change. Reroute
 after a complete prior-art collision, external review rejection, material G2
 contract change, or failure to recruit independent implementers.
-
