@@ -13,12 +13,12 @@ from prototype.semantic import (
     RecordedSemanticVerifier,
     SemanticCoverage,
     SemanticObservation,
-    SemanticOperation,
     SemanticProbe,
     SemanticProbeReport,
     SemanticProbeRunner,
     VerifierConfig,
 )
+from prototype.errata import Operation
 
 
 CONFIG = VerifierConfig(
@@ -31,16 +31,16 @@ CONFIG = VerifierConfig(
 
 
 def probe(
-    probe_id: str, kind: ProbeKind, *, required: bool = True, operation: SemanticOperation = SemanticOperation.CORRECTION
+    probe_id: str, kind: ProbeKind, *, required: bool = True, operation: Operation = Operation.CORRECT
 ) -> SemanticProbe:
     return SemanticProbe(
         probe_id=probe_id,
         kind=kind,
         operation=operation,
-        scope="current-answer-sample",
+        scope="erasure-scope-v1" if operation is Operation.ERASE else "current-answer-sample",
         prompt_template=(
             ERASURE_PROMPT_TEMPLATE
-            if operation is SemanticOperation.ERASURE
+            if operation is Operation.ERASE
             else f"synthetic-{kind.value}-prompt"
         ),
         required=required,
@@ -126,6 +126,15 @@ class Aggregation(unittest.TestCase):
         ))
         self.assertEqual(report.coverage, SemanticCoverage.FAILED)
 
+    def test_duplicate_required_failure_is_invalid_and_unknown(self) -> None:
+        report = self.report_for((
+            observation("negative", ObservationVerdict.FAIL),
+            observation("negative", ObservationVerdict.PASS),
+            observation("positive", ObservationVerdict.PASS),
+            observation("preserve", ObservationVerdict.PASS),
+        ))
+        self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
+
     def test_inconclusive_or_error_required_observations_are_unknown(self) -> None:
         for verdict in (ObservationVerdict.INCONCLUSIVE, ObservationVerdict.ERROR):
             with self.subTest(verdict=verdict):
@@ -190,8 +199,8 @@ class Aggregation(unittest.TestCase):
 class SerializationAndPrivacy(unittest.TestCase):
     def test_report_serialization_is_deterministic(self) -> None:
         probes = (
-            probe("preserve", ProbeKind.PRESERVATION, operation=SemanticOperation.ERASURE),
-            probe("negative", ProbeKind.NEGATIVE, operation=SemanticOperation.ERASURE),
+            probe("preserve", ProbeKind.PRESERVATION, operation=Operation.ERASE),
+            probe("negative", ProbeKind.NEGATIVE, operation=Operation.ERASE),
         )
         observations = (
             observation("negative", ObservationVerdict.PASS),
@@ -206,10 +215,10 @@ class SerializationAndPrivacy(unittest.TestCase):
     def test_erasure_report_does_not_disclose_retired_value(self) -> None:
         erased_value = "orchid-lantern-secret"
         erasure_probe = probe(
-            "erase-negative", ProbeKind.NEGATIVE, operation=SemanticOperation.ERASURE
+            "erase_negative", ProbeKind.NEGATIVE, operation=Operation.ERASE
         )
         preservation_probe = probe(
-            "erase-preserve", ProbeKind.PRESERVATION, operation=SemanticOperation.ERASURE
+            "erase_preserve", ProbeKind.PRESERVATION, operation=Operation.ERASE
         )
         report = SemanticProbeRunner().run(
             (erasure_probe, preservation_probe),
@@ -226,9 +235,24 @@ class SerializationAndPrivacy(unittest.TestCase):
     def test_erasure_rejects_prompt_template_that_can_embed_a_retired_value(self) -> None:
         with self.assertRaises(ValueError):
             SemanticProbe(
-                "erase-negative", ProbeKind.NEGATIVE, SemanticOperation.ERASURE,
+                "erase-negative", ProbeKind.NEGATIVE, Operation.ERASE,
                 "current-answer-sample", "Does it remember orchid-lantern-secret?",
             )
+
+    def test_erasure_rejects_retired_prose_in_every_persisted_probe_string(self) -> None:
+        erased = "orchid lantern secret"
+        for field in ("probe_id", "scope", "prompt_template"):
+            values = {
+                "probe_id": "erase_negative",
+                "scope": "erasure-scope-v1",
+                "prompt_template": ERASURE_PROMPT_TEMPLATE,
+            }
+            values[field] = erased
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                SemanticProbe(
+                    values["probe_id"], ProbeKind.NEGATIVE, Operation.ERASE,
+                    values["scope"], values["prompt_template"],
+                )
 
     def test_report_parser_rejects_contradictory_coverage(self) -> None:
         probes = (
@@ -246,6 +270,26 @@ class SerializationAndPrivacy(unittest.TestCase):
         with self.assertRaises(ValueError):
             SemanticProbeReport.from_dict(payload)
 
+    def test_report_parser_rejects_supplied_limitations_and_missing_triad(self) -> None:
+        probes = (
+            probe("negative", ProbeKind.NEGATIVE),
+            probe("positive", ProbeKind.POSITIVE),
+            probe("preserve", ProbeKind.PRESERVATION),
+        )
+        report = SemanticProbeRunner().run(probes, CONFIG, RecordedSemanticVerifier((
+            observation("negative", ObservationVerdict.PASS),
+            observation("positive", ObservationVerdict.PASS),
+            observation("preserve", ObservationVerdict.PASS),
+        )))
+        payload = report.to_dict()
+        payload["limitations"] = ["invented limitation"]
+        with self.assertRaises(ValueError):
+            SemanticProbeReport.from_dict(payload)
+        payload = report.to_dict()
+        payload["probes"].pop()
+        with self.assertRaises(ValueError):
+            SemanticProbeReport.from_dict(payload)
+
 
 class RequiredTriadAndAdapterBoundaries(unittest.TestCase):
     def test_required_triads_and_operation_vocabulary_are_enforced(self) -> None:
@@ -254,9 +298,9 @@ class RequiredTriadAndAdapterBoundaries(unittest.TestCase):
             runner.run((probe("negative", ProbeKind.NEGATIVE),), CONFIG, ())
         with self.assertRaises(ValueError):
             runner.run((
-                probe("negative", ProbeKind.NEGATIVE, operation=SemanticOperation.ERASURE),
-                probe("preserve", ProbeKind.PRESERVATION, operation=SemanticOperation.ERASURE),
-                probe("positive", ProbeKind.POSITIVE, operation=SemanticOperation.ERASURE),
+                probe("negative", ProbeKind.NEGATIVE, operation=Operation.ERASE),
+                probe("preserve", ProbeKind.PRESERVATION, operation=Operation.ERASE),
+                probe("positive", ProbeKind.POSITIVE, operation=Operation.ERASE),
             ), CONFIG, ())
         with self.assertRaises(ValueError):
             SemanticProbe("bad", ProbeKind.NEGATIVE, "correct", "scope", "template")
