@@ -16,6 +16,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
@@ -198,6 +199,51 @@ class FeedIntegrityHoldsThroughTheCli(CliCase):
         result = self.run_cli("repair")
         self.assertEqual(result.returncode, EXIT_OK)
         self.assertIn("nothing to repair", result.stdout)
+
+
+class SemanticProbeConformance(CliCase):
+    def semantic_test(self, case: str, *extra: str) -> subprocess.CompletedProcess[str]:
+        return self.run_cli(
+            "semantic-test",
+            "--probes", str(SEMANTIC_FIXTURES / "probes.json"),
+            "--config", str(SEMANTIC_FIXTURES / "verifier-config.json"),
+            "--observations", str(SEMANTIC_FIXTURES / "observations.json"),
+            "--case", case,
+            *extra,
+        )
+
+    def test_checked_in_cases_return_coverage_exit_codes_and_canonical_reports(self) -> None:
+        expected = {
+            "verified-correction": EXIT_OK,
+            "failed-supersession": EXIT_REFUSED,
+            "unknown-erasure": EXIT_INCONCLUSIVE,
+        }
+        for case, exit_code in expected.items():
+            with self.subTest(case=case):
+                result = self.semantic_test(case)
+                self.assertEqual(result.returncode, exit_code, result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertNotIn("\n", result.stdout.rstrip("\n"))
+                report = json.loads(result.stdout)
+                self.assertEqual(report["coverage"], case.split("-", 1)[0])
+                self.assertEqual(
+                    result.stdout,
+                    json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
+                )
+
+    def test_semantic_test_refuses_malformed_input_without_traceback(self) -> None:
+        bad_observations = self.cwd / "bad-observations.json"
+        bad_observations.write_text("{not json", encoding="utf-8")
+        result = self.run_cli(
+            "semantic-test",
+            "--probes", str(SEMANTIC_FIXTURES / "probes.json"),
+            "--config", str(SEMANTIC_FIXTURES / "verifier-config.json"),
+            "--observations", str(bad_observations),
+            "--case", "verified-correction",
+        )
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("invalid input", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,9 @@
+{
+  "model": "recorded-semantic-verifier-v1",
+  "prompt_template_version": "semantic-fixtures-v1",
+  "provider": "synthetic-provider",
+  "sampling": {
+    "temperature": 0
+  },
+  "seed": 7
+}

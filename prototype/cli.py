@@ -31,6 +31,14 @@ from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_f
 from prototype.lineage import LineageLedger
 from prototype.receipts import Receipt
 from prototype.schema import load as load_schema, validate as validate_schema
+from prototype.semantic import (
+    RecordedSemanticVerifier,
+    SemanticCoverage,
+    SemanticObservation,
+    SemanticProbe,
+    SemanticProbeRunner,
+    VerifierConfig,
+)
 from prototype.signing import Ed25519Signer
 from prototype.sqlite_store import SqliteAdapter
 from prototype.workspace import Workspace
@@ -39,6 +47,61 @@ from prototype.workspace import Workspace
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+def _load_json(path: Path, *, label: str) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"{label} is not readable JSON") from error
+
+
+def _probe_case(path: Path, case_name: str) -> tuple[SemanticProbe, ...]:
+    value = _load_json(path, label="probe manifest")
+    if not isinstance(value, dict) or set(value) != {"cases"}:
+        raise ValueError("probe manifest must contain only cases")
+    cases = value["cases"]
+    if not isinstance(cases, dict) or not all(isinstance(name, str) for name in cases):
+        raise ValueError("probe manifest cases must be an object")
+    records = cases.get(case_name)
+    if not isinstance(records, list):
+        raise ValueError(f"probe case is missing: {case_name}")
+    return tuple(SemanticProbe.from_dict(item) for item in records)
+
+
+def _observations_for_case(path: Path, case_name: str) -> tuple[SemanticObservation, ...]:
+    value = _load_json(path, label="observations manifest")
+    if not isinstance(value, dict) or set(value) != {"cases"}:
+        raise ValueError("observations manifest must contain only cases")
+    cases = value["cases"]
+    if not isinstance(cases, dict) or not all(isinstance(name, str) for name in cases):
+        raise ValueError("observations manifest cases must be an object")
+    records = cases.get(case_name)
+    if not isinstance(records, list):
+        raise ValueError(f"observations case is missing: {case_name}")
+    return tuple(SemanticObservation.from_dict(item) for item in records)
+
+
+def cmd_semantic_test(ws: Workspace, args: argparse.Namespace) -> int:
+    """Run checked-in or supplied offline semantic observations."""
+
+    try:
+        probes = _probe_case(args.probes, args.case)
+        config = VerifierConfig.from_dict(_load_json(args.config, label="verifier configuration"))
+        observations = _observations_for_case(args.observations, args.case)
+        report = SemanticProbeRunner().run(
+            probes, config, RecordedSemanticVerifier(observations)
+        )
+    except ValueError as error:
+        print(f"invalid input: {error}", file=sys.stderr)
+        return EXIT_REFUSED
+
+    print(report.canonical_json())
+    return {
+        SemanticCoverage.VERIFIED: EXIT_OK,
+        SemanticCoverage.FAILED: EXIT_REFUSED,
+        SemanticCoverage.UNKNOWN: EXIT_INCONCLUSIVE,
+    }[report.coverage]
 
 
 def _importer(ws: Workspace) -> tuple[Importer, SqliteAdapter]:
@@ -269,6 +332,7 @@ COMMANDS = {
     "attest": cmd_attest,
     "audit": cmd_audit,
     "verify": cmd_verify,
+    "semantic-test": cmd_semantic_test,
 }
 
 
@@ -318,13 +382,21 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--json", action="store_true")
 
     sub.add_parser("verify", help="check every receipt's signature and schema")
+
+    semantic_test = sub.add_parser(
+        "semantic-test", help="run recorded semantic-probe observations offline"
+    )
+    semantic_test.add_argument("--probes", required=True, type=Path)
+    semantic_test.add_argument("--config", required=True, type=Path)
+    semantic_test.add_argument("--observations", required=True, type=Path)
+    semantic_test.add_argument("--case", required=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     ws = Workspace(args.workspace)
-    if args.command != "init" and not ws.exists():
+    if args.command not in {"init", "semantic-test"} and not ws.exists():
         print(
             f"no workspace at {args.workspace}; run `errata init` first",
             file=sys.stderr,

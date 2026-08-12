@@ -81,6 +81,32 @@ failed check, and **`2` means the repair ran and the result is not verified**.
 `2` is not a lesser `1`: it is the case the whole proposal exists to make
 expressible, so it is a distinct code rather than a warning on stdout.
 
+### Offline semantic conformance
+
+Semantic probes are separate behavioral evidence, not a change to Phase 1
+receipts. Checked-in synthetic fixtures run without a provider, network, or API
+key:
+
+```bash
+python3 -m prototype.cli semantic-test \
+  --probes spec/semantic/probes.json \
+  --config spec/semantic/verifier-config.json \
+  --observations spec/semantic/observations.json \
+  --case verified-correction
+```
+
+The three named cases demonstrate `verified` correction (`0`), failed
+supersession (`1`), and unknown erasure (`2`). Output is one canonical JSON
+semantic report. Malformed or non-conforming manifests exit `1` without a
+traceback. The fixture format and privacy constraints are documented in
+[spec/README.md](../spec/README.md#offline-semantic-probe-fixtures).
+
+The offline runner consumes `RecordedSemanticVerifier`; production adapters
+implement `SemanticVerifier` in `semantic.py`. They may evaluate confidential
+inputs ephemerally, but only the structured verdict, binding digest, timestamp,
+and response digest may enter an observation. Raw output and erased values are
+not persisted.
+
 Running it against a real SQLite store produces the result that matters:
 
 ```text

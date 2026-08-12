@@ -1,0 +1,74 @@
+{
+  "cases": {
+    "verified-correction": [
+      {
+    "kind": "negative",
+    "operation": "correct",
+    "probe_id": "correct-negative-v1",
+    "prompt_template": "synthetic-negative-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      },
+      {
+    "kind": "positive",
+    "operation": "correct",
+    "probe_id": "correct-positive-v1",
+    "prompt_template": "synthetic-positive-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      },
+      {
+    "kind": "preservation",
+    "operation": "correct",
+    "probe_id": "correct-preservation-v1",
+    "prompt_template": "synthetic-preservation-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "failed-supersession": [
+      {
+        "kind": "negative",
+        "operation": "supersede",
+        "probe_id": "supersede-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "supersede",
+        "probe_id": "supersede-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "supersede",
+        "probe_id": "supersede-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "unknown-erasure": [
+      {
+        "kind": "negative",
+        "operation": "erase",
+        "probe_id": "erase-negative-v1",
+        "prompt_template": "erasure-content-free-v1",
+        "required": true,
+        "scope": "declared-store-set-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "erase",
+        "probe_id": "erase-preservation-v1",
+        "prompt_template": "erasure-content-free-v1",
+        "required": true,
+        "scope": "declared-store-set-v1"
+      }
+    ]
+  }
+}
