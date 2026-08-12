@@ -21,14 +21,20 @@ readiness gate. Last verified: 2026-08-12.
 | Independent implementation call | [Issue #5](https://github.com/thomaswillner/llm-errata/issues/5) and its [implementation update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246) | Open call for independently authored adapters and a separately produced validator. |
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
 | GitHub Discussions announcement | [Discussion #9](https://github.com/thomaswillner/llm-errata/discussions/9), `LLM Errata needs falsifiers, independent reviewers, adapters, and real memory systems` | Created 2026-08-12 after Discussions was enabled (`has_discussions=true`). It links the repository, public issues, and PR #8; states Phase 2 incomplete, G2 `BLOCKED`, and `NOT_PROD_READY`. Publication/invitation only: no response yet and not external evidence. |
+| Complete Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Internal Phase 2 surface is complete and locally validated. Published for independent review; publication and internal tests do not satisfy G2. |
 
 No targeted invitation has an acceptance or reply recorded.
 
-The conformance review target remains source commit
-[`35052868cde8b6f16fc6c20b4136ae0277f9a00e`](https://github.com/thomaswillner/llm-errata/commit/35052868cde8b6f16fc6c20b4136ae0277f9a00e)
+The complete conformance review target is source commit
+[`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2)
 with canonical Phase 2 surface digest
-`a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`.
-The implementation and outreach surface at commit
+`9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804`.
+The digest was recomputed both from the checkout and from `git show` at that
+commit with an exact match. Earlier source commit
+[`35052868cde8b6f16fc6c20b4136ae0277f9a00e`](https://github.com/thomaswillner/llm-errata/commit/35052868cde8b6f16fc6c20b4136ae0277f9a00e)
+and digest `a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`
+remain historical pre-completion checkpoints, not current review targets.
+The earlier implementation and outreach surface at commit
 [`460883e093b52c99cec697443399da3e03ea2b40`](https://github.com/thomaswillner/llm-errata/commit/460883e093b52c99cec697443399da3e03ea2b40).
 was the fixed head exercised by GitHub Actions successfully on [Python
 3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31619022097/job/94188870893)
@@ -70,9 +76,10 @@ interoperability evidence.
 ## Readiness boundary
 
 GitHub calls, invitations, CI results, and internal reviews are not independent
-external evidence. Phase 2 remains incomplete: the explicit `errata quarantine`
-CLI and vectors for key rotation, concurrent events, invalid targets, and
-confidentiality remain absent; receipt state-root binding vectors exist but
-receipt-binding coverage is partial. G2 remains `BLOCKED` pending internal Phase
-2 completion and a dated independent external review of the complete
-conformance surface. Repository verdict remains `NOT_PROD_READY`.
+external evidence. Phase 2 is internally complete: explicit quarantine
+checkpoints, key rotation, concurrent conflicts, invalid targets,
+confidentiality, semantic probes, and every-field receipt binding are covered.
+G2 remains `BLOCKED` pending a dated independent external review of exact commit
+`50e895fbfec544b16c94caa07bf2d1f4049a42e2` and digest
+`9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804`.
+Repository verdict remains `NOT_PROD_READY`.
