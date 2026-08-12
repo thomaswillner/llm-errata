@@ -49,3 +49,14 @@ Security-relevant findings include, but are not limited to:
 - unsafe reference code or conformance tooling added to the repository.
 
 Factual disagreements, prior-art reports, and specification design proposals are not vulnerabilities; submit them through the normal contribution process.
+
+## Operational security gate
+
+Security reporting policy is not operational-readiness evidence. G6 additionally
+requires the independent, measured ten-scope report in
+[`docs/OPERATIONAL_READINESS.md`](docs/OPERATIONAL_READINESS.md), including
+deployment provenance, rollback and recovery exercises, lifecycle observability,
+telemetry redaction, compatibility, performance, overload behavior, incident
+response, least privilege, secret lifecycle, dependency inventory, and
+vulnerability management. Missing operator thresholds or internal assessment
+keeps G6 `BLOCKED`.

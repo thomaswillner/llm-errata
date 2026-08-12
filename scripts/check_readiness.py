@@ -6,9 +6,11 @@ from __future__ import annotations
 import json
 import re
 import hashlib
+import math
+import operator
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -61,6 +63,33 @@ G2_SCOPE = frozenset(
     }
 )
 G2_RESULTS = {"pass", "pass-with-findings", "fail"}
+G6_ATTESTATION = "llm-errata-independent-operational-review-v1"
+G6_SCOPE = frozenset(
+    {
+        "deployment-integrity-provenance",
+        "rollback-exercise",
+        "backup-recovery-rto-rpo",
+        "lifecycle-observability-alerting",
+        "telemetry-privacy-redaction",
+        "supported-version-compatibility",
+        "representative-latency-throughput",
+        "overload-rate-limit-dos",
+        "incident-response-exercise",
+        "operational-access-secrets-dependencies-vulnerability-management",
+    }
+)
+G6_NON_INDEPENDENT_PRODUCER_RE = re.compile(
+    r"(?:^|[\s:_-])(author|owner|implementer|operator|contributor|maintainer|thomas|willner|project|reference|local|agent|repository|repo|self)(?:$|[\s:_-])",
+    re.IGNORECASE,
+)
+COMPARATORS = {
+    "<=": operator.le,
+    "<": operator.lt,
+    ">=": operator.ge,
+    ">": operator.gt,
+    "==": operator.eq,
+    "!=": operator.ne,
+}
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Semantic probes and durable `errata quarantine` checkpoints are internally "
     "implemented, but Phase 2 remains incomplete: vectors for key rotation, concurrency, invalid targets, "
@@ -69,6 +98,14 @@ G2_MATRIX_CURRENT_EVIDENCE = (
 G2_MATRIX_NEXT_EVIDENCE = (
     "Complete listed Phase 2 gaps, then record dated independent external "
     "conformance-review result covering complete Phase 2 surface."
+)
+G6_MATRIX_CURRENT_EVIDENCE = (
+    "No independent report binds an exact commit and deployment to passing "
+    "measured comparators for all ten operational scopes."
+)
+G6_MATRIX_NEXT_EVIDENCE = (
+    "One qualifying independent report with declared workload, platform, failure domain, "
+    "observation window, numeric thresholds, raw artifacts, and passing measurements for every scope."
 )
 
 
@@ -272,6 +309,170 @@ def qualifying_g2_review_evidence(
     }
 
 
+def g6_surface_files(root: Path = ROOT) -> tuple[str, ...]:
+    relative = (
+        "docs/OPERATIONAL_READINESS.md",
+        "SECURITY.md",
+        "ROADMAP.md",
+        "scripts/check_readiness.py",
+        "tests/test_readiness.py",
+    )
+    if any(not (root / path).is_file() for path in relative):
+        raise OSError("canonical G6 surface is incomplete")
+    return tuple(sorted(relative))
+
+
+def g6_surface_digest(root: Path = ROOT) -> str:
+    return surface_digest_from_bytes(
+        [(relative, (root / relative).read_bytes()) for relative in g6_surface_files(root)]
+    )
+
+
+def g6_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
+    if not reviewed_commit_exists(commit, root):
+        raise OSError("reviewed commit is unavailable")
+    entries = []
+    for relative in g6_surface_files(root):
+        result = subprocess.run(
+            ["git", "show", f"{commit}:{relative}"], cwd=root,
+            capture_output=True, check=False,
+        )
+        if result.returncode != 0:
+            raise OSError(f"reviewed commit lacks {relative}")
+        entries.append((relative, result.stdout))
+    return surface_digest_from_bytes(entries)
+
+
+def _exact_dict(value: object, keys: set[str]) -> bool:
+    return isinstance(value, dict) and set(value) == keys
+
+
+def _nonempty(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _finite_number(value: object) -> bool:
+    return type(value) in {int, float} and math.isfinite(value)
+
+
+def _iso_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.endswith("Z"):
+        return None
+    try:
+        return datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError:
+        return None
+
+
+def _valid_measurement(value: object) -> bool:
+    keys = {"metric", "value", "unit", "comparator", "threshold", "evidence_ref"}
+    if not _exact_dict(value, keys):
+        return False
+    return (
+        _nonempty(value["metric"])
+        and _finite_number(value["value"])
+        and _nonempty(value["unit"])
+        and value["comparator"] in COMPARATORS
+        and _finite_number(value["threshold"])
+        and valid_g2_report_ref(value["evidence_ref"])
+    )
+
+
+def _measurement_passes(value: dict[str, object]) -> bool:
+    return COMPARATORS[value["comparator"]](value["value"], value["threshold"])
+
+
+def valid_g6_operational_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    """Validate complete external G6 report structure and exact bindings."""
+
+    if not valid_external_evidence(entry, today=today) or not isinstance(entry, dict):
+        return False
+    deployment = entry.get("deployment")
+    workload = entry.get("workload")
+    window = entry.get("observation_window")
+    scopes = entry.get("scopes")
+    reviewed_commit = entry.get("reviewed_commit")
+    if not (
+        entry.get("kind") == "external"
+        and valid_g2_report_ref(entry.get("ref"))
+        and G6_NON_INDEPENDENT_PRODUCER_RE.search(entry["producer"]) is None
+        and valid_g2_identity_ref(entry.get("producer_identity"))
+        and entry.get("relationship") == "independent-third-party"
+        and isinstance(entry.get("conflicts"), list)
+        and entry.get("independence_attestation") == G6_ATTESTATION
+        and entry.get("result") in G2_RESULTS
+        and isinstance(reviewed_commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", reviewed_commit) is not None
+        and _exact_dict(deployment, {
+            "deployment_id", "platform", "environment", "artifact_digest",
+            "provenance_ref", "deployed_at",
+        })
+        and all(_nonempty(deployment[key]) for key in ("deployment_id", "platform", "environment"))
+        and isinstance(deployment["artifact_digest"], str)
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", deployment["artifact_digest"]) is not None
+        and valid_g2_report_ref(deployment["provenance_ref"])
+        and _iso_timestamp(deployment["deployed_at"]) is not None
+        and _exact_dict(workload, {
+            "name", "dataset_class", "synthetic_data", "volume", "concurrency",
+            "duration_seconds", "failure_domain",
+        })
+        and all(_nonempty(workload[key]) for key in ("name", "dataset_class", "failure_domain"))
+        and isinstance(workload["synthetic_data"], bool)
+        and all(type(workload[key]) is int and workload[key] > 0 for key in ("volume", "concurrency", "duration_seconds"))
+        and _exact_dict(window, {"start", "end"})
+        and _iso_timestamp(window["start"]) is not None
+        and _iso_timestamp(window["end"]) is not None
+        and _iso_timestamp(window["start"]) < _iso_timestamp(window["end"])
+        and isinstance(scopes, list)
+        and len(scopes) == len(G6_SCOPE)
+    ):
+        return False
+    tokens = []
+    for scope in scopes:
+        if not _exact_dict(scope, {"scope", "status", "artifacts", "measurements", "findings"}):
+            return False
+        artifacts = scope["artifacts"]
+        measurements = scope["measurements"]
+        if not (
+            isinstance(scope["scope"], str)
+            and scope["status"] in {"pass", "fail"}
+            and isinstance(artifacts, list) and artifacts
+            and all(valid_g2_report_ref(item) for item in artifacts)
+            and isinstance(measurements, list) and measurements
+            and all(_valid_measurement(item) for item in measurements)
+            and isinstance(scope["findings"], list)
+        ):
+            return False
+        tokens.append(scope["scope"])
+    try:
+        return (
+            len(tokens) == len(set(tokens))
+            and set(tokens) == G6_SCOPE
+            and entry.get("surface_digest") == g6_surface_digest(root)
+            and entry.get("surface_digest") == g6_surface_digest_at_commit(reviewed_commit, root)
+        )
+    except OSError:
+        return False
+
+
+def qualifying_g6_operational_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    if not valid_g6_operational_evidence(entry, today=today, root=root):
+        return False
+    return (
+        entry["result"] in {"pass", "pass-with-findings"}
+        and all(scope["status"] == "pass" for scope in entry["scopes"])
+        and all(
+            _measurement_passes(measurement)
+            for scope in entry["scopes"]
+            for measurement in scope["measurements"]
+        )
+    )
+
+
 def markdown_row_cells(line: str) -> list[str] | None:
     if not line.startswith("|") or not line.endswith("|"):
         return None
@@ -410,6 +611,32 @@ def validate_matrix(
         g2_row is not None and markdown_value(g2_row[4]) == G2_MATRIX_NEXT_EVIDENCE,
         "G2 matrix requires dated independent external review",
     )
+    g6_gate = next(
+        (gate for gate in raw_gates if isinstance(gate, dict) and gate.get("id") == "G6"),
+        None,
+    ) if isinstance(raw_gates, list) else None
+    g6_row = next(
+        (row for row in gate_rows if len(row) == 5 and markdown_value(row[0]) == "G6"),
+        None,
+    )
+    g6_criterion = g6_gate.get("criterion") if isinstance(g6_gate, dict) else None
+    reporter.check(
+        "G6 matrix criterion",
+        isinstance(g6_criterion, str)
+        and g6_row is not None
+        and markdown_value(g6_row[1]) == g6_criterion,
+        "G6 matrix criterion exactly matches the readiness ledger",
+    )
+    reporter.check(
+        "G6 matrix current evidence",
+        g6_row is not None and markdown_value(g6_row[3]) == G6_MATRIX_CURRENT_EVIDENCE,
+        "G6 matrix states absence of complete measured independent evidence",
+    )
+    reporter.check(
+        "G6 matrix next evidence",
+        g6_row is not None and markdown_value(g6_row[4]) == G6_MATRIX_NEXT_EVIDENCE,
+        "G6 matrix requires all ten measured operational scopes",
+    )
 
 
 def validate_ledger(
@@ -507,6 +734,7 @@ def validate_ledger(
 
         valid_external_entries = 0
         valid_g2_reviews = 0
+        valid_g6_reports = 0
         evidence_valid = isinstance(evidence, list)
         if isinstance(evidence, list):
             for index, entry in enumerate(evidence):
@@ -554,6 +782,10 @@ def validate_ledger(
                         producer_valid = producer_valid and (
                             G2_NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
                         )
+                    if gate_id == "G6" and isinstance(producer, str):
+                        producer_valid = producer_valid and (
+                            G6_NON_INDEPENDENT_PRODUCER_RE.search(producer) is None
+                        )
                     reporter.check(
                         f"{entry_name} external reference",
                         reference_valid,
@@ -572,11 +804,15 @@ def validate_ledger(
                     entry_valid = valid_external_evidence(entry)
                     if gate_id == "G2":
                         entry_valid = valid_g2_review_evidence(entry, root=ROOT)
+                    elif gate_id == "G6":
+                        entry_valid = valid_g6_operational_evidence(entry, root=ROOT)
                     evidence_valid = evidence_valid and entry_valid
                     if entry_valid:
                         valid_external_entries += 1
                     if gate_id == "G2" and qualifying_g2_review_evidence(entry, root=ROOT):
                         valid_g2_reviews += 1
+                    if gate_id == "G6" and qualifying_g6_operational_evidence(entry, root=ROOT):
+                        valid_g6_reports += 1
                 else:
                     reporter.check(entry_name, False, "kind must be repository or external")
                     evidence_valid = False
@@ -584,15 +820,16 @@ def validate_ledger(
         if not evidence_valid:
             all_pass = False
 
-        external_pass_valid = (
-            gate_class != "external"
-            or status != "PASS"
-            or (valid_g2_reviews > 0 if gate_id == "G2" else valid_external_entries > 0)
+        qualifying_external = (
+            valid_g2_reviews if gate_id == "G2"
+            else valid_g6_reports if gate_id == "G6"
+            else valid_external_entries
         )
+        external_pass_valid = gate_class != "external" or status != "PASS" or qualifying_external > 0
         reporter.check(
             f"{prefix} external PASS evidence",
             external_pass_valid,
-            "G2 PASS requires a complete independent Phase 2 review; other external PASS gates require independently observed external evidence",
+            "external evidence: G2 requires complete conformance review; G6 requires complete measured operational report; other external gates require independent evidence",
         )
         if not external_pass_valid:
             all_pass = False

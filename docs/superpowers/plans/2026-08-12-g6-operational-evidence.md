@@ -16,6 +16,8 @@
 - Missing thresholds remain `BLOCKED`.
 - Internal producers, repository CI, invitations, and example reports never qualify.
 - Exact current checkout and reviewed-commit surface digests must match.
+- Readiness ledger and matrix remain outside G6 digest to avoid self-reference;
+  their status/evidence synchronization is checked separately.
 - Current verdict remains `NOT_PROD_READY` without genuine external evidence.
 
 ---

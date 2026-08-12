@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import shutil
 import subprocess
 import tempfile
@@ -10,12 +11,16 @@ import unittest
 from pathlib import Path
 
 from scripts.check_readiness import (
+    G6_SCOPE,
     g2_surface_digest,
     g2_surface_digest_at_commit,
     g2_surface_files,
+    g6_surface_digest,
+    qualifying_g6_operational_evidence,
     qualifying_g2_review_evidence,
     valid_external_evidence,
     valid_g2_review_evidence,
+    valid_g6_operational_evidence,
     markdown_value,
 )
 from tests.support import (
@@ -41,6 +46,143 @@ class ReadinessCheckerPasses(unittest.TestCase):
         files = set(g2_surface_files())
         self.assertIn("prototype/checkpoints.py", files)
         self.assertIn("tests/test_checkpoints.py", files)
+
+    def test_g6_complete_measured_report_is_commit_and_deployment_bound(self) -> None:
+        with repo_copy() as source, tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            shutil.copytree(source, root)
+            for command in (
+                ("git", "init"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-m", "operational baseline"),
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            commit = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            report = self._complete_g6_report(root, commit)
+            self.assertTrue(valid_g6_operational_evidence(report, root=root))
+            self.assertTrue(qualifying_g6_operational_evidence(report, root=root))
+
+    def test_g6_failed_comparator_is_valid_but_not_qualifying(self) -> None:
+        with repo_copy() as source, tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            shutil.copytree(source, root)
+            for command in (
+                ("git", "init"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-m", "operational baseline"),
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            commit = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            report = self._complete_g6_report(root, commit)
+            report["scopes"][0]["measurements"][0]["value"] = 11
+            self.assertTrue(valid_g6_operational_evidence(report, root=root))
+            self.assertFalse(qualifying_g6_operational_evidence(report, root=root))
+
+    def test_g6_report_rejects_missing_or_ambiguous_measurement_evidence(self) -> None:
+        with repo_copy() as source, tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repository"
+            shutil.copytree(source, root)
+            for command in (
+                ("git", "init"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-m", "operational baseline"),
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            commit = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            baseline = self._complete_g6_report(root, commit)
+
+            mutations = {
+                "nine scopes": lambda report: report["scopes"].pop(),
+                "duplicate scope": lambda report: report["scopes"].__setitem__(
+                    1, copy.deepcopy(report["scopes"][0])
+                ),
+                "no measurements": lambda report: report["scopes"][0].update(measurements=[]),
+                "no artifacts": lambda report: report["scopes"][0].update(artifacts=[]),
+                "missing threshold": lambda report: report["scopes"][0]["measurements"][0].pop("threshold"),
+                "nonfinite value": lambda report: report["scopes"][0]["measurements"][0].update(value=float("nan")),
+                "unitless": lambda report: report["scopes"][0]["measurements"][0].update(unit=""),
+                "invalid comparator": lambda report: report["scopes"][0]["measurements"][0].update(comparator="approximately"),
+                "missing platform": lambda report: report["deployment"].update(platform=""),
+                "missing failure domain": lambda report: report["workload"].update(failure_domain=""),
+                "zero volume": lambda report: report["workload"].update(volume=0),
+                "reversed window": lambda report: report["observation_window"].update(
+                    start="2026-08-12T11:00:00Z", end="2026-08-12T10:00:00Z"
+                ),
+            }
+            for name, mutate in mutations.items():
+                with self.subTest(name=name):
+                    report = copy.deepcopy(baseline)
+                    mutate(report)
+                    self.assertFalse(valid_g6_operational_evidence(report, root=root))
+
+    @staticmethod
+    def _complete_g6_report(root: Path, commit: str) -> dict[str, object]:
+        return {
+            "kind": "external",
+            "ref": "https://reviews.example.org/operations/report-1",
+            "producer": "Independent Reliability Laboratory",
+            "producer_identity": "https://identity.example.org/reliability-lab",
+            "observed": "2026-08-12",
+            "relationship": "independent-third-party",
+            "conflicts": [],
+            "independence_attestation": "llm-errata-independent-operational-review-v1",
+            "result": "pass-with-findings",
+            "reviewed_commit": commit,
+            "surface_digest": g6_surface_digest(root),
+            "deployment": {
+                "deployment_id": "deploy-20260812-01",
+                "platform": "linux-amd64",
+                "environment": "production-like-isolated",
+                "artifact_digest": "sha256:" + "a" * 64,
+                "provenance_ref": "https://evidence.example.org/build/1",
+                "deployed_at": "2026-08-12T08:00:00Z",
+            },
+            "workload": {
+                "name": "synthetic-correction-mix",
+                "dataset_class": "synthetic",
+                "synthetic_data": True,
+                "volume": 1000,
+                "concurrency": 10,
+                "duration_seconds": 600,
+                "failure_domain": "single-region-store-loss",
+            },
+            "observation_window": {
+                "start": "2026-08-12T08:00:00Z",
+                "end": "2026-08-12T10:00:00Z",
+            },
+            "scopes": [
+                {
+                    "scope": scope,
+                    "status": "pass",
+                    "artifacts": [f"https://evidence.example.org/{scope}/raw"],
+                    "measurements": [{
+                        "metric": f"{scope}.gate",
+                        "value": 1,
+                        "unit": "count",
+                        "comparator": "<=",
+                        "threshold": 10,
+                        "evidence_ref": f"https://evidence.example.org/{scope}/measurement",
+                    }],
+                    "findings": [],
+                }
+                for scope in sorted(G6_SCOPE)
+            ],
+        }
 
     def test_generic_external_evidence_allows_https_root_url(self) -> None:
         self.assertTrue(
@@ -294,6 +436,30 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
 
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "G2 matrix next evidence")
+
+    def test_g6_matrix_current_evidence_drift_is_rejected(self) -> None:
+        def mutate(root):
+            rewrite(
+                root / "PRODUCTION_READINESS.md",
+                "No independent report binds an exact commit and deployment to passing measured comparators for all ten operational scopes.",
+                "Internal tests prove operations readiness.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assert_rejected_without_traceback(result, "G6 matrix current evidence")
+
+    def test_generic_external_record_does_not_qualify_as_g6_evidence(self) -> None:
+        def mutate(payload):
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G6")
+            gate["evidence"].append({
+                "kind": "external",
+                "ref": "https://reviews.example.org/operations/report",
+                "producer": "Independent Reliability Laboratory",
+                "observed": "2026-08-12",
+            })
+
+        result = self._mutated(mutate)
+        self.assert_rejected_without_traceback(result, "G6 evidence")
 
     def test_code_formatted_duplicate_matrix_gate_is_rejected(self) -> None:
         def mutate(root):

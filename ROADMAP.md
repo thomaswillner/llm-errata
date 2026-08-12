@@ -139,6 +139,14 @@ Phase 2 internal implementation is incomplete. Complete the listed vector and re
 
 Run one user-controlled root across at least three independently operated runtimes or memory systems. [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) records public system-nomination requirements; nomination is not experiment approval.
 
+Operational promotion is separately governed by
+[`docs/OPERATIONAL_READINESS.md`](docs/OPERATIONAL_READINESS.md). Interoperability
+does not substitute for deployment provenance, rollback, recovery,
+observability, privacy, compatibility, performance, overload, incident-response,
+access, secret, dependency, or vulnerability-management evidence. One
+independent report must pass all ten scopes against operator-declared numeric
+thresholds before G6 can pass.
+
 Measure:
 
 - time from observation to quarantine;

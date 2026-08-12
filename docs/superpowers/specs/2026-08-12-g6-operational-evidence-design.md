@@ -125,12 +125,15 @@ valuable evidence but keeps G6 from passing.
 The digest covers:
 
 - `docs/OPERATIONAL_READINESS.md`;
-- `PRODUCTION_READINESS.md`;
 - `SECURITY.md`;
 - `ROADMAP.md`;
-- `readiness/production-readiness.json`;
 - `scripts/check_readiness.py`; and
 - `tests/test_readiness.py`.
+
+The readiness ledger and matrix are deliberately outside this digest. They
+record the report and gate result after review; including them would make the
+evidence self-referential because recording the digest would change the bytes
+the digest claims to bind. Their synchronization remains independently checked.
 
 It uses the same ordered `relative path + NUL + raw bytes + NUL` SHA-256 framing
 as G2. A missing file, unavailable commit, or byte drift blocks qualification.

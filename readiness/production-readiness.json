@@ -75,8 +75,13 @@
       "name": "Operational production gates",
       "class": "external",
       "status": "BLOCKED",
-      "criterion": "Security, observability, recovery, compatibility, performance, deployment, and rollback gates pass with current operational evidence.",
-      "evidence": [{"kind": "repository", "ref": "SECURITY.md"}]
+      "criterion": "All ten operational scopes pass from one independent report bound to exact commit and deployment, with declared thresholds and measured comparators.",
+      "evidence": [
+        {"kind": "repository", "ref": "docs/OPERATIONAL_READINESS.md"},
+        {"kind": "repository", "ref": "SECURITY.md"},
+        {"kind": "repository", "ref": "scripts/check_readiness.py"},
+        {"kind": "repository", "ref": "tests/test_readiness.py"}
+      ]
     }
   ]
 }

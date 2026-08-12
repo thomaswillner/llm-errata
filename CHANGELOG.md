@@ -10,6 +10,11 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Added a ten-scope G6 operational evidence contract and fail-closed checker.
+  One independent report must bind exact commit and deployment, declare
+  workload, platform, failure domain, observation window, numeric thresholds,
+  units, comparators, and raw artifacts, then pass every measurement. Internal
+  tests validate the contract but leave G6 `BLOCKED`.
 - Added durable `errata quarantine` checkpoints. CLI repair now requires an
   authenticated, atomic checkpoint bound to erratum, sequence, target,
   inspectable pre-state, adapters, opaque limitations, and gated artifacts;

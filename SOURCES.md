@@ -100,6 +100,21 @@ An archived copy of the Glean report exists at
   exists, the correct action is to narrow the affected row, not to keep the
   citation.
 
+## Operational-readiness grounding sources
+
+These official sources were read on 2026-08-12 to ground scope selection in
+[`docs/OPERATIONAL_READINESS.md`](docs/OPERATIONAL_READINESS.md). They do not
+certify LLM Errata, prove G6, or supply operator-specific numeric thresholds.
+
+| Source | Pin or version | Verified 2026-08-12 and project use |
+|---|---|---|
+| [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) | Final, April 2025 | Official title confirmed: *Incident Response Recommendations and Considerations for Cybersecurity Risk Management: A CSF 2.0 Community Profile*. Grounds incident preparation, detection, response, recovery, and learning scope. |
+| [NIST SP 800-218](https://csrc.nist.gov/pubs/sp/800/218/final) | SSDF Version 1.1, February 2022 | Official title confirmed: *Secure Software Development Framework (SSDF) Version 1.1: Recommendations for Mitigating the Risk of Software Vulnerabilities*. Grounds secure-development, dependency, provenance, and vulnerability-management scope. |
+| [SLSA specification](https://slsa.dev/spec/v1.2/) | Version 1.2 | Official versioned specification page describes supply-chain security levels. Grounds deployment artifact and build-provenance binding. |
+| [OpenTelemetry Signals](https://opentelemetry.io/docs/concepts/signals/) | Live official documentation | Official page defines supported telemetry categories. Grounds lifecycle metrics, logs, traces, and alert-observation coverage. |
+| [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) | 1.44.0 | Official version shown on 2026-08-12. Grounds stable metric, unit, attribute, and event naming; it does not define LLM Errata-specific thresholds. |
+| [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) | Live OWASP Cheat Sheet Series | Grounds security-event logging, sensitive-data exclusion, monitoring, and verification concerns. |
+
 ## Production-cryptography candidate sources
 
 These sources were read on 2026-08-12 for the internal candidate assessment in
