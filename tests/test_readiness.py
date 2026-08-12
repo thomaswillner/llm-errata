@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from scripts.check_readiness import markdown_value
+from scripts.check_readiness import qualifying_g2_review_evidence, markdown_value
 from tests.support import (
     EXIT_FAIL,
     EXIT_OK,
@@ -24,6 +24,25 @@ class ReadinessCheckerPasses(unittest.TestCase):
         with repo_copy() as root:
             result = run_checker(root, SCRIPT)
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
+
+    def test_complete_independent_g2_review_passes_schema(self) -> None:
+        review = {
+            "kind": "external",
+            "ref": "https://reviews.example.org/phase2/report",
+            "producer": "Independent Systems Lab",
+            "observed": "2026-08-12",
+            "review_type": "phase2-conformance",
+            "reviewed_commit": "a" * 40,
+            "scope": [
+                "schemas", "vectors", "cli", "adapter-interface",
+                "transactional-store", "substrate-evidence", "semantic-probes",
+                "security-boundaries",
+            ],
+            "result": "pass-with-findings",
+            "relationship": "independent-third-party",
+            "conflicts": [],
+        }
+        self.assertTrue(qualifying_g2_review_evidence(review))
 
     def test_consistently_formatted_canonical_matrix_cells_are_accepted(self) -> None:
         def mutate(root):
@@ -327,6 +346,28 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = self._mutated(mutate)
         self.assertEqual(result.returncode, EXIT_FAIL)
         self.assertIn("independence", result.stdout)
+
+    def test_g2_pass_requires_complete_independent_review_schema(self) -> None:
+        def mutate(payload):
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["status"] = "PASS"
+            gate["evidence"].append(
+                {
+                    "kind": "external",
+                    "ref": "https://reviews.example.org/phase2/report",
+                    "producer": "Independent Systems Lab",
+                    "observed": "2026-08-12",
+                    "review_type": "phase2-conformance",
+                    "reviewed_commit": "a" * 40,
+                    "scope": ["schemas"],
+                    "result": "pass-with-findings",
+                    "relationship": "independent-third-party",
+                    "conflicts": [],
+                }
+            )
+
+        result = self._mutated(mutate)
+        self.assert_rejected_without_traceback(result, "G2 external PASS evidence")
 
 
 if __name__ == "__main__":

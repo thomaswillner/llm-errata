@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Iterable
 from urllib.parse import unquote
 
-from check_readiness import valid_external_evidence
+from check_readiness import qualifying_g2_review_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -413,7 +413,7 @@ def check_g2_independent_review_gate(reporter: Reporter) -> None:
         qualifying_external_review = any(
             isinstance(entry, dict)
             and entry.get("kind") == "external"
-            and valid_external_evidence(entry)
+            and qualifying_g2_review_evidence(entry)
             for entry in evidence
         ) if isinstance(evidence, list) else False
         valid = status != "PASS" or qualifying_external_review

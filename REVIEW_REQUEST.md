@@ -41,7 +41,36 @@ Please identify:
 - conflicts of interest or prior involvement; and
 - verdict: proceed, narrow, redesign, or retire.
 
+## G2 ledger schema
+
+A review can qualify G2 only when its public external report is represented in
+the readiness ledger with all fields below. A `fail` result is recorded as
+evidence but cannot make G2 pass.
+
+```json
+{
+  "kind": "external",
+  "ref": "https://reviewer.example/report",
+  "producer": "Independent reviewer identity",
+  "observed": "YYYY-MM-DD",
+  "review_type": "phase2-conformance",
+  "reviewed_commit": "40 lowercase hexadecimal characters",
+  "scope": [
+    "schemas", "vectors", "cli", "adapter-interface",
+    "transactional-store", "substrate-evidence", "semantic-probes",
+    "security-boundaries"
+  ],
+  "result": "pass | pass-with-findings | fail",
+  "relationship": "independent-third-party",
+  "conflicts": []
+}
+```
+
+`ref` must be a public `https` URL with host and path, or a well-formed
+`urn:<nid>:<nss>`. `observed` cannot be future-dated. `conflicts` is always an
+array, including when empty. A qualifying pass requires `pass` or
+`pass-with-findings` plus every listed scope token.
+
 Open a GitHub issue for public findings. Security-sensitive findings must follow
 `SECURITY.md`. Review invitations and automated reviews are not independent
 evidence for the production-readiness ledger.
-

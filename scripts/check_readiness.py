@@ -26,9 +26,23 @@ VERDICTS = {"NOT_PROD_READY", "PROD_READY"}
 STATUSES = {"PASS", "FAIL", "BLOCKED"}
 CLASSES = {"internal", "external"}
 NON_INDEPENDENT_PRODUCER_RE = re.compile(
-    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo)(?:$|[\s:_-])",
+    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo|project[\s_-]*owner|reference[\s_-]*implementer)(?:$|[\s:_-])",
     re.IGNORECASE,
 )
+URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
+G2_SCOPE = frozenset(
+    {
+        "schemas",
+        "vectors",
+        "cli",
+        "adapter-interface",
+        "transactional-store",
+        "substrate-evidence",
+        "semantic-probes",
+        "security-boundaries",
+    }
+)
+G2_RESULTS = {"pass", "pass-with-findings", "fail"}
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Internal Phase 2 implementation is recorded in repository evidence; "
     "no qualifying independent review is recorded."
@@ -84,7 +98,9 @@ def valid_external_ref(value: object) -> bool:
         parsed = urlparse(value)
     except ValueError:
         return False
-    return value.startswith("urn:") or (parsed.scheme == "https" and bool(parsed.netloc))
+    return bool(URN_RE.fullmatch(value)) or (
+        parsed.scheme == "https" and bool(parsed.netloc) and bool(parsed.path)
+    )
 
 
 def valid_external_evidence(entry: object, *, today: date | None = None) -> bool:
@@ -103,6 +119,35 @@ def valid_external_evidence(entry: object, *, today: date | None = None) -> bool
     if not valid_iso_date(observed):
         return False
     return date.fromisoformat(observed) <= (today or date.today())
+
+
+def valid_g2_review_evidence(entry: object, *, today: date | None = None) -> bool:
+    """Validate a qualifying independent review of complete Phase 2 surface."""
+
+    if not valid_external_evidence(entry, today=today) or not isinstance(entry, dict):
+        return False
+    scope = entry.get("scope")
+    return (
+        entry.get("kind") == "external"
+        and entry.get("review_type") == "phase2-conformance"
+        and isinstance(entry.get("reviewed_commit"), str)
+        and re.fullmatch(r"[0-9a-f]{40}", entry["reviewed_commit"]) is not None
+        and isinstance(scope, list)
+        and all(isinstance(token, str) for token in scope)
+        and G2_SCOPE.issubset(scope)
+        and entry.get("result") in G2_RESULTS
+        and entry.get("relationship") == "independent-third-party"
+        and isinstance(entry.get("conflicts"), list)
+    )
+
+
+def qualifying_g2_review_evidence(entry: object, *, today: date | None = None) -> bool:
+    """Return whether a valid G2 review can satisfy a G2 PASS gate."""
+
+    return valid_g2_review_evidence(entry, today=today) and entry.get("result") in {
+        "pass",
+        "pass-with-findings",
+    }
 
 
 def markdown_row_cells(line: str) -> list[str] | None:
@@ -339,6 +384,7 @@ def validate_ledger(
             all_pass = False
 
         valid_external_entries = 0
+        valid_g2_reviews = 0
         evidence_valid = isinstance(evidence, list)
         if isinstance(evidence, list):
             for index, entry in enumerate(evidence):
@@ -401,6 +447,8 @@ def validate_ledger(
                     evidence_valid = evidence_valid and entry_valid
                     if entry_valid:
                         valid_external_entries += 1
+                    if gate_id == "G2" and qualifying_g2_review_evidence(entry):
+                        valid_g2_reviews += 1
                 else:
                     reporter.check(entry_name, False, "kind must be repository or external")
                     evidence_valid = False
@@ -408,11 +456,15 @@ def validate_ledger(
         if not evidence_valid:
             all_pass = False
 
-        external_pass_valid = gate_class != "external" or status != "PASS" or valid_external_entries > 0
+        external_pass_valid = (
+            gate_class != "external"
+            or status != "PASS"
+            or (valid_g2_reviews > 0 if gate_id == "G2" else valid_external_entries > 0)
+        )
         reporter.check(
             f"{prefix} external PASS evidence",
             external_pass_valid,
-            "external PASS requires independently observed external evidence",
+            "G2 PASS requires a complete independent Phase 2 review; other external PASS gates require independently observed external evidence",
         )
         if not external_pass_valid:
             all_pass = False
