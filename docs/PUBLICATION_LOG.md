@@ -26,12 +26,15 @@ The conformance review target remains source commit
 [`35052868cde8b6f16fc6c20b4136ae0277f9a00e`](https://github.com/thomaswillner/llm-errata/commit/35052868cde8b6f16fc6c20b4136ae0277f9a00e)
 with canonical Phase 2 surface digest
 `a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`.
-PR #8 currently heads at publication-log commit
+The implementation and outreach surface at commit
 [`460883e093b52c99cec697443399da3e03ea2b40`](https://github.com/thomaswillner/llm-errata/commit/460883e093b52c99cec697443399da3e03ea2b40).
-GitHub Actions for that current PR head completed successfully for [Python
+was the fixed head exercised by GitHub Actions successfully on [Python
 3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31619022097/job/94188870893)
 and [Python
 3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31619022097/job/94188870819).
+The live [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) identifies
+later publication-log-only commits and their own CI runs without requiring a
+self-referential commit identifier in this file.
 
 ## Direct email outreach
 
