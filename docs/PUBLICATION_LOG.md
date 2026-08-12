@@ -18,6 +18,7 @@ readiness gate. Last verified: 2026-08-12.
 | Separate CODEOWNER volunteer recruitment | [PR #3 reviewer call](https://github.com/thomaswillner/llm-errata/pull/3#issuecomment-5269583214) | Invitation only; no volunteer or reviewer is recorded, no access was granted, and this call made no CODEOWNERS or protection change. It is not external evidence. |
 | Independent implementation call | [Issue #5](https://github.com/thomaswillner/llm-errata/issues/5) and its [implementation update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246) | Open call for independently authored adapters and a separately produced validator. |
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
+| GitHub Discussions announcement | [Discussion #9](https://github.com/thomaswillner/llm-errata/discussions/9), `LLM Errata needs falsifiers, independent reviewers, adapters, and real memory systems` | Created 2026-08-12 after Discussions was enabled (`has_discussions=true`). It links the repository, public issues, and PR #8; states Phase 2 incomplete, G2 `BLOCKED`, and `NOT_PROD_READY`. Publication/invitation only: no response yet and not external evidence. |
 
 No targeted invitation has an acceptance or reply recorded.
 
@@ -38,10 +39,11 @@ and [Python
 |---|---|---|
 | `founders@mem0.ai` | `Nomination request: Mem0 for an independent AI-memory interoperability experiment` | Sent 2026-08-12; no reply or acceptance recorded. Linked [Mem0 GitHub invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269537990) remains nomination-only. |
 | `info@topoteretes.com` | `Nomination request: Cognee for an independent AI-memory interoperability experiment` | Sent 2026-08-12; no reply or acceptance recorded. Linked [Cognee GitHub invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269538156) remains nomination-only. |
+| `linzh@memtensor.cn` | `Independent security review invitation: post-export repair of derived AI memory` | Sent 2026-08-12 to the corresponding author contact for cited [arXiv:2604.16548](https://arxiv.org/html/2604.16548v1); preliminary security critique requested, with no reply or acceptance recorded. A formal qualifying review must wait for the final Phase 2 surface. |
 
 These messages are outreach, not external evidence. They do not authorize a
 synthetic experiment, account access, data transfer, cost, integration, or a
-role that overlaps validator authorship.
+role that overlaps validator authorship. They also do not satisfy G2.
 
 ## External channels
 
