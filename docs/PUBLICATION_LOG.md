@@ -27,11 +27,11 @@ The conformance review target remains source commit
 with canonical Phase 2 surface digest
 `a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`.
 PR #8 currently heads at publication-log commit
-[`cbcfd2a0d77f1060651bac781599edc469a42c26`](https://github.com/thomaswillner/llm-errata/commit/cbcfd2a0d77f1060651bac781599edc469a42c26).
+[`460883e093b52c99cec697443399da3e03ea2b40`](https://github.com/thomaswillner/llm-errata/commit/460883e093b52c99cec697443399da3e03ea2b40).
 GitHub Actions for that current PR head completed successfully for [Python
-3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230842)
+3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31619022097/job/94188870893)
 and [Python
-3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230861).
+3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31619022097/job/94188870819).
 
 ## Direct email outreach
 
