@@ -49,6 +49,21 @@ def _nonempty_string(value: object, *, name: str) -> str:
     return value
 
 
+def _probe_id(value: object, *, name: str) -> str:
+    text = _nonempty_string(value, name=name)
+    if _PROBE_ID.fullmatch(text) is None:
+        raise ValueError(f"{name} must be a safe protocol identifier")
+    return text
+
+
+def _erasure_probe_id(kind: ProbeKind) -> str:
+    if kind is ProbeKind.NEGATIVE:
+        return ERASURE_NEGATIVE_PROBE_ID
+    if kind is ProbeKind.PRESERVATION:
+        return ERASURE_PRESERVATION_PROBE_ID
+    raise ValueError("erasure has no positive replacement probe")
+
+
 def _sha256(value: object, *, name: str) -> str:
     text = _nonempty_string(value, name=name)
     if len(text) != 64 or any(char not in "0123456789abcdef" for char in text):
@@ -111,8 +126,10 @@ class SemanticCoverage(str, Enum):
 
 
 ERASURE_PROMPT_TEMPLATE = "erasure-content-free-v1"
-ERASURE_SCOPE = "erasure-scope-v1"
-_OPAQUE_TOKEN = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
+ERASURE_SCOPE = "declared-store-set-v1"
+ERASURE_NEGATIVE_PROBE_ID = "erase-negative-v1"
+ERASURE_PRESERVATION_PROBE_ID = "erase-preservation-v1"
+_PROBE_ID = re.compile(r"[a-z][a-z0-9-]{0,63}\Z")
 
 
 @dataclass(frozen=True)
@@ -132,7 +149,7 @@ class SemanticProbe:
     required: bool = True
 
     def __post_init__(self) -> None:
-        _nonempty_string(self.probe_id, name="probe_id")
+        _probe_id(self.probe_id, name="probe_id")
         if not isinstance(self.kind, ProbeKind):
             raise ValueError("kind must be a ProbeKind")
         if not isinstance(self.operation, Operation):
@@ -145,10 +162,13 @@ class SemanticProbe:
             raise ValueError("erasure has no positive replacement probe")
         if (
             self.operation is Operation.ERASE
-            and (self.prompt_template != ERASURE_PROMPT_TEMPLATE or self.scope != ERASURE_SCOPE
-                 or _OPAQUE_TOKEN.fullmatch(self.probe_id) is None)
+            and (
+                self.prompt_template != ERASURE_PROMPT_TEMPLATE
+                or self.scope != ERASURE_SCOPE
+                or self.probe_id != _erasure_probe_id(self.kind)
+            )
         ):
-            raise ValueError("erasure probes require fixed content-free fields and opaque token ID")
+            raise ValueError("erasure probes require fixed content-free protocol fields")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -178,7 +198,7 @@ class SemanticProbe:
         except (TypeError, ValueError) as error:
             raise ValueError("semantic probe operation is invalid") from error
         return cls(
-            probe_id=_nonempty_string(payload["probe_id"], name="probe_id"),
+            probe_id=_probe_id(payload["probe_id"], name="probe_id"),
             kind=kind,
             operation=operation,
             scope=_nonempty_string(payload["scope"], name="scope"),
@@ -255,7 +275,7 @@ class SemanticObservation:
     response_digest: str
 
     def __post_init__(self) -> None:
-        _nonempty_string(self.probe_id, name="probe_id")
+        _probe_id(self.probe_id, name="probe_id")
         if not isinstance(self.verdict, ObservationVerdict):
             raise ValueError("verdict must be an ObservationVerdict")
         _sha256(self.config_digest, name="config_digest")
@@ -285,7 +305,7 @@ class SemanticObservation:
         except (TypeError, ValueError) as error:
             raise ValueError("semantic observation verdict is invalid") from error
         return cls(
-            probe_id=_nonempty_string(payload["probe_id"], name="probe_id"),
+            probe_id=_probe_id(payload["probe_id"], name="probe_id"),
             verdict=verdict,
             config_digest=_sha256(payload["config_digest"], name="config_digest"),
             observed_at=_timestamp(payload["observed_at"], name="observed_at"),
@@ -387,9 +407,11 @@ class SemanticProbeReport:
                 _nonempty_string(item, name="limitation") for item in payload["limitations"]
             ),
         )
-        expected_coverage, expected_limitations = _evaluate_evidence(
+        expected_coverage, expected_limitations, accepted = _evaluate_evidence(
             report.probes, report.observations, report.config_digest
         )
+        if report.observations != accepted:
+            raise ValueError("semantic probe report persists unexpected observations")
         if report.limitations != expected_limitations:
             raise ValueError("semantic probe report limitations contradict its evidence")
         if report.coverage is not expected_coverage:
@@ -419,7 +441,7 @@ def _evaluate_evidence(
     config_digest: str,
     *,
     initial_limitations: Sequence[str] = (),
-) -> tuple[SemanticCoverage, tuple[str, ...]]:
+) -> tuple[SemanticCoverage, tuple[str, ...], tuple[SemanticObservation, ...]]:
     _required_triad(probes)
     limitations = list(initial_limitations)
     declared = {item.probe_id: item for item in probes}
@@ -427,15 +449,21 @@ def _evaluate_evidence(
     for item in observations:
         grouped.setdefault(item.probe_id, []).append(item)
     valid_fails: set[str] = set()
+    accepted: list[SemanticObservation] = []
+    unexpected_count = 0
     for probe_id, records in grouped.items():
         if probe_id not in declared:
-            limitations.append(f"unexpected observation for probe {probe_id}")
+            unexpected_count += len(records)
         elif len(records) != 1:
             limitations.append(f"duplicate observations for probe {probe_id}")
-        elif records[0].config_digest != config_digest:
-            limitations.append(f"configuration drift for probe {probe_id}")
-        elif records[0].verdict is ObservationVerdict.FAIL and declared[probe_id].required:
-            valid_fails.add(probe_id)
+        else:
+            accepted.append(records[0])
+            if records[0].config_digest != config_digest:
+                limitations.append(f"configuration drift for probe {probe_id}")
+            elif records[0].verdict is ObservationVerdict.FAIL and declared[probe_id].required:
+                valid_fails.add(probe_id)
+    if unexpected_count:
+        limitations.append(f"unexpected observation identifiers: {unexpected_count}")
     for probe in probes:
         records = grouped.get(probe.probe_id, [])
         if not records and probe.required:
@@ -448,9 +476,10 @@ def _evaluate_evidence(
                     f"required probe {probe.probe_id} returned {records[0].verdict.value}"
                 )
     normalized = tuple(sorted(set(limitations)))
+    persisted = tuple(sorted(accepted, key=lambda item: (item.probe_id, item.observed_at, item.response_digest)))
     if valid_fails:
-        return SemanticCoverage.FAILED, normalized
-    return (SemanticCoverage.UNKNOWN if normalized else SemanticCoverage.VERIFIED), normalized
+        return SemanticCoverage.FAILED, normalized, persisted
+    return (SemanticCoverage.UNKNOWN if normalized else SemanticCoverage.VERIFIED), normalized, persisted
 
 
 class SemanticProbeRunner:
@@ -499,7 +528,7 @@ class SemanticProbeRunner:
             raise ValueError("observations must be SemanticObservation instances")
 
         limitations: list[str] = list(adapter_limitations)
-        coverage, limitations = _evaluate_evidence(
+        coverage, limitations, persisted = _evaluate_evidence(
             declared, received, config.digest, initial_limitations=limitations
         )
 
@@ -507,6 +536,6 @@ class SemanticProbeRunner:
             config_digest=config.digest,
             coverage=coverage,
             probes=declared,
-            observations=tuple(received),
+            observations=persisted,
             limitations=limitations,
         )

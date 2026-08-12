@@ -8,6 +8,8 @@ import unittest
 
 from prototype.semantic import (
     ObservationVerdict,
+    ERASURE_NEGATIVE_PROBE_ID,
+    ERASURE_PRESERVATION_PROBE_ID,
     ERASURE_PROMPT_TEMPLATE,
     ProbeKind,
     RecordedSemanticVerifier,
@@ -34,10 +36,12 @@ def probe(
     probe_id: str, kind: ProbeKind, *, required: bool = True, operation: Operation = Operation.CORRECT
 ) -> SemanticProbe:
     return SemanticProbe(
-        probe_id=probe_id,
+        probe_id=(
+            ERASURE_NEGATIVE_PROBE_ID if kind is ProbeKind.NEGATIVE else ERASURE_PRESERVATION_PROBE_ID
+        ) if operation is Operation.ERASE else probe_id,
         kind=kind,
         operation=operation,
-        scope="erasure-scope-v1" if operation is Operation.ERASE else "current-answer-sample",
+        scope="declared-store-set-v1" if operation is Operation.ERASE else "current-answer-sample",
         prompt_template=(
             ERASURE_PROMPT_TEMPLATE
             if operation is Operation.ERASE
@@ -215,18 +219,18 @@ class SerializationAndPrivacy(unittest.TestCase):
     def test_erasure_report_does_not_disclose_retired_value(self) -> None:
         erased_value = "orchid-lantern-secret"
         erasure_probe = probe(
-            "erase_negative", ProbeKind.NEGATIVE, operation=Operation.ERASE
+            ERASURE_NEGATIVE_PROBE_ID, ProbeKind.NEGATIVE, operation=Operation.ERASE
         )
         preservation_probe = probe(
-            "erase_preserve", ProbeKind.PRESERVATION, operation=Operation.ERASE
+            ERASURE_PRESERVATION_PROBE_ID, ProbeKind.PRESERVATION, operation=Operation.ERASE
         )
         report = SemanticProbeRunner().run(
             (erasure_probe, preservation_probe),
             CONFIG,
             RecordedSemanticVerifier(
                 (
-                    observation("erase-negative", ObservationVerdict.PASS),
-                    observation("erase-preserve", ObservationVerdict.PASS),
+                    observation(ERASURE_NEGATIVE_PROBE_ID, ObservationVerdict.PASS),
+                    observation(ERASURE_PRESERVATION_PROBE_ID, ObservationVerdict.PASS),
                 )
             ),
         )
@@ -254,6 +258,13 @@ class SerializationAndPrivacy(unittest.TestCase):
                     values["scope"], values["prompt_template"],
                 )
 
+    def test_erasure_rejects_caller_selected_protocol_identifiers(self) -> None:
+        with self.assertRaises(ValueError):
+            SemanticProbe(
+                "other-safe-token", ProbeKind.NEGATIVE, Operation.ERASE,
+                "declared-store-set-v1", ERASURE_PROMPT_TEMPLATE,
+            )
+
     def test_report_parser_rejects_contradictory_coverage(self) -> None:
         probes = (
             probe("negative", ProbeKind.NEGATIVE),
@@ -269,6 +280,22 @@ class SerializationAndPrivacy(unittest.TestCase):
         payload["coverage"] = "failed"
         with self.assertRaises(ValueError):
             SemanticProbeReport.from_dict(payload)
+
+    def test_unexpected_erasure_observation_identifier_is_not_persisted(self) -> None:
+        retired = "orchid-lantern-secret"
+        probes = (
+            probe("ignored", ProbeKind.NEGATIVE, operation=Operation.ERASE),
+            probe("ignored", ProbeKind.PRESERVATION, operation=Operation.ERASE),
+        )
+        report = SemanticProbeRunner().run(probes, CONFIG, RecordedSemanticVerifier((
+            observation(ERASURE_NEGATIVE_PROBE_ID, ObservationVerdict.PASS),
+            observation(ERASURE_PRESERVATION_PROBE_ID, ObservationVerdict.PASS),
+            observation(retired, ObservationVerdict.PASS),
+        )))
+        self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
+        self.assertEqual(len(report.observations), 2)
+        self.assertIn("unexpected observation identifiers: 1", report.limitations)
+        self.assertNotIn(retired, report.canonical_json())
 
     def test_report_parser_rejects_supplied_limitations_and_missing_triad(self) -> None:
         probes = (
