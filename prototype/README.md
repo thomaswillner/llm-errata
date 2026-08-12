@@ -91,14 +91,17 @@ key:
 python3 -m prototype.cli semantic-test \
   --probes spec/semantic/probes.json \
   --config spec/semantic/verifier-config.json \
-  --observations spec/semantic/observations.json \
-  --case verified-correction
+  --observations spec/semantic/observations.json
 ```
 
-The three named cases demonstrate `verified` correction (`0`), failed
-supersession (`1`), and unknown erasure (`2`). Output is one canonical JSON
-semantic report. Malformed or non-conforming manifests exit `1` without a
-traceback. The fixture format and privacy constraints are documented in
+This exact invocation defaults to `verified-correction`. Pass `--case NAME` to
+run named cases. The fixtures demonstrate verified correction (`0`), failed
+supersession (`1`), and unknown erasure, provider error, missing response,
+duplicate response, configuration drift, and structurally parseable
+nonconforming output (`2`). Output is one canonical JSON semantic report.
+Malformed manifests exit `1` without a traceback; an unexpected structured
+verifier record is semantic uncertainty, not an argument-parser error. Fixture
+format and privacy constraints are documented in
 [spec/README.md](../spec/README.md#offline-semantic-probe-fixtures).
 
 The offline runner consumes `RecordedSemanticVerifier`; production adapters

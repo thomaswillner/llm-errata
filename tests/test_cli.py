@@ -202,34 +202,52 @@ class FeedIntegrityHoldsThroughTheCli(CliCase):
 
 
 class SemanticProbeConformance(CliCase):
-    def semantic_test(self, case: str, *extra: str) -> subprocess.CompletedProcess[str]:
-        return self.run_cli(
+    def semantic_test(
+        self, case: str | None = None, *extra: str
+    ) -> subprocess.CompletedProcess[str]:
+        arguments = [
             "semantic-test",
             "--probes", str(SEMANTIC_FIXTURES / "probes.json"),
             "--config", str(SEMANTIC_FIXTURES / "verifier-config.json"),
             "--observations", str(SEMANTIC_FIXTURES / "observations.json"),
-            "--case", case,
-            *extra,
-        )
+        ]
+        if case is not None:
+            arguments.extend(("--case", case))
+        return self.run_cli(*arguments, *extra)
 
-    def test_checked_in_cases_return_coverage_exit_codes_and_canonical_reports(self) -> None:
+    def test_checked_in_cases_return_coverage_exit_codes_and_limitations(self) -> None:
         expected = {
-            "verified-correction": EXIT_OK,
-            "failed-supersession": EXIT_REFUSED,
-            "unknown-erasure": EXIT_INCONCLUSIVE,
+            "verified-correction": (EXIT_OK, "verified", None),
+            "failed-supersession": (EXIT_REFUSED, "failed", None),
+            "unknown-erasure": (EXIT_INCONCLUSIVE, "unknown", "inconclusive"),
+            "provider-error": (EXIT_INCONCLUSIVE, "unknown", "returned error"),
+            "missing-response": (EXIT_INCONCLUSIVE, "unknown", "missing required observation"),
+            "duplicate-response": (EXIT_INCONCLUSIVE, "unknown", "duplicate observations"),
+            "configuration-drift": (EXIT_INCONCLUSIVE, "unknown", "configuration drift"),
+            "nonconforming-output": (EXIT_INCONCLUSIVE, "unknown", "operation mismatch"),
         }
-        for case, exit_code in expected.items():
+        for case, (exit_code, coverage, limitation) in expected.items():
             with self.subTest(case=case):
                 result = self.semantic_test(case)
                 self.assertEqual(result.returncode, exit_code, result.stderr)
                 self.assertEqual(result.stderr, "")
                 self.assertNotIn("\n", result.stdout.rstrip("\n"))
                 report = json.loads(result.stdout)
-                self.assertEqual(report["coverage"], case.split("-", 1)[0])
+                self.assertEqual(report["coverage"], coverage)
+                if limitation is not None:
+                    self.assertTrue(
+                        any(limitation in item for item in report["limitations"]),
+                        report["limitations"],
+                    )
                 self.assertEqual(
                     result.stdout,
                     json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
                 )
+
+    def test_exact_documented_invocation_defaults_to_verified_correction(self) -> None:
+        result = self.semantic_test()
+        self.assertEqual(result.returncode, EXIT_OK, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["coverage"], "verified")
 
     def test_semantic_test_refuses_malformed_input_without_traceback(self) -> None:
         bad_observations = self.cwd / "bad-observations.json"

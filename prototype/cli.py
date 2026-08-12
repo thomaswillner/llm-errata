@@ -389,7 +389,7 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_test.add_argument("--probes", required=True, type=Path)
     semantic_test.add_argument("--config", required=True, type=Path)
     semantic_test.add_argument("--observations", required=True, type=Path)
-    semantic_test.add_argument("--case", required=True)
+    semantic_test.add_argument("--case", default="verified-correction")
     return parser
 
 

@@ -16,27 +16,33 @@ than this one can be built and checked against the same contract.
 ## Offline semantic-probe fixtures
 
 The semantic fixtures exercise provider-neutral behavioral evidence without a
-network connection, API key, or raw model output. Run one named case with:
+network connection, API key, or raw model output. The approved invocation runs
+the default `verified-correction` case:
 
 ```bash
 python3 -m prototype.cli semantic-test \
   --probes spec/semantic/probes.json \
   --config spec/semantic/verifier-config.json \
-  --observations spec/semantic/observations.json \
-  --case verified-correction
+  --observations spec/semantic/observations.json
 ```
 
 `probes.json` and `observations.json` are strict objects containing only a
-`cases` object. The selected case must exist in both files. A probe case is an
+`cases` object. `--case NAME` selects a non-default case; selected cases must
+exist in both files. A probe case is an
 array of strict `SemanticProbe` records. An observation case is an array of
 strict `SemanticObservation` records. `verifier-config.json` is one strict
 `VerifierConfig` record. Unknown fields, malformed JSON, missing cases, and
 invalid record fields are refused rather than interpreted.
 
 The included synthetic cases are `verified-correction`,
-`failed-supersession`, and `unknown-erasure`. The command prints one canonical
-JSON `SemanticProbeReport` and exits `0` for `verified`, `1` for `failed` or
-invalid input, and `2` for `unknown`.
+`failed-supersession`, `unknown-erasure`, `provider-error`,
+`missing-response`, `duplicate-response`, `configuration-drift`, and
+`nonconforming-output`. The latter five prove coverage refuses provider error,
+missing evidence, duplicate evidence, binding drift, and a structurally
+parseable operation mismatch. They are semantic `unknown` outcomes, unlike
+malformed manifest shape, which is invalid CLI input. The command prints one
+canonical JSON `SemanticProbeReport` and exits `0` for `verified`, `1` for
+`failed` or invalid input, and `2` for `unknown`.
 
 Erasure fixtures carry only fixed content-free protocol labels, timestamps,
 verdicts, and digests. They never contain a retired value or raw provider

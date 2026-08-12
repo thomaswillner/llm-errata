@@ -28,3 +28,21 @@
 - Learning: no promotion; implementation-specific fixture layout is documented
   locally and no reusable policy change was discovered.
 - Verdict: PASS.
+
+## Review remediation — revision 2
+
+- Scope: Task 2 review findings only.
+- Change: `--case` defaults to `verified-correction`; exact approved invocation
+  now succeeds without it. Added named provider-error, missing-response,
+  duplicate-response, configuration-drift, and nonconforming-output fixtures.
+- Evidence gate: `tests.test_cli.SemanticProbeConformance` enumerates all eight
+  cases, their required exit codes, canonical output, and expected limitation
+  evidence. Provider error uses structured `error`; nonconforming output uses
+  a structurally valid operation mismatch. Malformed JSON remains invalid input.
+- Gates: PASS — focused CLI/semantic suite (44 passed); PASS — full suite (211
+  passed); PASS — `make check`; PASS — remediation diff has no whitespace or
+  ownership violations.
+- Evidence: exact invocation, every named semantic case, required coverage
+  status, canonical JSON, and expected limitation are asserted in
+  `SemanticProbeConformance`.
+- Verdict: PASS.
