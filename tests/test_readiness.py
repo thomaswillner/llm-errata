@@ -271,7 +271,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Semantic probes are internally implemented, but Phase 2 remains incomplete: `errata quarantine` and vectors for key rotation, concurrency, invalid targets, receipt binding, and confidentiality are absent; no qualifying independent review is recorded.",
+                "Semantic probes are internally implemented, but Phase 2 remains incomplete: `errata quarantine` and vectors for key rotation, concurrency, invalid targets, and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 

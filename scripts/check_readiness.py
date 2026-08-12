@@ -63,7 +63,7 @@ G2_RESULTS = {"pass", "pass-with-findings", "fail"}
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Semantic probes are internally implemented, but Phase 2 remains incomplete: "
     "`errata quarantine` and vectors for key rotation, concurrency, invalid targets, "
-    "receipt binding, and confidentiality are absent; no qualifying independent review is recorded."
+    "and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
     "Complete listed Phase 2 gaps, then record dated independent external "

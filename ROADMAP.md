@@ -102,7 +102,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** items 1 through 5 are partially implemented and item 6 is internally implemented; Phase 2 is not complete. `spec/` carries schemas, vectors, and deterministic semantic fixtures; `prototype/cli.py` exposes most control-plane commands and `semantic-test`; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. The explicit `errata quarantine` command and vectors for key rotation, concurrent events, invalid targets, receipt binding, and confidentiality remain unimplemented. This internal work does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
+**Status:** items 1 through 5 are partially implemented and item 6 is internally implemented; Phase 2 is not complete. `spec/` carries schemas, vectors, and deterministic semantic fixtures; `prototype/cli.py` exposes most control-plane commands and `semantic-test`; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. The explicit `errata quarantine` command and vectors for key rotation, concurrent events, invalid targets, and confidentiality remain unimplemented. Receipt state-root binding vectors exist, but receipt-binding coverage remains partial. This internal work does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
 
 Only after the file-backed proof passes:
 
