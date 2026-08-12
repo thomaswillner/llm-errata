@@ -339,6 +339,7 @@ class SerializationAndPrivacy(unittest.TestCase):
             observation("preserve", ObservationVerdict.PASS),
         )))
         payload = report.to_dict()
+        payload["coverage"] = "unknown"
         payload["limitations"] = ["invented limitation"]
         with self.assertRaises(ValueError):
             SemanticProbeReport.from_dict(payload)
@@ -417,6 +418,16 @@ class DirectConstructionBoundaries(unittest.TestCase):
             observations=observations,
             limitations=(),
         )
+
+    def test_report_rejects_caller_supplied_limitation_that_forces_unknown(self) -> None:
+        with self.assertRaises(ValueError):
+            SemanticProbeReport(
+                config_digest=CONFIG.digest,
+                coverage=SemanticCoverage.UNKNOWN,
+                probes=self.probes,
+                observations=self.observations,
+                limitations=("invented limitation",),
+            )
 
     def test_erasure_observation_rejects_caller_selected_identifier(self) -> None:
         with self.assertRaises(ValueError):

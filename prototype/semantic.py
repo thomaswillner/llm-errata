@@ -379,6 +379,9 @@ class SemanticProbeReport:
     limitations: tuple[str, ...]
 
     def __post_init__(self) -> None:
+        self._validate()
+
+    def _validate(self, *, adapter_diagnostics: Sequence[str] = ()) -> None:
         _sha256(self.config_digest, name="config_digest")
         if not isinstance(self.coverage, SemanticCoverage):
             raise ValueError("coverage must be a SemanticCoverage")
@@ -388,11 +391,22 @@ class SemanticProbeReport:
             raise ValueError("observations must be SemanticObservation instances")
         if not all(isinstance(item, str) and item for item in self.limitations):
             raise ValueError("limitations must contain non-empty strings")
-        expected_coverage, expected_limitations, accepted = _evaluate_evidence(
+        if not all(isinstance(item, str) and item for item in adapter_diagnostics):
+            raise ValueError("adapter diagnostics must contain non-empty strings")
+        evidence_coverage, evidence_limitations, accepted = _evaluate_evidence(
             self.probes,
             self.observations,
             self.config_digest,
-            initial_limitations=self.limitations,
+        )
+        expected_limitations = tuple(
+            sorted(set(evidence_limitations).union(adapter_diagnostics))
+        )
+        expected_coverage = (
+            SemanticCoverage.FAILED
+            if evidence_coverage is SemanticCoverage.FAILED
+            else SemanticCoverage.UNKNOWN
+            if expected_limitations
+            else SemanticCoverage.VERIFIED
         )
         if self.observations != accepted:
             raise ValueError(
@@ -403,6 +417,46 @@ class SemanticProbeReport:
             raise ValueError("semantic probe report limitations contradict its evidence")
         if self.coverage is not expected_coverage:
             raise ValueError("semantic probe report coverage contradicts its evidence")
+
+    @classmethod
+    def _from_runner_evidence(
+        cls,
+        *,
+        config_digest: str,
+        probes: Sequence[SemanticProbe],
+        observations: Sequence[SemanticObservation],
+        adapter_diagnostics: Sequence[str],
+    ) -> "SemanticProbeReport":
+        """Build a report from trusted runner diagnostics and serialized evidence."""
+
+        evidence_coverage, evidence_limitations, accepted = _evaluate_evidence(
+            probes, observations, config_digest
+        )
+        # Evidence rejected before persistence (duplicates, unexpected IDs,
+        # operation/configuration mismatches) cannot be rediscovered by
+        # validating the accepted observation subset. Carry only the
+        # evaluator-produced, sanitized messages through this private runner
+        # path; public construction and parsing still derive their limitations
+        # exclusively from the serialized evidence they receive.
+        diagnostics = tuple(
+            sorted(set(adapter_diagnostics).union(evidence_limitations))
+        )
+        limitations = tuple(sorted(set(evidence_limitations).union(diagnostics)))
+        coverage = (
+            SemanticCoverage.FAILED
+            if evidence_coverage is SemanticCoverage.FAILED
+            else SemanticCoverage.UNKNOWN
+            if limitations
+            else SemanticCoverage.VERIFIED
+        )
+        report = object.__new__(cls)
+        object.__setattr__(report, "config_digest", config_digest)
+        object.__setattr__(report, "coverage", coverage)
+        object.__setattr__(report, "probes", tuple(probes))
+        object.__setattr__(report, "observations", accepted)
+        object.__setattr__(report, "limitations", limitations)
+        report._validate(adapter_diagnostics=diagnostics)
+        return report
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -478,11 +532,9 @@ def _evaluate_evidence(
     probes: Sequence[SemanticProbe],
     observations: Sequence[SemanticObservation],
     config_digest: str,
-    *,
-    initial_limitations: Sequence[str] = (),
 ) -> tuple[SemanticCoverage, tuple[str, ...], tuple[SemanticObservation, ...]]:
     _required_triad(probes)
-    limitations = list(initial_limitations)
+    limitations: list[str] = []
     declared = {item.probe_id: item for item in probes}
     grouped: dict[str, list[SemanticObservation]] = {}
     for item in observations:
@@ -578,15 +630,9 @@ class SemanticProbeRunner:
         if not all(isinstance(item, SemanticObservation) for item in received):
             raise ValueError("observations must be SemanticObservation instances")
 
-        limitations: list[str] = list(adapter_limitations)
-        coverage, limitations, persisted = _evaluate_evidence(
-            declared, received, config.digest, initial_limitations=limitations
-        )
-
-        return SemanticProbeReport(
+        return SemanticProbeReport._from_runner_evidence(
             config_digest=config.digest,
-            coverage=coverage,
             probes=declared,
-            observations=persisted,
-            limitations=limitations,
+            observations=received,
+            adapter_diagnostics=adapter_limitations,
         )
