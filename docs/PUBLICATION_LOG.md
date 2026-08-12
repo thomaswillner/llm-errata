@@ -9,17 +9,20 @@ readiness gate. Last verified: 2026-08-12.
 |---|---|---|
 | Draft implementation and review surface | [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) | Open draft, targeting `agent/prod-readiness`. |
 | Independent review request | [Issue #4](https://github.com/thomaswillner/llm-errata/issues/4) and its [exact review target](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269378077) | Open call for conformance, novelty, security, and distributed-systems review. |
+| Targeted independent-review recruitment | [Inspeximus maintainer invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269444341) | Invitation to challenge the stated collision boundary; it is not external evidence. |
 | Independent implementation call | [Issue #5](https://github.com/thomaswillner/llm-errata/issues/5) and its [implementation update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246) | Open call for independently authored adapters and a separately produced validator. |
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
 
-The published review target is source commit
+The conformance review target remains source commit
 [`35052868cde8b6f16fc6c20b4136ae0277f9a00e`](https://github.com/thomaswillner/llm-errata/commit/35052868cde8b6f16fc6c20b4136ae0277f9a00e)
 with canonical Phase 2 surface digest
 `a3133f759620ed942d6cd519d303c0be1554f0193b89e0a141c410aaf4c047b9`.
-GitHub Actions completed successfully for [Python
-3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31616307869/job/94179861514)
+PR #8 currently heads at publication-log commit
+[`cbcfd2a0d77f1060651bac781599edc469a42c26`](https://github.com/thomaswillner/llm-errata/commit/cbcfd2a0d77f1060651bac781599edc469a42c26).
+GitHub Actions for that current PR head completed successfully for [Python
+3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230842)
 and [Python
-3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31616307869/job/94179861561).
+3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230861).
 
 ## External channels
 
