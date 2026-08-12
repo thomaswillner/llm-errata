@@ -23,6 +23,10 @@ readiness gate. Last verified: 2026-08-12.
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
 | GitHub Discussions announcement | [Discussion #9](https://github.com/thomaswillner/llm-errata/discussions/9), `LLM Errata needs falsifiers, independent reviewers, adapters, and real memory systems` | Created 2026-08-12 after Discussions was enabled (`has_discussions=true`). It links the repository, public issues, and PR #8; states Phase 2 incomplete, G2 `BLOCKED`, and `NOT_PROD_READY`. Publication/invitation only: no response yet and not external evidence. |
 | Complete Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Internal Phase 2 surface is complete and locally validated. Published for independent review; publication and internal tests do not satisfy G2. |
+| Final independent-implementation call | [Issue #5 completion update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5272475120) | Publishes the immutable Phase 2 commit and digest for two independent adapters and a separate validator. No implementation has been accepted; G4 remains `BLOCKED`. |
+| Final three-system nomination call | [Issue #6 completion update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5272475614) | Publishes the immutable Phase 2 target and exact nomination fields. No system authorization or experiment evidence exists; G5 remains `BLOCKED`. |
+| Interested-party review follow-up | [Inspeximus maintainer reply](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5272476094) | Acknowledges the source-grounded correction and points to the final review target. Conflict disclosure remains controlling; a future review from this maintainer cannot satisfy G2 alone. |
+| Phase 2 completion announcement | [Discussion #9 completion update](https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17993648) | Announces internal completion and routes falsifiers to Issues #4, #5, #6, and #10. Publication only; it records no external acceptance or readiness-gate change. |
 
 One targeted invitation now has the interested-party response recorded above;
 it is not an acceptance of an independent reviewer role and does not satisfy
@@ -47,6 +51,14 @@ and [Python
 The live [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) identifies
 later publication-log-only commits and their own CI runs without requiring a
 self-referential commit identifier in this file.
+
+The later publication head
+[`cc4aae11a048c7058e03f8a065b6ddb660a8ab8f`](https://github.com/thomaswillner/llm-errata/commit/cc4aae11a048c7058e03f8a065b6ddb660a8ab8f)
+passed [Python 3.11 and Python 3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31637838807)
+CI. Python 3.11 initially failed after all 250 test assertions ran, during
+`TemporaryDirectory` removal of a Git object directory; one bounded rerun of
+the failed job passed. This classifies the first result as an observed cleanup
+race rather than suppressing it or treating it as protocol evidence.
 
 ## Direct email outreach
 
