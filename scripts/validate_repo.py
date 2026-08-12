@@ -40,6 +40,10 @@ REQUIRED_FILES = (
     "CITATION.cff",
     "CHANGELOG.md",
     "PUBLISHING.md",
+    "REVIEW_REQUEST.md",
+    "INDEPENDENT_IMPLEMENTATION.md",
+    "PHASE3_SYSTEMS.md",
+    "docs/PUBLICATION_STRATEGY.md",
     "VERSION",
     "LICENSE",
     "NOTICE",
@@ -387,6 +391,41 @@ def check_publication_metadata(reporter: Reporter) -> None:
     )
 
 
+def check_g2_independent_review_gate(reporter: Reporter) -> None:
+    """Keep internal Phase 2 work from being represented as external review."""
+
+    path = ROOT / "readiness" / "production-readiness.json"
+    if not path.is_file():
+        return
+    try:
+        import json
+
+        payload = json.loads(read_utf8(path))
+        gates = payload.get("gates") if isinstance(payload, dict) else None
+        g2 = next(
+            (gate for gate in gates if isinstance(gate, dict) and gate.get("id") == "G2"),
+            None,
+        ) if isinstance(gates, list) else None
+        status = g2.get("status") if isinstance(g2, dict) else None
+        evidence = g2.get("evidence") if isinstance(g2, dict) else None
+        qualifying_external_review = any(
+            isinstance(entry, dict)
+            and entry.get("kind") == "external"
+            and isinstance(entry.get("ref"), str)
+            and isinstance(entry.get("producer"), str)
+            and isinstance(entry.get("observed"), str)
+            for entry in evidence
+        ) if isinstance(evidence, list) else False
+        valid = status != "PASS" or qualifying_external_review
+    except (ValueError, OSError, UnicodeError):
+        valid = False
+    reporter.check(
+        "G2 independent review gate",
+        valid,
+        "G2 PASS is backed by dated, independently produced external review evidence",
+        "Keep G2 BLOCKED until its evidence includes dated external review by an independent producer.",
+    )
+
 def check_document_version_alignment(
     reporter: Reporter, repository_version: str | None
 ) -> None:
@@ -546,6 +585,7 @@ def main() -> int:
     check_local_paths(reporter)
     check_local_links(reporter)
     check_publication_metadata(reporter)
+    check_g2_independent_review_gate(reporter)
     check_document_version_alignment(reporter, repository_version)
     check_citation(reporter, repository_version)
     return reporter.finish()

@@ -102,7 +102,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** items 1 through 5 implemented, not yet externally reviewed. `spec/` carries the schemas and vectors, `prototype/cli.py` the control plane, `prototype/sqlite_store.py` a real transactional store, and `prototype/residue.py` the substrate-evidence rule. Item 6, model-assisted semantic probes, is deliberately not started.
+**Status:** items 1 through 6 are internally implemented, not yet externally reviewed. `spec/` carries schemas, vectors, and deterministic semantic fixtures; `prototype/cli.py` exposes the control plane and `semantic-test`; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. This internal milestone does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
 
 Only after the file-backed proof passes:
 
@@ -124,13 +124,13 @@ Only after the file-backed proof passes:
 
 4. Define an adapter interface for enumeration, quarantine, reconstruction, verification, and coverage reporting.
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
-6. Add model-assisted semantic probes only behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration.
+6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
 
-Phase 2 is successful when two independently implemented adapters can consume the same erratum and produce receipts that a third-party validator evaluates consistently.
+Phase 2 internal implementation is complete. G2 remains blocked until a dated independent external reviewer evaluates the complete conformance surface. Broader Phase 2 interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
 
 ## Phase 3 — Interoperability experiment
 
-Run one user-controlled root across at least three independently operated runtimes or memory systems.
+Run one user-controlled root across at least three independently operated runtimes or memory systems. [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) records public system-nomination requirements; nomination is not experiment approval.
 
 Measure:
 

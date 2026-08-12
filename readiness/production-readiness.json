@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project_version": "0.3.0",
   "verdict": "NOT_PROD_READY",
-  "last_reviewed": "2026-08-10",
+  "last_reviewed": "2026-08-12",
   "gates": [
     {
       "id": "G1",
@@ -29,8 +29,18 @@
       "name": "Phase 2 complete with external conformance review",
       "class": "external",
       "status": "BLOCKED",
-      "criterion": "Phase 2 item 6 is implemented and an independent reviewer evaluates the complete conformance surface.",
-      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+      "criterion": "All Phase 2 items, including provider-neutral semantic probes, are implemented and an independent reviewer evaluates the complete conformance surface.",
+      "evidence": [
+        {"kind": "repository", "ref": "ROADMAP.md"},
+        {"kind": "repository", "ref": "prototype/semantic.py"},
+        {"kind": "repository", "ref": "spec/semantic/probes.json"},
+        {"kind": "repository", "ref": "spec/semantic/verifier-config.json"},
+        {"kind": "repository", "ref": "spec/semantic/observations.json"},
+        {"kind": "repository", "ref": "prototype/README.md"},
+        {"kind": "repository", "ref": "spec/README.md"},
+        {"kind": "repository", "ref": "REVIEW_REQUEST.md"},
+        {"kind": "repository", "ref": "INDEPENDENT_IMPLEMENTATION.md"}
+      ]
     },
     {
       "id": "G3",

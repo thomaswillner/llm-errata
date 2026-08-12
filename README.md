@@ -111,6 +111,10 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [CITATION.cff](CITATION.cff) | Citation metadata. |
 | [CHANGELOG.md](CHANGELOG.md) | Public version history, including claims that were narrowed or retired. |
 | [PUBLISHING.md](PUBLISHING.md) | Exact repository settings, review gates, release text, and announcement wording. |
+| [REVIEW_REQUEST.md](REVIEW_REQUEST.md) | Required record for independent conformance and security/distributed-systems review. |
+| [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md) | Call and evidence requirements for independently authored adapters. |
+| [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) | Nominations for future authorized three-system synthetic-data experiment. |
+| [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) | Evidence-bounded publication channels and canonical announcement copy. |
 
 ## Verifying this repository
 
@@ -162,7 +166,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and Phase 2 items 1 through 5 are implemented; neither has completed external conformance review, and Phase 2 item 6 remains unstarted.
+Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and all six Phase 2 items are internally implemented. Item 6 adds provider-neutral semantic probes with deterministic fixtures and recorded verifier configuration; it does not supply independent external evidence. G2 remains `BLOCKED` pending a dated independent review of the complete Phase 2 conformance surface.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 
@@ -176,7 +180,7 @@ The most useful contributions are:
 4. a smaller design that achieves the same user outcome;
 5. a concrete adapter or conformance test.
 
-Please use the evidence requirements in [CONTRIBUTING.md](CONTRIBUTING.md). A convincing prior-art collision should narrow or retire the claim rather than be argued away.
+Please use the evidence requirements in [CONTRIBUTING.md](CONTRIBUTING.md), [REVIEW_REQUEST.md](REVIEW_REQUEST.md), and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md). A convincing prior-art collision should narrow or retire the claim rather than be argued away.
 
 ## Authorship and research disclosure
 

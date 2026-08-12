@@ -8,6 +8,7 @@ say nothing about whether the proposal still states its bounded claim — that i
 from __future__ import annotations
 
 import unittest
+import json
 from pathlib import Path
 
 from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, run_checker
@@ -39,6 +40,33 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("required files", result.stdout)
+
+    def test_missing_independent_validation_program_artifacts_are_rejected(self) -> None:
+        for relative_path in (
+            "REVIEW_REQUEST.md",
+            "INDEPENDENT_IMPLEMENTATION.md",
+            "PHASE3_SYSTEMS.md",
+            "docs/PUBLICATION_STRATEGY.md",
+        ):
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    (root / path).unlink()
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("required files", result.stdout)
+
+    def test_internal_phase_two_completion_cannot_upgrade_g2(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / "readiness" / "production-readiness.json"
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["status"] = "PASS"
+            path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("G2 independent review gate", result.stdout)
 
     def test_broken_repository_relative_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:

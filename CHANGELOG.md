@@ -10,6 +10,7 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Added provider-neutral semantic probes, deterministic recorded fixtures, and `errata semantic-test` documentation as Phase 2 item 6 internal implementation. Opened independent review, independent implementation, and Phase 3 system-nomination programs. G2 remains `BLOCKED`: repository artifacts and local tests do not substitute for dated independent external review.
 - Added a fail-closed production-readiness ledger and human verification matrix. Local green tests cannot produce `PROD_READY`; every required gate must pass, and external gates require dated evidence naming an independent producer.
 - Added drift checks binding README maturity and SECURITY support policy to `VERSION`. The current verdict remains `NOT_PROD_READY`: only G1, document consistency, is complete.
 - Normalize complete-cell Markdown presentation decoration before readiness-matrix duplicate and contradiction checks.
