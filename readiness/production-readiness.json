@@ -48,7 +48,10 @@
       "class": "external",
       "status": "BLOCKED",
       "criterion": "Production signing uses an audited constant-time library through the Signer seam and independent security review covers key lifecycle.",
-      "evidence": [{"kind": "repository", "ref": "THREAT_MODEL.md"}]
+      "evidence": [
+        {"kind": "repository", "ref": "THREAT_MODEL.md"},
+        {"kind": "repository", "ref": "docs/CRYPTOGRAPHY_QUALIFICATION.md"}
+      ]
     },
     {
       "id": "G4",

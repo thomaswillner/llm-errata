@@ -84,8 +84,11 @@ repair. Nothing rate-limits or prioritises.
 
 The bundled Ed25519 is a reference implementation: correct against the RFC 8032
 vectors, and **not constant-time**. Python integer arithmetic cannot be. It is
-appropriate where signing keys are not attacker-facing. A deployment should
-link libsodium and substitute a `Signer`; no caller changes.
+appropriate where signing keys are not attacker-facing. A deployment must
+substitute a qualified production `Signer`; no caller changes. The current
+candidate assessment in
+[`docs/CRYPTOGRAPHY_QUALIFICATION.md`](docs/CRYPTOGRAPHY_QUALIFICATION.md)
+does not yet qualify either reviewed backend or pass readiness gate G3.
 
 ## Reporting
 

@@ -99,3 +99,22 @@ An archived copy of the Glean report exists at
 - When a source disappears, cite the archive snapshot and say so. If no snapshot
   exists, the correct action is to narrow the affected row, not to keep the
   citation.
+
+## Production-cryptography candidate sources
+
+These sources were read on 2026-08-12 for the internal candidate assessment in
+[`docs/CRYPTOGRAPHY_QUALIFICATION.md`](docs/CRYPTOGRAPHY_QUALIFICATION.md).
+They are security-maintenance and compatibility evidence, not independent
+review of LLM Errata and not evidence that G3 passes.
+
+| Source | Pin or version | Verified 2026-08-12 |
+|---|---|---|
+| [PyCA Ed25519 API](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/) | live documentation; repository `main` observed at `95c04524ef533d6173e4c61d5781ea34bff0e768` | Raw 32-byte private/public key loading, 64-byte signatures, and one-shot verification are supported |
+| [PyCA security policy](https://cryptography.io/en/latest/security/) | live documentation | Most recent release and `main` receive security support; binary releases are refreshed for OpenSSL security updates |
+| [PyCA project documentation](https://cryptography.io/en/latest/) | live documentation | Explicitly says project code and documentation have not undergone an external audit |
+| [PyCA on PyPI](https://pypi.org/project/cryptography/50.0.0/) | 50.0.0 | Python requirement and Apache-2.0 OR BSD-3-Clause licence expression confirmed |
+| [OpenSSL Ed25519](https://docs.openssl.org/3.5/man7/EVP_SIGNATURE-ED25519/) | OpenSSL 3.5 documentation | One-shot RFC 8032 Ed25519 signing and verification plus raw key loading confirmed |
+| [libsodium signatures](https://doc.libsodium.org/public-key_cryptography/public-key_signatures) | live documentation; stable branch observed at `701aa826b97dc84a353d70a551d49dc26da539c5` | Seed keypair, detached signature, detached verification, exact single-part Ed25519 algorithm, and key sizes confirmed |
+| [libsodium 1.0.22](https://github.com/jedisct1/libsodium/releases/tag/1.0.22-RELEASE) | 1.0.22, 2026-04-09 | Current public point release at assessment time |
+| [Libsodium 1.0.12 and 1.0.13 Security Assessment](https://www.privateinternetaccess.com/blog/wp-content/uploads/2017/08/libsodium.pdf) | assessment of 1.0.12 and 1.0.13 | Third-party review included Ed25519 signatures and reported no major vulnerabilities in reviewed versions; it is not a current 1.0.22 audit |
+| [CVE-2025-69277](https://nvd.nist.gov/vuln/detail/CVE-2025-69277) | CVE-2025-69277 | Older libsodium revisions had an Ed25519 point-validation flaw; 1.0.22 post-dates the cited fix, without making vulnerability review unnecessary |
