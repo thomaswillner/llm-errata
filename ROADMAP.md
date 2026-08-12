@@ -102,7 +102,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** items 1 through 5 are partially implemented and item 6 is internally implemented; Phase 2 is not complete. `spec/` carries schemas, vectors, and deterministic semantic fixtures; `prototype/cli.py` exposes most control-plane commands and `semantic-test`; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. The explicit `errata quarantine` command and vectors for key rotation, concurrent events, invalid targets, and confidentiality remain unimplemented. Receipt state-root binding vectors exist, but receipt-binding coverage remains partial. This internal work does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
+**Status:** items 1 through 5 are partially implemented and item 6 is internally implemented; Phase 2 is not complete. `spec/` carries schemas, vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. Vectors for key rotation, concurrent events, invalid targets, and confidentiality remain unimplemented. Receipt state-root binding vectors exist, but receipt-binding coverage remains partial. This internal work does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
 
 Only after the file-backed proof passes:
 
@@ -126,7 +126,14 @@ Only after the file-backed proof passes:
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
 6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
 
-Phase 2 internal implementation is incomplete. Complete the listed CLI and vector gaps before asking an independent reviewer to evaluate the complete conformance surface. G2 remains blocked until that implementation work and a dated independent external review exist. Broader Phase 2 interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
+The CLI quarantine checkpoint is also implemented internally. `errata quarantine`
+authenticates exactly the next pending erratum, gates enumerable descendants,
+records opaque stores as `unknown`, and atomically persists a digest bound to
+the erratum, sequence, target, pre-state, adapter inventory, and gated set.
+`errata repair` re-authenticates and refuses missing, consumed, replayed, or
+drifted checkpoints before rebuild.
+
+Phase 2 internal implementation is incomplete. Complete the listed vector and receipt-binding gaps before asking an independent reviewer to evaluate the complete conformance surface. G2 remains blocked until that implementation work and a dated independent external review exist. Broader Phase 2 interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
 
 ## Phase 3 — Interoperability experiment
 

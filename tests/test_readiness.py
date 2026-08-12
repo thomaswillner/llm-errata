@@ -12,6 +12,7 @@ from pathlib import Path
 from scripts.check_readiness import (
     g2_surface_digest,
     g2_surface_digest_at_commit,
+    g2_surface_files,
     qualifying_g2_review_evidence,
     valid_external_evidence,
     valid_g2_review_evidence,
@@ -35,6 +36,11 @@ class ReadinessCheckerPasses(unittest.TestCase):
         with repo_copy() as root:
             result = run_checker(root, SCRIPT)
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
+
+    def test_g2_surface_includes_checkpoint_contract_and_tests(self) -> None:
+        files = set(g2_surface_files())
+        self.assertIn("prototype/checkpoints.py", files)
+        self.assertIn("tests/test_checkpoints.py", files)
 
     def test_generic_external_evidence_allows_https_root_url(self) -> None:
         self.assertTrue(
@@ -271,7 +277,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Semantic probes are internally implemented, but Phase 2 remains incomplete: `errata quarantine` and vectors for key rotation, concurrency, invalid targets, and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded.",
+                "Semantic probes and durable `errata quarantine` checkpoints are internally implemented, but Phase 2 remains incomplete: vectors for key rotation, concurrency, invalid targets, and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 

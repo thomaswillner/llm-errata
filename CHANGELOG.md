@@ -10,6 +10,11 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Added durable `errata quarantine` checkpoints. CLI repair now requires an
+  authenticated, atomic checkpoint bound to erratum, sequence, target,
+  inspectable pre-state, adapters, opaque limitations, and gated artifacts;
+  consumption occurs only after durable receipt and applied-state writeback.
+  G2 remains `BLOCKED` for remaining Phase 2 vectors and independent review.
 - Added a fail-closed production-cryptography qualification record. PyCA
   reproduced the repository's RFC 8032 vectors but documents no external
   project audit; libsodium has a published assessment for older releases, not

@@ -32,6 +32,7 @@
       "criterion": "Complete Phase 2 implementation, including provider-neutral semantic probes, and an independent reviewer evaluates the complete conformance surface.",
       "evidence": [
         {"kind": "repository", "ref": "ROADMAP.md"},
+        {"kind": "repository", "ref": "prototype/checkpoints.py"},
         {"kind": "repository", "ref": "prototype/semantic.py"},
         {"kind": "repository", "ref": "spec/semantic/probes.json"},
         {"kind": "repository", "ref": "spec/semantic/verifier-config.json"},

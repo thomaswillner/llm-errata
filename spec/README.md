@@ -61,6 +61,13 @@ requires each invalid vector to be rejected **for the stated reason**, and
 requires the invalid set to trip at least four distinct rules, so the suite
 cannot be one rule wearing many hats.
 
+The Phase 2 CLI adds a local checkpoint evidence object implemented in
+`prototype/checkpoints.py`. It is not a third wire schema yet: independent
+review must settle whether checkpoints are importer-local evidence or a
+portable conformance artifact. Its canonical JSON and SHA-256 binding are
+nevertheless tested so missing, mutated, consumed, replayed, or drifted local
+evidence cannot authorize repair.
+
 ## What the bundled validator supports
 
 `prototype/schema.py` implements a subset, because the repository installs

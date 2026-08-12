@@ -39,6 +39,7 @@ URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
 G2_ATTESTATION = "llm-errata-independent-review-v1"
 G2_REQUIRED_TESTS = (
     "tests/test_adapters.py",
+    "tests/test_checkpoints.py",
     "tests/test_cli.py",
     "tests/test_controller.py",
     "tests/test_ed25519.py",
@@ -61,8 +62,8 @@ G2_SCOPE = frozenset(
 )
 G2_RESULTS = {"pass", "pass-with-findings", "fail"}
 G2_MATRIX_CURRENT_EVIDENCE = (
-    "Semantic probes are internally implemented, but Phase 2 remains incomplete: "
-    "`errata quarantine` and vectors for key rotation, concurrency, invalid targets, "
+    "Semantic probes and durable `errata quarantine` checkpoints are internally "
+    "implemented, but Phase 2 remains incomplete: vectors for key rotation, concurrency, invalid targets, "
     "and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (

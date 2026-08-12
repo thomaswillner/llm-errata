@@ -36,6 +36,7 @@ non-green result cannot be mistaken for a bug in the aggregation.
 | `adapters.py` | The three stores, plus the four coverage results. |
 | `strategies.py` | How a repair is carried out. One conforming strategy and three that are not, because a conformance suite where nothing can fail has not tested anything. |
 | `controller.py` | observe → quarantine → rebuild → test → attest, with a journal that makes the ordering observable. |
+| `checkpoints.py` | Canonical, atomically persisted proof binding CLI quarantine to erratum, state, adapters, and gated artifacts. |
 | `receipts.py` | Coverage-aware receipts and the aggregation rule. |
 | `scenario.py` | The synthetic fixture. |
 | `demo.py` | The narrated run. |
@@ -74,7 +75,17 @@ make cli-demo
 ```
 
 A full lifecycle without importing Python: `init`, `export`, `derive`,
-`publish`, `pull`, `plan`, `repair`, `test`, `attest`, `audit`, `verify`.
+`publish`, `pull`, `plan`, `quarantine`, `repair`, `test`, `attest`, `audit`,
+`verify`.
+
+`quarantine` authenticates exactly the next pending erratum, gates every
+enumerable descendant, records opaque stores as `unknown`, and atomically
+writes `checkpoints/<sequence>-<erratum>.json`. Its canonical digest binds the
+erratum, target, inspectable pre-state root, adapter inventory, limitations,
+and gated artifact set. `repair` re-authenticates and refuses missing, mutated,
+consumed, wrong-target, state-drifted, adapter-drifted, or ungated evidence.
+Consumption happens only after receipt and applied-state writeback, so an
+interrupted rebuild retains an unconsumed checkpoint for safe resume.
 
 Exit codes are part of the interface. `0` is success, `1` is a refusal or a
 failed check, and **`2` means the repair ran and the result is not verified**.

@@ -167,7 +167,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 is implemented; Phase 2 remains incomplete. Item 6 adds provider-neutral semantic probes with deterministic fixtures and recorded verifier configuration, while explicit `errata quarantine` CLI support and vectors for key rotation, concurrent events, invalid targets, and confidentiality remain open. Receipt-binding vectors exist for state roots but coverage remains partial. G2 remains `BLOCKED` pending internal Phase 2 completion and a dated independent review of the complete conformance surface.
+Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 is implemented; Phase 2 remains incomplete. Item 6 adds provider-neutral semantic probes with deterministic fixtures and recorded verifier configuration. Explicit `errata quarantine` CLI support now persists a digest-bound checkpoint required by `errata repair`; vectors for key rotation, concurrent events, invalid targets, and confidentiality remain open. Receipt-binding vectors exist for state roots but coverage remains partial. G2 remains `BLOCKED` pending internal Phase 2 completion and a dated independent review of the complete conformance surface.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 
