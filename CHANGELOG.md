@@ -10,6 +10,10 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Corrected the Inspeximus comparison after conflict-disclosed maintainer
+  feedback and source verification. `retract_lineage` plus `rederive` is a
+  stronger local quarantine/rebuild collision than the earlier erasure-focused
+  row; its coverage audit remains weaker than required-store aggregation.
 - Completed internal Phase 2 conformance surface with owner-key rotation,
   rotated-key refusal, concurrent sequence-conflict, invalid-target,
   content-free confidentiality, and every-field receipt-binding vectors. G2

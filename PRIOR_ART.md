@@ -33,7 +33,7 @@ No individual mechanism is claimed as new.
 | [EngramSpec](https://engramspec.org/) | **Yes/Partial:** live correction endpoint and pull-based incremental diffs with tombstones; no webhook/push model in v0.1 | No requirement found for quarantine and repair of importer-local summaries, vectors, graphs, or caches | No requirement found | No repair callback found | **Strongest AI-memory transport collision.** It substantially eliminates “portable corrections” as the novel idea, but not importer-local repair conformance. |
 | [vCon Lifecycle using SCITT](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) with [SCITT RFC 9943](https://datatracker.ietf.org/doc/rfc9943/) | **Yes:** lifecycle events and acknowledgments across recipients | No AI-memory descendant-repair requirement; workflow implementation is left to applications | No | **Partial:** acknowledgments and SCITT inclusion receipts, not a semantic-repair coverage receipt | **Strongest formal control-plane collision.** It proves that cross-recipient lifecycle events and transparent receipts are not new. |
 | [Shomei](https://shomei.ai/how-it-works/) ([API](https://shomei.ai/docs/http-api/), [governance](https://shomei.ai/docs/governance-and-receipts/)) | **Partial:** governed correction/update inside the Shomei boundary; no reviewed persistent post-export importer subscription/callback obligation | **Yes locally:** derived lineage, erasure cascades, and explicit external-delete-pending states | **Partial:** bounded governance evidence, but no reviewed mandatory negative + positive + preservation profile for each importer | **Partial:** signed, bounded governance receipts, but not the complete cross-importer callback | **Strongest governed-memory product collision.** It establishes local lineage, lifecycle, honest coverage, and receipts. |
-| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Partial:** lineage-aware retraction, echo guard, revert, and residue scanning for explicitly or successfully extractor-keyed assertions | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence, not a cross-importer repair callback | **Strongest open-source local correction collision.** Its README also reports that raw conversational prose is rarely keyed reliably, so supersession mostly does not fire there. |
+| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Yes locally, within declared lineage:** `retract_lineage` demotes a root and its recorded descendants from default recall, retains them as superseded with `needs_rederivation`, and `rederive` can rebuild against the correction | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence plus an `erasure_audit` coverage ratio, but incomplete declared lineage above zero is not itself a failing result and there is no cross-importer callback | **Strongest open-source local correction collision.** It substantially implements quarantine-then-rebuild inside one store. Its documented limit remains recorded lineage and its own boundary, not prior independent importers. |
 | [MemoRepair](https://arxiv.org/abs/2605.07242v1) | No cross-system delivery | **Yes, as an explicit contract:** descendants withdrawn before repair, republication restricted to validated predecessor-closed successors; invalidated-memory exposure cut from 69.8–94.3% to 0% *given complete influence provenance* | **Partial:** validated republication, no preservation test | No | **Strongest requirement-B collision found.** It independently arrives at quarantine-before-repair. Added 2026-08-07; post-dates the original cutoff. |
 | [Governed Evolving Memory](https://arxiv.org/abs/2605.26252v1) | No | **Partial:** formal correctness conditions for dependency consistency and provenance preservation | No | No | Argues record-level stores cannot satisfy those conditions. |
 | [Always-On Agents / AOEP-v0](https://arxiv.org/abs/2606.30306v1) | No | Governance obligations scored, not implemented | **Partial:** a deterministic evaluation contract scoring state mutation and recovery rather than answer quality | No | **Closest conformance-protocol collision.** |
@@ -81,7 +81,30 @@ Shomei's [overview](https://shomei.ai/how-it-works/), [HTTP API](https://shomei.
 
 That is a substantial collision with any claim that lineage-aware correction, honest coverage, or signed receipts are new. The reviewed material did not establish a persistent obligation for every independently operated prior importer to receive an erratum and return the complete repair-triad callback.
 
-Inspeximus publicly describes keyed supersession, an `echo_guard`, revert, lineage-aware retraction, residue scans, preservation behavior, and content-free signed erasure receipts. These mechanisms apply to explicitly keyed or successfully extractor-keyed assertions. Its README reports that raw conversational prose is rarely keyed reliably and supersession therefore mostly does not fire there.
+Inspeximus publicly describes keyed supersession, an `echo_guard`, revert,
+lineage-aware retraction, residue scans, preservation behavior, and content-free
+signed erasure receipts. At pinned commit
+[`4c711f2982911841d86d7ac1989b0ffb866dc891`](https://github.com/DanceNitra/inspeximus/tree/4c711f2982911841d86d7ac1989b0ffb866dc891),
+`retract_lineage(subject)` demotes the subject and every descendant reachable
+through recorded `derived_from` taint to superseded state, removes them from
+default recall, retains them for `include_superseded`, and marks them
+`needs_rederivation`; `rederive(subject)` rebuilds eligible descendants against
+the corrected root. That is a stronger requirement-B collision than the
+previous comparison to `forget_subject` and should be treated as local
+quarantine-then-rebuild, not merely deletion.
+
+The same pinned documentation describes `erasure_audit()` returning
+`coverage{records, with_declared_lineage, undeclared_derived, declared_ratio}`.
+Its tests force `unaudited` when declared lineage is zero, but a nonzero
+incomplete ratio can still return `no_declared_residue`. LLM Errata's required-
+store aggregation is therefore stricter: unresolved required coverage cannot
+become aggregate success. The Inspeximus maintainer additionally disclosed a
+0.0000 declared-lineage ratio in its dogfood store; this repository records that
+as interested-party testimony, not independently reproduced code evidence.
+
+These mechanisms apply to explicitly keyed or successfully extractor-keyed
+assertions and recorded lineage. The documented scope is one store, not every
+vector index, prompt log, backup, or independently operated importer.
 
 LLM Errata does not claim to improve or replace these local systems. It proposes the conformance boundary between an origin and multiple importers.
 

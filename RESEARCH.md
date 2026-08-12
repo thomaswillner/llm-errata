@@ -130,7 +130,19 @@ The distinction is not that these systems lack cross-recipient events or receipt
 
 [Shomei](https://shomei.ai/how-it-works/) documents source-linked recall, policy-checked use, lifecycle events, explicit coverage boundaries, and narrow receipts. The reviewed [HTTP API](https://shomei.ai/docs/http-api/) and [governance documentation](https://shomei.ai/docs/governance-and-receipts/) add correction/update, lineage, erasure-cascade, pending external deletion, and signed-receipt detail. Shomei also states that its receipts do not certify deletion by systems it does not govern.
 
-[Inspeximus](https://github.com/DanceNitra/inspeximus) is a strong open-source local collision: keyed supersession, `echo_guard`, revert, lineage-aware retraction, residue scans, preservation checks, and signed content-free erasure receipts are publicly described. These mechanisms apply to explicitly keyed or successfully extractor-keyed assertions; its README reports that raw conversational prose is rarely keyed reliably and supersession therefore mostly does not fire there. Its documented scope is its own store, not every vector index, prompt log, backup, or independently operated importer.
+[Inspeximus](https://github.com/DanceNitra/inspeximus) is a strong open-source
+local collision. Its pinned `retract_lineage` and `rederive` lifecycle demotes
+recorded descendants from default recall, retains them for re-derivation, and
+rebuilds eligible descendants against a corrected root. This is local
+quarantine-then-rebuild, not merely erasure. Its `erasure_audit` exposes a
+declared-lineage coverage ratio and refuses the zero-lineage case as
+`unaudited`, but nonzero incomplete lineage is not itself a failing verdict.
+The mechanisms depend on explicitly keyed assertions and recorded lineage, and
+the documented scope is its own store, not prior independently operated
+importers. The design credits the retract-and-retain lineage to [Doyle's truth-
+maintenance work](https://dblp.org/rec/journals/ai/Doyle79.html), reinforcing
+that dependency-directed retraction is established prior art rather than an
+LLM Errata invention.
 
 LLM Errata does not claim these local controls as new. It profiles their missing cross-importer contract.
 

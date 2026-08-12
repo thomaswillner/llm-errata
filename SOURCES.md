@@ -48,7 +48,8 @@ the default branch and will move.
 
 | Source | Pin | Verified 2026-08-07 |
 |---|---|---|
-| [Inspeximus](https://github.com/DanceNitra/inspeximus) | `3ba90c47560a53d650b4be47b0146b3a9538dd69` (2026-08-06) | README confirms the keying limitation PRIOR_ART.md relies on: its own benchmark reports 4–8 of 60 non-declarative prose sentences keyed. **This commit post-dates the 2026-08-01 research cutoff** — the repository moved between cutoff and re-verification, which is precisely why this file exists |
+| [Inspeximus](https://github.com/DanceNitra/inspeximus) | `4c711f2982911841d86d7ac1989b0ffb866dc891` (observed 2026-08-12) | `docs/API.md` confirms `retract_lineage` demotion, `include_superseded`, `needs_rederivation`, and `rederive`; it also documents `erasure_audit` coverage fields and zero-lineage `unaudited`. Tests confirm zero declared lineage is refused while incomplete nonzero lineage can report `no_declared_residue`. This commit post-dates the 2026-08-01 cutoff and is supplementary collision evidence, not a backdated change to the search corpus. |
+| [Doyle, A Truth Maintenance System](https://dblp.org/rec/journals/ai/Doyle79.html) | Artificial Intelligence 12(3), 1979; DBLP `journals/ai/Doyle79` | Stable bibliographic record confirms title and publication. Cited by Inspeximus as prior retract-and-retain lineage. Included to make historical dependency-retraction collision explicit; LLM Errata claims no invention of this mechanism. |
 | [IAB Data Deletion Request Framework](https://github.com/InteractiveAdvertisingBureau/Data-Subject-Rights/blob/main/Data%20Deletion%20Request%20Framework.md) | `b9418f5394ca91193181a61c567ffbbdff79cdef` (2025-02-06) | Repository unchanged since well before the cutoff |
 | [Karpathy LLM Wiki idea file](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) | Gist, revision not pinned | Cited only as a presentation precedent, so drift carries no claim risk |
 

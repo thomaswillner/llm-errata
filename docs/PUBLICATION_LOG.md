@@ -10,6 +10,7 @@ readiness gate. Last verified: 2026-08-12.
 | Draft implementation and review surface | [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) | Open draft, targeting `agent/prod-readiness`. |
 | Independent review request | [Issue #4](https://github.com/thomaswillner/llm-errata/issues/4) and its [exact review target](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269378077) | Open call for conformance, novelty, security, and distributed-systems review. |
 | Targeted independent-review recruitment | [Inspeximus maintainer invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269444341) | Invitation to challenge the stated collision boundary; it is not external evidence. |
+| Interested-party prior-art feedback | [Inspeximus maintainer response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5271988057) | Conflict-disclosed preliminary feedback. Source verification confirmed `retract_lineage` as a stronger local quarantine/rebuild collision and narrowed the coverage comparison. The disclosed dogfood ratio was not independently reproduced. Maintainer offered a future scoped review, but explicitly does not meet G2 independence alone. |
 | Targeted adapter recruitment | [Remnic invitation](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269523953) | Invitation to become a future independently authored adapter after Phase 2 completion; it is not technical evidence. |
 | Targeted validator or system recruitment | [ai-memory-mcp invitation](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269524142) | Invitation to choose one separate role: independently produced validator or independently operated system; it is not technical evidence. |
 | Targeted standards/collision review | [Portable Agent Memory invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269524323) | Invitation to test the conformance/standards collision boundary; it is not review evidence. |
@@ -23,7 +24,10 @@ readiness gate. Last verified: 2026-08-12.
 | GitHub Discussions announcement | [Discussion #9](https://github.com/thomaswillner/llm-errata/discussions/9), `LLM Errata needs falsifiers, independent reviewers, adapters, and real memory systems` | Created 2026-08-12 after Discussions was enabled (`has_discussions=true`). It links the repository, public issues, and PR #8; states Phase 2 incomplete, G2 `BLOCKED`, and `NOT_PROD_READY`. Publication/invitation only: no response yet and not external evidence. |
 | Complete Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Internal Phase 2 surface is complete and locally validated. Published for independent review; publication and internal tests do not satisfy G2. |
 
-No targeted invitation has an acceptance or reply recorded.
+One targeted invitation now has the interested-party response recorded above;
+it is not an acceptance of an independent reviewer role and does not satisfy
+G2. No adapter, validator, operated-system approval, or CODEOWNER volunteer has
+accepted.
 
 The complete conformance review target is source commit
 [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2)
