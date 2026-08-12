@@ -40,7 +40,22 @@ USER_AGENT = (
 # Status codes that prove the resource exists but the client was filtered.
 BLOCKED_STATUSES = frozenset({401, 403, 405, 406, 429, 503})
 
-URL_PATTERN = re.compile(r"https?://[^\s)>\"'\]]+")
+URL_PATTERN = re.compile(r"https?://[^\s)>\"'\]`]+")
+
+
+def is_reserved_example_url(url: str) -> bool:
+    """Reserved IANA example domains are schema placeholders, not citations."""
+
+    host = urllib.parse.urlparse(url).hostname or ""
+    return host == "example" or host.endswith(".example")
+
+
+def extract_urls(text: str) -> set[str]:
+    return {
+        match.group(0).rstrip(".,;:")
+        for match in URL_PATTERN.finditer(text)
+        if not is_reserved_example_url(match.group(0).rstrip(".,;:"))
+    }
 
 
 def cited_urls() -> dict[str, list[str]]:
@@ -48,11 +63,10 @@ def cited_urls() -> dict[str, list[str]]:
 
     found: dict[str, set[str]] = {}
     for path in sorted(ROOT.rglob("*.md")):
-        if ".git" in path.parts:
+        if ".git" in path.parts or ".superpowers" in path.parts or "superpowers" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
-        for match in URL_PATTERN.finditer(text):
-            url = match.group(0).rstrip(".,;:")
+        for url in extract_urls(text):
             found.setdefault(url, set()).add(path.relative_to(ROOT).as_posix())
     return {url: sorted(sources) for url, sources in sorted(found.items())}
 

@@ -61,12 +61,13 @@ G2_SCOPE = frozenset(
 )
 G2_RESULTS = {"pass", "pass-with-findings", "fail"}
 G2_MATRIX_CURRENT_EVIDENCE = (
-    "Internal Phase 2 implementation is recorded in repository evidence; "
-    "no qualifying independent review is recorded."
+    "Semantic probes are internally implemented, but Phase 2 remains incomplete: "
+    "`errata quarantine` and vectors for key rotation, concurrency, invalid targets, "
+    "receipt binding, and confidentiality are absent; no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
-    "Dated independent external conformance-review result covering complete "
-    "Phase 2 surface."
+    "Complete listed Phase 2 gaps, then record dated independent external "
+    "conformance-review result covering complete Phase 2 surface."
 )
 
 

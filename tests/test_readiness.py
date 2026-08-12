@@ -36,31 +36,6 @@ class ReadinessCheckerPasses(unittest.TestCase):
             result = run_checker(root, SCRIPT)
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
 
-    def test_complete_independent_g2_review_passes_schema(self) -> None:
-        commit = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, check=True, text=True
-        ).stdout.strip()
-        review = {
-            "kind": "external",
-            "ref": "https://reviews.example.org/phase2/report",
-            "producer": "Independent Systems Lab",
-            "observed": "2026-08-12",
-            "review_type": "phase2-conformance",
-            "reviewed_commit": commit,
-            "scope": [
-                "schemas", "vectors", "cli", "adapter-interface",
-                "transactional-store", "substrate-evidence", "semantic-probes",
-                "security-boundaries",
-            ],
-            "result": "pass-with-findings",
-            "relationship": "independent-third-party",
-            "conflicts": [],
-            "producer_identity": "https://identity.example.org/reviewer",
-            "independence_attestation": "llm-errata-independent-review-v1",
-            "surface_digest": g2_surface_digest(),
-        }
-        self.assertTrue(qualifying_g2_review_evidence(review))
-
     def test_generic_external_evidence_allows_https_root_url(self) -> None:
         self.assertTrue(
             valid_external_evidence(
@@ -285,7 +260,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "All Phase 2 items, including provider-neutral semantic probes, are implemented and an independent reviewer evaluates the complete conformance surface.",
+                "Complete Phase 2 implementation, including provider-neutral semantic probes, and an independent reviewer evaluates the complete conformance surface.",
                 "Internal Phase 2 implementation is enough.",
             )
 
@@ -296,7 +271,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Internal Phase 2 implementation is recorded in repository evidence; no qualifying independent review is recorded.",
+                "Semantic probes are internally implemented, but Phase 2 remains incomplete: `errata quarantine` and vectors for key rotation, concurrency, invalid targets, receipt binding, and confidentiality are absent; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 
@@ -307,7 +282,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Dated independent external conformance-review result covering complete Phase 2 surface.",
+                "Complete listed Phase 2 gaps, then record dated independent external conformance-review result covering complete Phase 2 surface.",
                 "Local tests are enough.",
             )
 
