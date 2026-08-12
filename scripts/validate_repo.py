@@ -376,20 +376,29 @@ def check_publication_metadata(reporter: Reporter) -> None:
 
     license_text = read_utf8(license_path)
     notice_text = read_utf8(notice_path)
+    required_license = (
+        "LLM Errata Specification Implementation and Personal Use Licence",
+        "commercial and non-commercial products and services",
+        "Implements the LLM Errata specification by Thomas Willner",
+        "https://github.com/thomaswillner/llm-errata",
+        "does not cover `prototype/`, `scripts/`, or `tests/`",
+        "does not imply endorsement, sponsorship, certification, or audit",
+        "No patent rights are granted",
+        "Apache License 2.0",
+        "irrevocable",
+    )
     reporter.check(
         "license and notice",
-        "Personal Use Licence" in license_text
+        all(value in license_text for value in required_license)
         and "Copyright 2026 Thomas Rainer Willner" in license_text
-        and "Copyright 2026 Thomas Rainer Willner" in notice_text
+        and "Copyright 2026 Thomas Rainer Willner" in notice_text,
         # The Apache-2.0 grant on 0.2.0 and earlier is irrevocable. Deleting
         # the sentence that says so would misrepresent the rights of anyone who
         # already holds those releases.
-        and "Apache License 2.0" in license_text
-        and "irrevocable" in license_text,
-        "personal-use licence, author notice, and the irrevocable prior grant are present",
-        "Restore the Personal Use Licence, the Thomas Rainer Willner copyright "
-        "notice, and the statement that the Apache-2.0 grant on earlier releases "
-        "is irrevocable.",
+        "dual licence, product attribution, source-code boundary, author notice, and irrevocable prior grant are present",
+        "Restore the attributed specification implementation grant, personal-use "
+        "Reference Code boundary, no-endorsement and no-patent rules, Thomas "
+        "Rainer Willner copyright notice, and irrevocable earlier Apache grant.",
     )
 
 

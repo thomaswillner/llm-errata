@@ -25,6 +25,41 @@ class ValidatorPasses(unittest.TestCase):
 
 
 class ValidatorRejectsStructuralFaults(unittest.TestCase):
+    def _assert_license_mutation_is_rejected(self, old: str, new: str) -> None:
+        def mutate(root: Path) -> None:
+            path = root / "LICENSE"
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(old, text, f"missing licence contract: {old}")
+            path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("license and notice", result.stdout)
+
+    def test_specification_implementation_grant_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "commercial and non-commercial products and services",
+            "personal non-commercial experiments",
+        )
+
+    def test_required_product_attribution_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "Implements the LLM Errata specification by Thomas Willner",
+            "Implements an unnamed memory specification",
+        )
+
+    def test_reference_code_cannot_be_relicensed_by_specification_grant(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "does not cover `prototype/`, `scripts/`, or `tests/`",
+            "also covers `prototype/`, `scripts/`, and `tests/`",
+        )
+
+    def test_false_endorsement_protection_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "does not imply endorsement, sponsorship, certification, or audit",
+            "implies certification by the author",
+        )
+
     def test_missing_required_file_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             (root / "SECURITY.md").unlink()
