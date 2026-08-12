@@ -269,6 +269,7 @@ class SemanticObservation:
     """Persistable verifier result, excluding raw provider output."""
 
     probe_id: str
+    operation: Operation
     verdict: ObservationVerdict
     config_digest: str
     observed_at: str
@@ -276,6 +277,14 @@ class SemanticObservation:
 
     def __post_init__(self) -> None:
         _probe_id(self.probe_id, name="probe_id")
+        if not isinstance(self.operation, Operation):
+            raise ValueError("operation must be an Operation")
+        if (
+            self.operation is Operation.ERASE
+            and self.probe_id
+            not in {ERASURE_NEGATIVE_PROBE_ID, ERASURE_PRESERVATION_PROBE_ID}
+        ):
+            raise ValueError("erasure observations require fixed content-free probe identifiers")
         if not isinstance(self.verdict, ObservationVerdict):
             raise ValueError("verdict must be an ObservationVerdict")
         _sha256(self.config_digest, name="config_digest")
@@ -285,6 +294,7 @@ class SemanticObservation:
     def to_dict(self) -> dict[str, str]:
         return {
             "probe_id": self.probe_id,
+            "operation": self.operation.value,
             "verdict": self.verdict.value,
             "config_digest": self.config_digest,
             "observed_at": self.observed_at,
@@ -296,16 +306,28 @@ class SemanticObservation:
         payload = _exact_fields(
             value,
             fields=frozenset(
-                {"probe_id", "verdict", "config_digest", "observed_at", "response_digest"}
+                {
+                    "probe_id",
+                    "operation",
+                    "verdict",
+                    "config_digest",
+                    "observed_at",
+                    "response_digest",
+                }
             ),
             name="semantic observation",
         )
+        try:
+            operation = Operation(payload["operation"])
+        except (TypeError, ValueError) as error:
+            raise ValueError("semantic observation operation is invalid") from error
         try:
             verdict = ObservationVerdict(payload["verdict"])
         except (TypeError, ValueError) as error:
             raise ValueError("semantic observation verdict is invalid") from error
         return cls(
             probe_id=_probe_id(payload["probe_id"], name="probe_id"),
+            operation=operation,
             verdict=verdict,
             config_digest=_sha256(payload["config_digest"], name="config_digest"),
             observed_at=_timestamp(payload["observed_at"], name="observed_at"),
@@ -336,7 +358,13 @@ class RecordedSemanticVerifier:
     def evaluate(
         self, probe: SemanticProbe, config: VerifierConfig
     ) -> SemanticObservation | None:
-        matches = [item for item in self._observations if item.probe_id == probe.probe_id]
+        matches = [
+            item
+            for item in self._observations
+            if item.probe_id == probe.probe_id
+            and item.operation is probe.operation
+            and item.config_digest == config.digest
+        ]
         return matches[0] if len(matches) == 1 else None
 
 
@@ -360,6 +388,21 @@ class SemanticProbeReport:
             raise ValueError("observations must be SemanticObservation instances")
         if not all(isinstance(item, str) and item for item in self.limitations):
             raise ValueError("limitations must contain non-empty strings")
+        expected_coverage, expected_limitations, accepted = _evaluate_evidence(
+            self.probes,
+            self.observations,
+            self.config_digest,
+            initial_limitations=self.limitations,
+        )
+        if self.observations != accepted:
+            raise ValueError(
+                "semantic probe report observations must uniquely match declared probes, "
+                "operations, and configuration"
+            )
+        if self.limitations != expected_limitations:
+            raise ValueError("semantic probe report limitations contradict its evidence")
+        if self.coverage is not expected_coverage:
+            raise ValueError("semantic probe report coverage contradicts its evidence")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -407,19 +450,15 @@ class SemanticProbeReport:
                 _nonempty_string(item, name="limitation") for item in payload["limitations"]
             ),
         )
-        expected_coverage, expected_limitations, accepted = _evaluate_evidence(
-            report.probes, report.observations, report.config_digest
-        )
-        if report.observations != accepted:
-            raise ValueError("semantic probe report persists unexpected observations")
-        if report.limitations != expected_limitations:
-            raise ValueError("semantic probe report limitations contradict its evidence")
-        if report.coverage is not expected_coverage:
-            raise ValueError("semantic probe report coverage contradicts its evidence")
         return report
 
 
 def _required_triad(probes: Sequence[SemanticProbe]) -> tuple[Operation, set[ProbeKind]]:
+    if not probes or not all(isinstance(probe, SemanticProbe) for probe in probes):
+        raise ValueError("probes must be SemanticProbe instances")
+    probe_ids = [probe.probe_id for probe in probes]
+    if len(probe_ids) != len(set(probe_ids)):
+        raise ValueError("probe IDs must be unique")
     operations = {probe.operation for probe in probes}
     if len(operations) != 1:
         raise ValueError("all probes in a report must have one operation")
@@ -450,6 +489,7 @@ def _evaluate_evidence(
         grouped.setdefault(item.probe_id, []).append(item)
     valid_fails: set[str] = set()
     accepted: list[SemanticObservation] = []
+    accepted_by_id: dict[str, SemanticObservation] = {}
     unexpected_count = 0
     for probe_id, records in grouped.items():
         if probe_id not in declared:
@@ -457,23 +497,34 @@ def _evaluate_evidence(
         elif len(records) != 1:
             limitations.append(f"duplicate observations for probe {probe_id}")
         else:
-            accepted.append(records[0])
-            if records[0].config_digest != config_digest:
+            record = records[0]
+            probe = declared[probe_id]
+            if record.operation is not probe.operation:
+                limitations.append(f"operation mismatch for probe {probe_id}")
+            elif record.config_digest != config_digest:
                 limitations.append(f"configuration drift for probe {probe_id}")
-            elif records[0].verdict is ObservationVerdict.FAIL and declared[probe_id].required:
+            else:
+                accepted.append(record)
+                accepted_by_id[probe_id] = record
+            if (
+                record.operation is probe.operation
+                and record.config_digest == config_digest
+                and record.verdict is ObservationVerdict.FAIL
+                and probe.required
+            ):
                 valid_fails.add(probe_id)
     if unexpected_count:
         limitations.append(f"unexpected observation identifiers: {unexpected_count}")
     for probe in probes:
-        records = grouped.get(probe.probe_id, [])
-        if not records and probe.required:
+        record = accepted_by_id.get(probe.probe_id)
+        if record is None and probe.required:
             limitations.append(f"missing required observation for probe {probe.probe_id}")
-        elif len(records) == 1 and records[0].config_digest == config_digest:
-            if probe.required and records[0].verdict in {
+        elif record is not None:
+            if probe.required and record.verdict in {
                 ObservationVerdict.INCONCLUSIVE, ObservationVerdict.ERROR
             }:
                 limitations.append(
-                    f"required probe {probe.probe_id} returned {records[0].verdict.value}"
+                    f"required probe {probe.probe_id} returned {record.verdict.value}"
                 )
     normalized = tuple(sorted(set(limitations)))
     persisted = tuple(sorted(accepted, key=lambda item: (item.probe_id, item.observed_at, item.response_digest)))

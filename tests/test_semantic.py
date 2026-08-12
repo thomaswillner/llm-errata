@@ -52,10 +52,15 @@ def probe(
 
 
 def observation(
-    probe_id: str, verdict: ObservationVerdict, *, config: VerifierConfig = CONFIG
+    probe_id: str,
+    verdict: ObservationVerdict,
+    *,
+    config: VerifierConfig = CONFIG,
+    operation: Operation = Operation.CORRECT,
 ) -> SemanticObservation:
     return SemanticObservation(
         probe_id=probe_id,
+        operation=operation,
         verdict=verdict,
         config_digest=config.digest,
         observed_at="2026-08-12T09:00:00Z",
@@ -207,8 +212,16 @@ class SerializationAndPrivacy(unittest.TestCase):
             probe("negative", ProbeKind.NEGATIVE, operation=Operation.ERASE),
         )
         observations = (
-            observation("negative", ObservationVerdict.PASS),
-            observation("preserve", ObservationVerdict.PASS),
+            observation(
+                ERASURE_NEGATIVE_PROBE_ID,
+                ObservationVerdict.PASS,
+                operation=Operation.ERASE,
+            ),
+            observation(
+                ERASURE_PRESERVATION_PROBE_ID,
+                ObservationVerdict.PASS,
+                operation=Operation.ERASE,
+            ),
         )
         report = SemanticProbeRunner().run(probes, CONFIG, RecordedSemanticVerifier(observations))
         self.assertEqual(
@@ -229,11 +242,20 @@ class SerializationAndPrivacy(unittest.TestCase):
             CONFIG,
             RecordedSemanticVerifier(
                 (
-                    observation(ERASURE_NEGATIVE_PROBE_ID, ObservationVerdict.PASS),
-                    observation(ERASURE_PRESERVATION_PROBE_ID, ObservationVerdict.PASS),
+                    observation(
+                        ERASURE_NEGATIVE_PROBE_ID,
+                        ObservationVerdict.PASS,
+                        operation=Operation.ERASE,
+                    ),
+                    observation(
+                        ERASURE_PRESERVATION_PROBE_ID,
+                        ObservationVerdict.PASS,
+                        operation=Operation.ERASE,
+                    ),
                 )
             ),
         )
+        self.assertEqual(report.coverage, SemanticCoverage.VERIFIED)
         self.assertNotIn(erased_value, report.canonical_json())
 
     def test_erasure_rejects_prompt_template_that_can_embed_a_retired_value(self) -> None:
@@ -288,8 +310,16 @@ class SerializationAndPrivacy(unittest.TestCase):
             probe("ignored", ProbeKind.PRESERVATION, operation=Operation.ERASE),
         )
         report = SemanticProbeRunner().run(probes, CONFIG, RecordedSemanticVerifier((
-            observation(ERASURE_NEGATIVE_PROBE_ID, ObservationVerdict.PASS),
-            observation(ERASURE_PRESERVATION_PROBE_ID, ObservationVerdict.PASS),
+            observation(
+                ERASURE_NEGATIVE_PROBE_ID,
+                ObservationVerdict.PASS,
+                operation=Operation.ERASE,
+            ),
+            observation(
+                ERASURE_PRESERVATION_PROBE_ID,
+                ObservationVerdict.PASS,
+                operation=Operation.ERASE,
+            ),
             observation(retired, ObservationVerdict.PASS),
         )))
         self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
@@ -347,6 +377,97 @@ class RequiredTriadAndAdapterBoundaries(unittest.TestCase):
             report = SemanticProbeRunner().run(probes, CONFIG, verifier)
             self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
             self.assertTrue(report.limitations)
+
+    def test_recorded_observation_operation_mismatch_is_unknown_and_not_persisted(self) -> None:
+        probes = (
+            probe("negative", ProbeKind.NEGATIVE),
+            probe("positive", ProbeKind.POSITIVE),
+            probe("preserve", ProbeKind.PRESERVATION),
+        )
+        report = SemanticProbeRunner().run(
+            probes,
+            CONFIG,
+            RecordedSemanticVerifier((
+                observation("negative", ObservationVerdict.PASS, operation=Operation.SUPERSEDE),
+                observation("positive", ObservationVerdict.PASS),
+                observation("preserve", ObservationVerdict.PASS),
+            )),
+        )
+        self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
+        self.assertNotIn("negative", {item.probe_id for item in report.observations})
+        self.assertIn("operation mismatch for probe negative", report.limitations)
+
+
+class DirectConstructionBoundaries(unittest.TestCase):
+    def setUp(self) -> None:
+        self.probes = (
+            probe("negative", ProbeKind.NEGATIVE),
+            probe("positive", ProbeKind.POSITIVE),
+            probe("preserve", ProbeKind.PRESERVATION),
+        )
+        self.observations = tuple(
+            observation(item.probe_id, ObservationVerdict.PASS) for item in self.probes
+        )
+
+    def report_with(self, observations: tuple[SemanticObservation, ...]) -> SemanticProbeReport:
+        return SemanticProbeReport(
+            config_digest=CONFIG.digest,
+            coverage=SemanticCoverage.VERIFIED,
+            probes=self.probes,
+            observations=observations,
+            limitations=(),
+        )
+
+    def test_erasure_observation_rejects_caller_selected_identifier(self) -> None:
+        with self.assertRaises(ValueError):
+            observation(
+                "orchid-lantern-secret",
+                ObservationVerdict.PASS,
+                operation=Operation.ERASE,
+            )
+
+        payload = observation(
+            ERASURE_NEGATIVE_PROBE_ID,
+            ObservationVerdict.PASS,
+            operation=Operation.ERASE,
+        ).to_dict()
+        payload["probe_id"] = "orchid-lantern-secret"
+        with self.assertRaises(ValueError):
+            SemanticObservation.from_dict(payload)
+
+    def test_observation_serialization_binds_canonical_operation(self) -> None:
+        item = observation("negative", ObservationVerdict.PASS)
+        self.assertEqual(item.to_dict()["operation"], Operation.CORRECT.value)
+        payload = item.to_dict()
+        payload["operation"] = "correction"
+        with self.assertRaises(ValueError):
+            SemanticObservation.from_dict(payload)
+
+    def test_report_rejects_unexpected_duplicate_or_mismatched_observations(self) -> None:
+        drifted = VerifierConfig(
+            provider="other-provider",
+            model="synthetic-model-1",
+            prompt_template_version="2026-08-12",
+            sampling={"temperature": 0},
+        )
+        invalid = {
+            "unexpected": self.observations
+            + (observation("unrelated", ObservationVerdict.PASS),),
+            "duplicate": self.observations + (self.observations[0],),
+            "operation": (
+                observation(
+                    "negative", ObservationVerdict.PASS, operation=Operation.SUPERSEDE
+                ),
+            )
+            + self.observations[1:],
+            "configuration": (
+                observation("negative", ObservationVerdict.PASS, config=drifted),
+            )
+            + self.observations[1:],
+        }
+        for name, records in invalid.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                self.report_with(records)
 
 
 class StrictParsing(unittest.TestCase):
