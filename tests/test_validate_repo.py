@@ -91,6 +91,8 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
                 self.assertIn("G2 independent review gate", result.stdout)
 
     def test_g2_pass_requires_complete_independent_review_schema(self) -> None:
+        from scripts.check_readiness import g2_surface_digest
+
         review = {
             "kind": "external",
             "ref": "https://reviews.example.org/phase2/report",
@@ -106,9 +108,15 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
             "result": "pass-with-findings",
             "relationship": "independent-third-party",
             "conflicts": [],
+            "producer_identity": "https://identity.example.org/reviewer",
+            "independence_attestation": "llm-errata-independent-review-v1",
+            "surface_digest": g2_surface_digest(),
         }
         invalid_reviews = []
-        for field in ("kind", "review_type", "reviewed_commit", "scope", "result", "relationship", "conflicts"):
+        for field in (
+            "kind", "review_type", "reviewed_commit", "scope", "result", "relationship",
+            "conflicts", "producer_identity", "independence_attestation", "surface_digest",
+        ):
             invalid = dict(review)
             invalid.pop(field)
             invalid_reviews.append(invalid)
@@ -119,9 +127,15 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
             ("producer", "reference implementer"),
             ("reviewed_commit", "a" * 39),
             ("scope", ["schemas"]),
+            ("scope", review["scope"] + ["schemas"]),
+            ("scope", review["scope"] + ["extra"]),
             ("result", "fail"),
             ("relationship", "maintainer"),
             ("conflicts", "none"),
+            ("producer_identity", "https://identity.example.org"),
+            ("producer_identity", "https://identity.example.org/"),
+            ("independence_attestation", "independent"),
+            ("surface_digest", "a" * 64),
         ):
             invalid = dict(review)
             invalid[field] = value

@@ -62,14 +62,42 @@ evidence but cannot make G2 pass.
   ],
   "result": "pass | pass-with-findings | fail",
   "relationship": "independent-third-party",
-  "conflicts": []
+  "conflicts": [],
+  "producer_identity": "https://identity.example/reviewer",
+  "independence_attestation": "llm-errata-independent-review-v1",
+  "surface_digest": "SHA-256 of canonical Phase 2 surface"
 }
 ```
 
 `ref` must be a public `https` URL with host and path, or a well-formed
-`urn:<nid>:<nss>`. `observed` cannot be future-dated. `conflicts` is always an
-array, including when empty. A qualifying pass requires `pass` or
-`pass-with-findings` plus every listed scope token.
+`urn:<nid>:<nss>`. `producer_identity` must be an `https` URL with host and
+path. `observed` cannot be future-dated. `conflicts` is always an array,
+including when empty. Scope must contain each token exactly once. A qualifying
+pass requires `pass` or `pass-with-findings` plus every listed scope token.
+
+`surface_digest` is SHA-256 over each file below in listed order, appending the
+UTF-8 repository-relative path, one NUL byte, then the file's raw bytes:
+
+```text
+spec/erratum.schema.json
+spec/receipt.schema.json
+spec/vectors/manifest.json
+prototype/cli.py
+prototype/adapters.py
+prototype/sqlite_store.py
+prototype/residue.py
+prototype/semantic.py
+spec/semantic/probes.json
+spec/semantic/verifier-config.json
+spec/semantic/observations.json
+SECURITY.md
+THREAT_MODEL.md
+```
+
+The checker validates schema, claimed relationship, report identity, commit
+binding, and surface digest. It cannot prove the reviewer is independent or
+that conflicts are complete; a human must verify those claims before changing
+the readiness verdict.
 
 Open a GitHub issue for public findings. Security-sensitive findings must follow
 `SECURITY.md`. Review invitations and automated reviews are not independent

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -26,10 +28,26 @@ VERDICTS = {"NOT_PROD_READY", "PROD_READY"}
 STATUSES = {"PASS", "FAIL", "BLOCKED"}
 CLASSES = {"internal", "external"}
 NON_INDEPENDENT_PRODUCER_RE = re.compile(
-    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo|project[\s_-]*owner|reference[\s_-]*implementer)(?:$|[\s:_-])",
+    r"(?:^|[\s:_-])(author|owner|implementer|contributor|maintainer|thomas|willner|project|reference|local|agent|repository|repo|self)(?:$|[\s:_-])",
     re.IGNORECASE,
 )
 URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
+G2_ATTESTATION = "llm-errata-independent-review-v1"
+G2_SURFACE_FILES = (
+    "spec/erratum.schema.json",
+    "spec/receipt.schema.json",
+    "spec/vectors/manifest.json",
+    "prototype/cli.py",
+    "prototype/adapters.py",
+    "prototype/sqlite_store.py",
+    "prototype/residue.py",
+    "prototype/semantic.py",
+    "spec/semantic/probes.json",
+    "spec/semantic/verifier-config.json",
+    "spec/semantic/observations.json",
+    "SECURITY.md",
+    "THREAT_MODEL.md",
+)
 G2_SCOPE = frozenset(
     {
         "schemas",
@@ -98,9 +116,55 @@ def valid_external_ref(value: object) -> bool:
         parsed = urlparse(value)
     except ValueError:
         return False
+    return bool(URN_RE.fullmatch(value)) or (parsed.scheme == "https" and bool(parsed.netloc))
+
+
+def valid_g2_report_ref(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
     return bool(URN_RE.fullmatch(value)) or (
-        parsed.scheme == "https" and bool(parsed.netloc) and bool(parsed.path)
+        parsed.scheme == "https" and bool(parsed.netloc) and parsed.path not in {"", "/"}
     )
+
+
+def valid_g2_identity_ref(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
+    return parsed.scheme == "https" and bool(parsed.netloc) and parsed.path not in {"", "/"}
+
+
+def g2_surface_digest(root: Path = ROOT) -> str:
+    """SHA-256 of sorted `path + NUL + bytes` canonical Phase 2 surface."""
+
+    digest = hashlib.sha256()
+    for relative in G2_SURFACE_FILES:
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update((root / relative).read_bytes())
+    return digest.hexdigest()
+
+
+def reviewed_commit_exists(value: str, root: Path = ROOT) -> bool:
+    """Check commit existence when this checkout has live Git metadata."""
+
+    if not (root / ".git").exists():
+        return True
+    result = subprocess.run(
+        ["git", "cat-file", "-e", f"{value}^{{commit}}"],
+        cwd=root,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    return result.returncode == 0
 
 
 def valid_external_evidence(entry: object, *, today: date | None = None) -> bool:
@@ -127,18 +191,29 @@ def valid_g2_review_evidence(entry: object, *, today: date | None = None) -> boo
     if not valid_external_evidence(entry, today=today) or not isinstance(entry, dict):
         return False
     scope = entry.get("scope")
-    return (
-        entry.get("kind") == "external"
-        and entry.get("review_type") == "phase2-conformance"
-        and isinstance(entry.get("reviewed_commit"), str)
-        and re.fullmatch(r"[0-9a-f]{40}", entry["reviewed_commit"]) is not None
-        and isinstance(scope, list)
-        and all(isinstance(token, str) for token in scope)
-        and G2_SCOPE.issubset(scope)
-        and entry.get("result") in G2_RESULTS
-        and entry.get("relationship") == "independent-third-party"
-        and isinstance(entry.get("conflicts"), list)
-    )
+    reviewed_commit = entry.get("reviewed_commit")
+    try:
+        return (
+            entry.get("kind") == "external"
+            and valid_g2_report_ref(entry.get("ref"))
+            and entry.get("review_type") == "phase2-conformance"
+            and isinstance(reviewed_commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", reviewed_commit) is not None
+            and reviewed_commit_exists(reviewed_commit)
+            and isinstance(scope, list)
+            and all(isinstance(token, str) for token in scope)
+            and len(scope) == len(set(scope))
+            and set(scope) == G2_SCOPE
+            and entry.get("result") in G2_RESULTS
+            and entry.get("relationship") == "independent-third-party"
+            and isinstance(entry.get("conflicts"), list)
+            and isinstance(entry.get("producer_identity"), str)
+            and valid_g2_identity_ref(entry["producer_identity"])
+            and entry.get("independence_attestation") == G2_ATTESTATION
+            and entry.get("surface_digest") == g2_surface_digest()
+        )
+    except OSError:
+        return False
 
 
 def qualifying_g2_review_evidence(entry: object, *, today: date | None = None) -> bool:
@@ -444,6 +519,8 @@ def validate_ledger(
                         "observed must be an ISO YYYY-MM-DD date that is not future-dated",
                     )
                     entry_valid = valid_external_evidence(entry)
+                    if gate_id == "G2":
+                        entry_valid = valid_g2_review_evidence(entry)
                     evidence_valid = evidence_valid and entry_valid
                     if entry_valid:
                         valid_external_entries += 1

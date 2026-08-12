@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Iterable
 from urllib.parse import unquote
 
-from check_readiness import qualifying_g2_review_evidence
+from check_readiness import qualifying_g2_review_evidence, valid_g2_review_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -416,14 +416,22 @@ def check_g2_independent_review_gate(reporter: Reporter) -> None:
             and qualifying_g2_review_evidence(entry)
             for entry in evidence
         ) if isinstance(evidence, list) else False
-        valid = status != "PASS" or qualifying_external_review
+        g2_external_entries_valid = all(
+            not isinstance(entry, dict)
+            or entry.get("kind") != "external"
+            or valid_g2_review_evidence(entry)
+            for entry in evidence
+        ) if isinstance(evidence, list) else False
+        valid = g2_external_entries_valid and (
+            status != "PASS" or qualifying_external_review
+        )
     except (ValueError, OSError, UnicodeError):
         valid = False
     reporter.check(
         "G2 independent review gate",
         valid,
-        "G2 PASS is backed by dated, independently produced external review evidence",
-        "Keep G2 BLOCKED until its evidence includes dated external review by an independent producer.",
+        "G2 external entries are schema-valid declared-independent reviews; a PASS has a qualifying complete review",
+        "Keep G2 BLOCKED until its evidence includes a complete schema-valid declared-independent review.",
     )
 
 def check_document_version_alignment(

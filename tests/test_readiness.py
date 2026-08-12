@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import unittest
 
-from scripts.check_readiness import qualifying_g2_review_evidence, markdown_value
+from scripts.check_readiness import (
+    g2_surface_digest,
+    qualifying_g2_review_evidence,
+    valid_external_evidence,
+    markdown_value,
+)
 from tests.support import (
     EXIT_FAIL,
     EXIT_OK,
@@ -26,13 +32,16 @@ class ReadinessCheckerPasses(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
 
     def test_complete_independent_g2_review_passes_schema(self) -> None:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, check=True, text=True
+        ).stdout.strip()
         review = {
             "kind": "external",
             "ref": "https://reviews.example.org/phase2/report",
             "producer": "Independent Systems Lab",
             "observed": "2026-08-12",
             "review_type": "phase2-conformance",
-            "reviewed_commit": "a" * 40,
+            "reviewed_commit": commit,
             "scope": [
                 "schemas", "vectors", "cli", "adapter-interface",
                 "transactional-store", "substrate-evidence", "semantic-probes",
@@ -41,8 +50,22 @@ class ReadinessCheckerPasses(unittest.TestCase):
             "result": "pass-with-findings",
             "relationship": "independent-third-party",
             "conflicts": [],
+            "producer_identity": "https://identity.example.org/reviewer",
+            "independence_attestation": "llm-errata-independent-review-v1",
+            "surface_digest": g2_surface_digest(),
         }
         self.assertTrue(qualifying_g2_review_evidence(review))
+
+    def test_generic_external_evidence_allows_https_root_url(self) -> None:
+        self.assertTrue(
+            valid_external_evidence(
+                {
+                    "ref": "https://reviewer.example.org",
+                    "producer": "Independent Systems Lab",
+                    "observed": "2026-08-12",
+                }
+            )
+        )
 
     def test_consistently_formatted_canonical_matrix_cells_are_accepted(self) -> None:
         def mutate(root):
@@ -363,11 +386,22 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
                     "result": "pass-with-findings",
                     "relationship": "independent-third-party",
                     "conflicts": [],
+                    "producer_identity": "https://identity.example.org/reviewer",
+                    "independence_attestation": "llm-errata-independent-review-v1",
+                    "surface_digest": g2_surface_digest(),
                 }
             )
 
         result = self._mutated(mutate)
         self.assert_rejected_without_traceback(result, "G2 external PASS evidence")
+
+    def test_malformed_g2_external_evidence_is_rejected_while_blocked(self) -> None:
+        def mutate(payload):
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["evidence"].append({"kind": "external", "ref": "urn:"})
+
+        result = self._mutated(mutate)
+        self.assert_rejected_without_traceback(result, "G2 evidence")
 
 
 if __name__ == "__main__":
