@@ -115,6 +115,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md) | Call and evidence requirements for independently authored adapters. |
 | [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) | Nominations for future authorized three-system synthetic-data experiment. |
 | [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) | Evidence-bounded publication channels and canonical announcement copy. |
+| [docs/PUBLICATION_LOG.md](docs/PUBLICATION_LOG.md) | Public GitHub calls, blocked external-channel attempts, and readiness boundary. |
 
 ## Verifying this repository
 
