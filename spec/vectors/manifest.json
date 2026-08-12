@@ -1,5 +1,6 @@
 {
-  "description": "Conformance vectors for the LLM Errata wire schema. Every entry states whether it must validate, and an invalid entry names the text that must appear in the rejection.",
+  "description": "Conformance vectors for the LLM Errata wire schema. Every entry states whether it must validate, and an invalid entry names the text that must appear in the rejection. Stateful protocol artifacts are declared separately because JSON Schema cannot evaluate ordering, key schedules, target registration, confidentiality, or signature mutation.",
+  "stateful_vectors": ["protocol-manifest.json", "receipt-binding-mutations.json"],
   "vectors": [
     {
       "file": "erratum-correct-valid.json",

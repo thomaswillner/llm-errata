@@ -12,6 +12,8 @@ than this one can be built and checked against the same contract.
 | `semantic/probes.json` | Named, strict semantic-probe sets for offline conformance. |
 | `semantic/verifier-config.json` | Exact synthetic verifier configuration, whose canonical digest binds every observation. |
 | `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |
+| `vectors/protocol-manifest.json` | Executable key-rotation, concurrency, invalid-target, and confidentiality cases that JSON Schema cannot express. |
+| `vectors/receipt-binding-mutations.json` | Valid-domain mutations proving every signed receipt field is bound. |
 
 ## Offline semantic-probe fixtures
 
@@ -60,6 +62,13 @@ A vector is not satisfied merely by being rejected. `tests/test_schema.py`
 requires each invalid vector to be rejected **for the stated reason**, and
 requires the invalid set to trip at least four distinct rules, so the suite
 cannot be one rule wearing many hats.
+
+Stateful vectors are executed, not parsed as schema instances. The feed cases
+construct synthetic signed events and key schedules, then require the exact
+accept/refuse behavior. Confidentiality case requires forbidden erased content
+to remain absent from serialized receipt evidence. Receipt-binding mutations
+rebuild a receipt with one field changed while retaining original signature;
+verification must fail for every signable field.
 
 The Phase 2 CLI adds a local checkpoint evidence object implemented in
 `prototype/checkpoints.py`. It is not a third wire schema yet: independent

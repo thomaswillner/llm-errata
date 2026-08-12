@@ -91,13 +91,12 @@ COMPARATORS = {
     "!=": operator.ne,
 }
 G2_MATRIX_CURRENT_EVIDENCE = (
-    "Semantic probes and durable `errata quarantine` checkpoints are internally "
-    "implemented, but Phase 2 remains incomplete: vectors for key rotation, concurrency, invalid targets, "
-    "and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded."
+    "Phase 2 is internally complete: schemas, CLI quarantine checkpoints, semantic probes, "
+    "key rotation, concurrency, invalid-target, confidentiality, and complete receipt-field "
+    "binding vectors are implemented; no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
-    "Complete listed Phase 2 gaps, then record dated independent external "
-    "conformance-review result covering complete Phase 2 surface."
+    "Dated independent external conformance-review result covering the exact complete Phase 2 surface."
 )
 G6_MATRIX_CURRENT_EVIDENCE = (
     "No independent report binds an exact commit and deployment to passing "

@@ -37,6 +37,8 @@
         {"kind": "repository", "ref": "spec/semantic/probes.json"},
         {"kind": "repository", "ref": "spec/semantic/verifier-config.json"},
         {"kind": "repository", "ref": "spec/semantic/observations.json"},
+        {"kind": "repository", "ref": "spec/vectors/protocol-manifest.json"},
+        {"kind": "repository", "ref": "spec/vectors/receipt-binding-mutations.json"},
         {"kind": "repository", "ref": "prototype/README.md"},
         {"kind": "repository", "ref": "spec/README.md"},
         {"kind": "repository", "ref": "REVIEW_REQUEST.md"},

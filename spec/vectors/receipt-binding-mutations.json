@@ -1,0 +1,19 @@
+{
+  "description": "One semantically different valid-domain value for every signed receipt field. Reusing the original signature must fail for every mutation.",
+  "fields": {
+    "importer": "other-importer",
+    "erratum_id": "err_other",
+    "sequence": 2,
+    "target_root": "mem_other",
+    "operation": "correct",
+    "pre_state_root": "00000000000000000000000000000000",
+    "post_state_root": "11111111111111111111111111111111",
+    "stores": {"markdown": "unknown"},
+    "dispositions": {"markdown": {"fact:diet": "untouched"}},
+    "triad": {"negative": "fail", "positive": "pass", "preserve": "pass"},
+    "aggregate": "unknown",
+    "limitations": ["synthetic mutation"],
+    "history_retained": false,
+    "adapter_versions": {"markdown": "9.9.9"}
+  }
+}

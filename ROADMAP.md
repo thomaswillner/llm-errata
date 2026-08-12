@@ -102,7 +102,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** items 1 through 5 are partially implemented and item 6 is internally implemented; Phase 2 is not complete. `spec/` carries schemas, vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. Vectors for key rotation, concurrent events, invalid targets, and confidentiality remain unimplemented. Receipt state-root binding vectors exist, but receipt-binding coverage remains partial. This internal work does not complete G2: a dated independent external conformance review of the complete Phase 2 surface remains required.
+**Status:** internally complete, externally unreviewed. `spec/` carries schemas, static vectors, executable stateful vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. `OwnerKeySchedule` binds every event to the key active at its sequence. Stateful vectors execute valid rotation, rotated-key reuse, concurrent sequence conflict, invalid targets, content-free erasure evidence, and mutation of every signed receipt field. This internal work does not complete G2: a dated independent external conformance review of the exact complete Phase 2 surface remains required.
 
 Only after the file-backed proof passes:
 
@@ -133,7 +133,7 @@ the erratum, sequence, target, pre-state, adapter inventory, and gated set.
 `errata repair` re-authenticates and refuses missing, consumed, replayed, or
 drifted checkpoints before rebuild.
 
-Phase 2 internal implementation is incomplete. Complete the listed vector and receipt-binding gaps before asking an independent reviewer to evaluate the complete conformance surface. G2 remains blocked until that implementation work and a dated independent external review exist. Broader Phase 2 interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
+Phase 2 internal implementation is complete. G2 remains blocked until a dated independent external reviewer evaluates the exact committed surface; local tests and author-directed review cannot satisfy that gate. Broader interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
 
 ## Phase 3 — Interoperability experiment
 

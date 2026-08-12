@@ -419,18 +419,26 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Semantic probes and durable `errata quarantine` checkpoints are internally implemented, but Phase 2 remains incomplete: vectors for key rotation, concurrency, invalid targets, and confidentiality are absent; receipt-binding vectors are partial; no qualifying independent review is recorded.",
+                "Phase 2 is internally complete: schemas, CLI quarantine checkpoints, semantic probes, key rotation, concurrency, invalid-target, confidentiality, and complete receipt-field binding vectors are implemented; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "G2 matrix current evidence")
 
+    def test_internal_phase2_completion_cannot_upgrade_g2(self) -> None:
+        def mutate(payload):
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["status"] = "PASS"
+
+        result = self._mutated(mutate)
+        self.assert_rejected_without_traceback(result, "G2 external PASS evidence")
+
     def test_g2_matrix_next_evidence_drift_is_rejected(self) -> None:
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Complete listed Phase 2 gaps, then record dated independent external conformance-review result covering complete Phase 2 surface.",
+                "Dated independent external conformance-review result covering the exact complete Phase 2 surface.",
                 "Local tests are enough.",
             )
 

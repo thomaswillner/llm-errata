@@ -4,7 +4,7 @@
   "title": "LLM Errata erratum",
   "description": "An authorised correction, supersession, or erasure for an exported memory root. This is the signed preimage: the signature is carried alongside and is not part of what it covers.",
   "type": "object",
-  "required": ["erratum_id", "sequence", "target_root", "operation", "valid_from", "postconditions"],
+  "required": ["erratum_id", "sequence", "target_root", "operation", "valid_from", "postconditions", "signing_key_id"],
   "additionalProperties": false,
   "properties": {
     "erratum_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9_.:-]+$"},
@@ -23,6 +23,7 @@
         "preserve": {"type": "string", "minLength": 1}
       }
     },
+    "signing_key_id": {"type": "string", "minLength": 1, "description": "Key identifier active for this sequence under the importer's configured owner-key schedule."},
     "signature": {"type": ["string", "null"], "pattern": "^[0-9a-f]{128}$"}
   },
   "oneOf": [

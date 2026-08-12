@@ -10,6 +10,10 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Completed internal Phase 2 conformance surface with owner-key rotation,
+  rotated-key refusal, concurrent sequence-conflict, invalid-target,
+  content-free confidentiality, and every-field receipt-binding vectors. G2
+  remains `BLOCKED` until dated independent review of exact committed surface.
 - Added a ten-scope G6 operational evidence contract and fail-closed checker.
   One independent report must bind exact commit and deployment, declare
   workload, platform, failure domain, observation window, numeric thresholds,

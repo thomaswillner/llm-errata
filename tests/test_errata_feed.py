@@ -14,6 +14,7 @@ from prototype.errata import (
     Erratum,
     FeedError,
     Operation,
+    OwnerKeySchedule,
     RootRegistry,
     read_feed,
     verify_feed,
@@ -23,6 +24,8 @@ from prototype.signing import DemoSigner
 
 OWNER = DemoSigner(b"owner-secret")
 IMPOSTOR = DemoSigner(b"not-the-owner")
+OWNER_V1 = DemoSigner(b"owner-v1", key_id="owner-v1")
+OWNER_V2 = DemoSigner(b"owner-v2", key_id="owner-v2")
 
 ROOTS = RootRegistry({"mem_01HX", "mem_02KP"})
 
@@ -58,6 +61,24 @@ class FeedAcceptsWellFormedEvents(unittest.TestCase):
             [item.erratum_id for item in read_feed(lines)],
             ["err_0001", "err_0002"],
         )
+
+    def test_key_rotation_uses_the_key_active_for_each_sequence(self) -> None:
+        schedule = OwnerKeySchedule(((1, OWNER_V1.public), (2, OWNER_V2.public)))
+        signed = [
+            OWNER_V1.sign_erratum(erratum(1)),
+            OWNER_V2.sign_erratum(erratum(2)),
+        ]
+        accepted = verify_feed(signed, owner=schedule, roots=ROOTS)
+        self.assertEqual([item.signing_key_id for item in accepted], ["owner-v1", "owner-v2"])
+
+    def test_rotated_out_key_cannot_sign_a_later_sequence(self) -> None:
+        schedule = OwnerKeySchedule(((1, OWNER_V1.public), (2, OWNER_V2.public)))
+        signed = [
+            OWNER_V1.sign_erratum(erratum(1)),
+            OWNER_V1.sign_erratum(erratum(2)),
+        ]
+        with self.assertRaisesRegex(FeedError, "active key"):
+            verify_feed(signed, owner=schedule, roots=ROOTS)
 
 
 class FeedRejectsForgeryAndReplay(unittest.TestCase):
