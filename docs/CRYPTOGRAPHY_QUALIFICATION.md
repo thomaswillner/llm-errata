@@ -31,6 +31,25 @@ checked RFC 8032 vectors, but Python big-integer operations are not a suitable
 side-channel boundary for production signing. The `Signer` protocol in
 `prototype/signing.py` isolates replacement from controller and receipt logic.
 
+### Verification refusal evidence
+
+The stronger security-relevant reference evidence is not that five valid
+signatures succeed; it is that invalid inputs fail closed. The checked suite
+demonstrates refusal of:
+
+- a non-canonical scalar (`S >= L`), preventing signature malleability;
+- malformed public-key and signature lengths, returning `False` rather than
+  raising into an ambiguous caller path;
+- a tampered message;
+- a tampered signature; and
+- a wrong public key.
+
+The suite also refuses malformed signature strings at the `VerificationKey`
+seam and refuses a seed of the wrong length. These are observed reference-code
+properties in `tests/test_ed25519.py`, not claims about a future production
+binding. They do not prove constant-time behavior, resistance to side channels,
+safe key lifecycle, current-library audit status, or G3.
+
 ### PyCA `cryptography`
 
 | Item | Observed evidence |
@@ -114,7 +133,9 @@ not independent security evidence.
 The compatibility probe loaded the five RFC 8032 vectors already published in
 `tests/test_ed25519.py`, constructed PyCA private keys from each 32-byte seed,
 and compared raw public keys and signatures with literal expected values. It
-then verified every signature with the corresponding raw public key.
+then verified every signature with the corresponding raw public key. This is a
+wire-compatibility oracle; the refusal-path tests above are the stronger
+security-relevant evidence about the current reference verifier.
 
 Observed result:
 

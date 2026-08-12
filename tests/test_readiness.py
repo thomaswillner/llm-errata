@@ -37,6 +37,22 @@ SCRIPT = "check_readiness.py"
 
 
 class ReadinessCheckerPasses(unittest.TestCase):
+    def test_cryptography_qualification_foregrounds_refusal_evidence(self) -> None:
+        qualification = (
+            Path(__file__).resolve().parents[1]
+            / "docs"
+            / "CRYPTOGRAPHY_QUALIFICATION.md"
+        ).read_text(encoding="utf-8")
+        for phrase in (
+            "non-canonical scalar",
+            "malformed public-key and signature lengths",
+            "tampered message",
+            "tampered signature",
+            "wrong public key",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, qualification)
+
     def test_current_not_ready_ledger_is_honest(self) -> None:
         with repo_copy() as root:
             result = run_checker(root, SCRIPT)

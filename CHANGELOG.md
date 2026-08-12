@@ -19,6 +19,10 @@ Changes to the bounded novelty statement or the source comparison are recorded h
   coverage-truthfulness properties. A valid signature authenticates the
   importer and receipt bytes; it cannot turn overstated, missing, or opaque
   coverage into a truthful claim.
+- Reordered the production-cryptography qualification to foreground observed
+  refusal of malformed lengths, non-canonical scalars, tampered messages and
+  signatures, and wrong keys. Successful RFC vectors remain compatibility
+  evidence and do not establish constant-time or production assurance.
 
 - Corrected the Inspeximus comparison after conflict-disclosed maintainer
   feedback and source verification. `retract_lineage` plus `rederive` is a
