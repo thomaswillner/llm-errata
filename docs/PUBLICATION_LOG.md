@@ -15,6 +15,7 @@ readiness gate. Last verified: 2026-08-12.
 | Targeted standards/collision review | [Portable Agent Memory invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269524323) | Invitation to test the conformance/standards collision boundary; it is not review evidence. |
 | Targeted operated-system nomination | [Mem0 invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269537990) | Invitation to nominate a future independently operated system; it is non-evidence and separate from validator authorship. |
 | Targeted operated-system nomination | [Cognee invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269538156) | Invitation to nominate a future independently operated system; it is non-evidence and separate from validator authorship. |
+| Separate CODEOWNER volunteer recruitment | [PR #3 reviewer call](https://github.com/thomaswillner/llm-errata/pull/3#issuecomment-5269583214) | Invitation only; no volunteer or reviewer is recorded, no access was granted, and this call made no CODEOWNERS or protection change. It is not external evidence. |
 | Independent implementation call | [Issue #5](https://github.com/thomaswillner/llm-errata/issues/5) and its [implementation update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246) | Open call for independently authored adapters and a separately produced validator. |
 | Phase 3 system nominations | [Issue #6](https://github.com/thomaswillner/llm-errata/issues/6) and its [nomination update](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440) | Open nominations only; no experiment is authorized or underway. |
 
@@ -30,6 +31,17 @@ GitHub Actions for that current PR head completed successfully for [Python
 3.11](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230842)
 and [Python
 3.13](https://github.com/thomaswillner/llm-errata/actions/runs/31616716434/job/94181230861).
+
+## Direct email outreach
+
+| Recipient | Subject | Status |
+|---|---|---|
+| `founders@mem0.ai` | `Nomination request: Mem0 for an independent AI-memory interoperability experiment` | Sent 2026-08-12; no reply or acceptance recorded. Linked [Mem0 GitHub invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269537990) remains nomination-only. |
+| `info@topoteretes.com` | `Nomination request: Cognee for an independent AI-memory interoperability experiment` | Sent 2026-08-12; no reply or acceptance recorded. Linked [Cognee GitHub invitation](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269538156) remains nomination-only. |
+
+These messages are outreach, not external evidence. They do not authorize a
+synthetic experiment, account access, data transfer, cost, integration, or a
+role that overlaps validator authorship.
 
 ## External channels
 
