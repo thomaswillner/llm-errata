@@ -401,6 +401,31 @@ def check_publication_metadata(reporter: Reporter) -> None:
         "Rainer Willner copyright notice, and irrevocable earlier Apache grant.",
     )
 
+    public_requirements = {
+        "README.md": (
+            "Commercial and non-commercial independent implementations are permitted",
+            "Thomas Willner",
+        ),
+        "NOTICE": ("Implements the LLM Errata specification by Thomas Willner",),
+        "INDEPENDENT_IMPLEMENTATION.md": ("No per-implementer permission is required",),
+        "CONTRIBUTING.md": ("independently authored implementation",),
+        "SECURITY.md": (
+            "Licence attribution does not imply security review, endorsement, or certification",
+        ),
+    }
+    public_alignment = all(
+        (ROOT / name).is_file()
+        and all(phrase in read_utf8(ROOT / name) for phrase in phrases)
+        for name, phrases in public_requirements.items()
+    )
+    reporter.check(
+        "public licence alignment",
+        public_alignment,
+        "public documents preserve implementation rights, attribution, clean-room, and no-endorsement boundaries",
+        "Synchronize README, NOTICE, INDEPENDENT_IMPLEMENTATION, CONTRIBUTING, "
+        "and SECURITY with the dual licence contract.",
+    )
+
 
 def check_g2_independent_review_gate(reporter: Reporter) -> None:
     """Keep internal Phase 2 work from being represented as external review."""

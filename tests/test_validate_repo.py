@@ -25,6 +25,19 @@ class ValidatorPasses(unittest.TestCase):
 
 
 class ValidatorRejectsStructuralFaults(unittest.TestCase):
+    def _assert_public_license_mutation_is_rejected(
+        self, relative_path: str, old: str, new: str
+    ) -> None:
+        def mutate(root: Path) -> None:
+            path = root / relative_path
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(old, text, f"missing public licence contract: {old}")
+            path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("public licence alignment", result.stdout)
+
     def _assert_license_mutation_is_rejected(self, old: str, new: str) -> None:
         def mutate(root: Path) -> None:
             path = root / "LICENSE"
@@ -58,6 +71,41 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self._assert_license_mutation_is_rejected(
             "does not imply endorsement, sponsorship, certification, or audit",
             "implies certification by the author",
+        )
+
+    def test_readme_dual_license_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "README.md",
+            "Commercial and non-commercial independent implementations are permitted",
+            "Only personal experiments are permitted",
+        )
+
+    def test_notice_product_attribution_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "NOTICE",
+            "Implements the LLM Errata specification by Thomas Willner",
+            "Implements a memory specification",
+        )
+
+    def test_independent_implementation_permission_rule_cannot_regress(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "INDEPENDENT_IMPLEMENTATION.md",
+            "No per-implementer permission is required",
+            "Written permission is required",
+        )
+
+    def test_contributing_clean_room_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "CONTRIBUTING.md",
+            "independently authored implementation",
+            "copy of the reference implementation",
+        )
+
+    def test_security_no_endorsement_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "SECURITY.md",
+            "Licence attribution does not imply security review, endorsement, or certification",
+            "Licence attribution provides security certification",
         )
 
     def test_missing_required_file_is_rejected(self) -> None:

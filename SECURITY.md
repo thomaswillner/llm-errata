@@ -50,6 +50,11 @@ Security-relevant findings include, but are not limited to:
 
 Factual disagreements, prior-art reports, and specification design proposals are not vulnerabilities; submit them through the normal contribution process.
 
+Licence attribution does not imply security review, endorsement, or certification
+by Thomas Willner. Third-party implementations have their own security and
+support responsibilities; conformance or attribution alone does not place them
+inside this repository's supported-version policy.
+
 ## Operational security gate
 
 Security reporting policy is not operational-readiness evidence. G6 additionally

@@ -32,7 +32,10 @@ specification version, dependencies, test commands, unsupported behavior, and
 licence. Shared conformance vectors are expected. Shared reference-adapter code
 disqualifies the implementation as independent evidence.
 
-The current personal-use licence requires written permission to implement the
-specification. Open a GitHub issue naming the research or standards scope,
-repository, organization, requested version, and intended publication. A
-permission grant does not imply technical endorsement.
+No per-implementer permission is required for an independently authored
+commercial or non-commercial implementation of the specification. The
+irrevocable implementation grant requires every product or service to credit
+`LLM Errata`, `Thomas Willner`, and the canonical repository in an ordinarily
+accessible product location. It does not permit copying code from `prototype/`,
+`scripts/`, or `tests/`, and attribution does not imply technical endorsement,
+certification, or audit. See [LICENSE](LICENSE).

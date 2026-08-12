@@ -17,7 +17,7 @@
 | Status | Public concept proposal / Request for Comment |
 | Published | 2026-08-07 |
 | Research reviewed through | 2026-08-01 |
-| License | Personal use only, see [LICENSE](LICENSE). Releases up to 0.2.0 were Apache-2.0. |
+| License | Attributed specification implementations permitted; reference code remains personal-use. See [LICENSE](LICENSE). |
 
 This is an independent proposal. It does not represent the position of the author's employer or any organization referenced in this repository.
 
@@ -193,12 +193,17 @@ The public research record exposes the decision criteria and evidence trail. It 
 
 Copyright © 2026 Thomas Rainer Willner.
 
-Licensed for personal, non-commercial evaluation and study. See [LICENSE](LICENSE).
+Commercial and non-commercial independent implementations are permitted under
+an irrevocable, worldwide, royalty-free specification grant. Every product or
+service implementing a material part of LLM Errata must credit **LLM Errata**
+and **Thomas Willner**, with the repository URL, in an ordinarily accessible
+About, Legal, documentation, acknowledgements, or NOTICE location.
 
-You may read, run, study, quote, and cite this work. Commercial use,
-redistribution, derivative works, and implementing the specifications in
-`spec/` require written permission, which is not unreasonably withheld for
-research and standards work.
+Reference code under `prototype/`, `scripts/`, and `tests/` remains licensed
+only for personal, non-commercial evaluation and study unless separately
+licensed. The specification grant permits clean-room implementation; it does
+not permit copying reference code. Attribution does not imply endorsement,
+certification, audit, or support.
 
 Version 0.2.0 and earlier were published under the Apache License 2.0. That
 grant is irrevocable for those releases and is not withdrawn here.

@@ -63,6 +63,13 @@ Implementation contributions should include:
 - dependency and license information;
 - evidence that unrelated memory is preserved during repair.
 
+An independently authored implementation may use the published specification,
+schemas, examples, and conformance vectors under the irrevocable implementation
+grant in [LICENSE](LICENSE). Product code must be authored independently rather
+than copied from `prototype/`, `scripts/`, or `tests/`, and every commercial or
+non-commercial product must preserve the required Thomas Willner and LLM Errata
+attribution.
+
 Never submit secrets, personal data, proprietary customer material, or confidential employer information.
 
 ## Issues and pull requests
@@ -81,7 +88,11 @@ Before opening a large pull request, open an issue describing the proposed chang
 
 By submitting a contribution, you grant the copyright holder a perpetual, worldwide, irrevocable, royalty-free licence to use, modify, and relicense it, and you confirm you have the right to submit the material. You retain your own copyright. See [LICENSE](LICENSE). Cite rather than copy third-party text unless its licence clearly permits inclusion.
 
-Note that this repository is licensed for personal use. Prior-art challenges, corrections, and design critique are welcome and need no permission. Implementing the specifications in `spec/` does require written permission, which is not unreasonably withheld for research and standards work.
+Reference code in this repository remains personal-use unless separately
+licensed. Prior-art challenges, corrections, and design critique need no
+permission. Clean-room specification implementations need no individual grant,
+but remain subject to attribution, notice-preservation, no-endorsement, and
+third-party licence conditions.
 
 ## Security findings
 

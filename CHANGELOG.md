@@ -10,6 +10,12 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Granted irrevocable, worldwide, royalty-free rights for independently
+  authored commercial and non-commercial implementations of the specification,
+  conditioned on accessible product attribution to LLM Errata and Thomas
+  Willner. Reference code remains personal-use, no patent or certification
+  right is granted, and the historical Apache-2.0 grant remains unchanged.
+
 - Corrected the Inspeximus comparison after conflict-disclosed maintainer
   feedback and source verification. `retract_lineage` plus `rederive` is a
   stronger local quarantine/rebuild collision than the earlier erasure-focused
