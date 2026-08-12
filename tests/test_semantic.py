@@ -379,6 +379,32 @@ class RequiredTriadAndAdapterBoundaries(unittest.TestCase):
             self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
             self.assertTrue(report.limitations)
 
+    def test_provider_exception_type_is_not_persisted_for_erasure(self) -> None:
+        retired_value = "orchid-lantern-secret"
+        value_bearing_error = type(retired_value, (Exception,), {})
+
+        class Explodes:
+            def evaluate(self, probe, config):
+                raise value_bearing_error("provider failure")
+
+        probes = (
+            probe("ignored", ProbeKind.NEGATIVE, operation=Operation.ERASE),
+            probe("ignored", ProbeKind.PRESERVATION, operation=Operation.ERASE),
+        )
+        report = SemanticProbeRunner().run(probes, CONFIG, Explodes())
+
+        self.assertEqual(report.coverage, SemanticCoverage.UNKNOWN)
+        self.assertEqual(
+            report.limitations,
+            (
+                f"missing required observation for probe {ERASURE_NEGATIVE_PROBE_ID}",
+                f"missing required observation for probe {ERASURE_PRESERVATION_PROBE_ID}",
+                f"provider error for probe {ERASURE_NEGATIVE_PROBE_ID}",
+                f"provider error for probe {ERASURE_PRESERVATION_PROBE_ID}",
+            ),
+        )
+        self.assertNotIn(retired_value, report.canonical_json())
+
     def test_recorded_observation_operation_mismatch_is_unknown_and_not_persisted(self) -> None:
         probes = (
             probe("negative", ProbeKind.NEGATIVE),

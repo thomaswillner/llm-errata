@@ -610,9 +610,13 @@ class SemanticProbeRunner:
             for item in declared:
                 try:
                     result = verifier.evaluate(item, config)  # type: ignore[union-attr]
-                except Exception as error:
+                except Exception:
+                    # Provider exceptions are untrusted input. Their messages
+                    # and even dynamically created class names can contain
+                    # retired or confidential content, so persist only this
+                    # closed diagnostic code plus the declared protocol ID.
                     adapter_limitations.append(
-                        f"provider error for probe {item.probe_id}: {type(error).__name__}"
+                        f"provider error for probe {item.probe_id}"
                     )
                     continue
                 if result is None:
