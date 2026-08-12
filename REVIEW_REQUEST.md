@@ -18,7 +18,7 @@ any earlier public implementation or normative profile that requires all of:
 1. post-export update delivery to prior importers;
 2. importer-side quarantine and repair of known local descendants;
 3. negative, positive, and preservation verification; and
-4. a signed, coverage-aware callback bound to the event and importer state.
+4. an authenticated, coverage-truthful callback bound to the event and importer state: D1 verifies signer and byte binding; D2 checks that signed stores, aggregate, and limitations truthfully represent the declared required scope.
 
 Partial collisions are valuable and should narrow the proposal.
 

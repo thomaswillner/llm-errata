@@ -49,7 +49,7 @@ observe → quarantine → rebuild → test → attest
 2. **Quarantine:** block that root and its known local descendants before further recall.
 3. **Rebuild:** retire invalid artifacts and reconstruct mixed artifacts from still-valid inputs.
 4. **Test:** run the repair triad across the declared stores and behavioral scope.
-5. **Attest:** return a signed, coverage-aware receipt bound to the erratum and the importer's pre-repair and post-repair state.
+5. **Attest:** return an authenticated, coverage-truthful receipt bound to the erratum and the importer's pre-repair and post-repair state. Its signature authenticates the bytes; separate coverage rules determine whether the signed claim is honest.
 
 An importer that cannot inspect a relevant cache or derived store reports `unknown`. It does not silently turn incomplete coverage into success.
 
@@ -85,7 +85,7 @@ This repository does **not** claim to invent portable memory, correction feeds, 
 
 The narrow research conclusion is:
 
-> **No exact public implementation found in the reviewed sources required all four together: post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and a signed, coverage-aware callback bound to the erratum and pre/post state.**
+> **No exact public implementation found in the reviewed sources required all four together: post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and an authenticated, coverage-truthful callback bound to the erratum and pre/post state.**
 
 This is a novel synthesis with an apparently unimplemented conformance gap. It is not a claim of patentability, a “world first,” or freedom to operate. [EngramSpec](https://engramspec.org/) is the strongest AI-memory transport collision. The individual [vCon Lifecycle using SCITT draft](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) is the strongest formal standards/control-plane collision. [Shomei](https://shomei.ai/docs/governance-and-receipts/) and [Inspeximus](https://github.com/DanceNitra/inspeximus) are the closest local governance and correction collisions.
 

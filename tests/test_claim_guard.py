@@ -78,6 +78,33 @@ class ClaimGuardRejectsOverclaims(unittest.TestCase):
 
 
 class ClaimGuardRejectsInvariantLoss(unittest.TestCase):
+    def test_signature_authenticity_cannot_be_misstated_as_coverage_truth(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "Signature validity authenticates the importer and receipt bytes; "
+                "it does not establish that the reported coverage is truthful.",
+                "Signature validity proves that the reported coverage is truthful.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("signature authenticity boundary", result.stdout)
+
+    def test_coverage_truthfulness_cannot_upgrade_missing_evidence(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "Coverage truthfulness requires the signed stores, aggregate, and "
+                "limitations to match the declared required scope without upgrading "
+                "missing or opaque evidence.",
+                "Coverage truthfulness permits missing and opaque evidence to be upgraded.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("coverage truthfulness boundary", result.stdout)
+
     def test_inverted_loop_order_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             path = root / "IDEA.md"

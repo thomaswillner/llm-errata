@@ -9,6 +9,12 @@ than this one can be built and checked against the same contract.
 | `receipt.schema.json` | What an importer returns after acting on one. |
 | `vectors/manifest.json` | Every vector, which schema it belongs to, whether it must validate, and — for an invalid vector — the text that must appear in the rejection. |
 | `vendor/json-schema-test-suite/` | Cases from the official JSON-Schema-Test-Suite, vendored unmodified. |
+
+Receipt conformance evaluates two independent properties. D1 authenticity
+verifies the importer and every signable byte. D2 coverage truthfulness checks
+that signed stores, aggregate, and limitations match the declared required
+scope. A correctly signed receipt that overstates coverage passes D1 and fails
+D2; signature validity never upgrades missing or opaque evidence.
 | `semantic/probes.json` | Named, strict semantic-probe sets for offline conformance. |
 | `semantic/verifier-config.json` | Exact synthetic verifier configuration, whose canonical digest binds every observation. |
 | `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |

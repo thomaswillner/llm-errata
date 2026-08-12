@@ -15,6 +15,10 @@ Changes to the bounded novelty statement or the source comparison are recorded h
   conditioned on accessible product attribution to LLM Errata and Thomas
   Willner. Reference code remains personal-use, no patent or certification
   right is granted, and the historical Apache-2.0 grant remains unchanged.
+- Split the callback requirement into independently evaluated authenticity and
+  coverage-truthfulness properties. A valid signature authenticates the
+  importer and receipt bytes; it cannot turn overstated, missing, or opaque
+  coverage into a truthful claim.
 
 - Corrected the Inspeximus comparison after conflict-disclosed maintainer
   feedback and source verification. `retract_lineage` plus `rederive` is a

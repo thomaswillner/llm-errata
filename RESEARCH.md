@@ -16,7 +16,7 @@ The broad question was:
 
 The question that survived screening was narrower:
 
-> As of 2026-08-01, did any reviewed public implementation or normative profile require an importer of exported AI memory to receive later errata, quarantine and repair the memory's locally derived descendants, verify the repair behaviorally, and return a signed, coverage-aware result to the root owner?
+> As of 2026-08-01, did any reviewed public implementation or normative profile require an importer of exported AI memory to receive later errata, quarantine and repair the memory's locally derived descendants, verify the repair behaviorally, and return an authenticated, coverage-truthful result to the root owner?
 
 The screened result is **LLM Errata**:
 
@@ -27,7 +27,7 @@ The exact surviving feature conjunction is:
 1. **Post-export update delivery.** A previously exported memory root remains addressable through an authenticated, monotonically sequenced correction, supersession, or erasure channel.
 2. **Importer-side descendant quarantine and repair.** After validating an erratum, the importer blocks the root and its known local derivation closure before recall, then retires or rebuilds affected summaries, embeddings, profile fields, graph nodes, caches, and downstream exports from still-valid inputs.
 3. **Three-way behavioral verification.** The importer tests that the retired belief is absent, the replacement is active when applicable, and unrelated memory survives. LLM Errata calls these the negative, positive, and preservation checks.
-4. **Signed, coverage-aware callback.** The importer returns a receipt bound to the erratum and pre-/post-repair state roots, identifies the stores inspected, reports surfaces it cannot observe as `unknown`, and cannot claim aggregate success while a required store remains unresolved.
+4. **Authenticated, coverage-truthful callback.** The importer returns a signed receipt bound to the erratum and pre-/post-repair state roots, identifies the stores inspected, reports surfaces it cannot observe as `unknown`, and cannot claim aggregate success while a required store remains unresolved. Signature verification authenticates the importer and bytes; coverage evaluation separately tests whether the signed stores, aggregate, and limitations truthfully describe the required scope.
 
 The claim is about the **complete conjunction**. None of its individual mechanisms is claimed as new.
 
@@ -190,7 +190,7 @@ The prior-art conclusion should be revised or withdrawn if a dated public source
 2. A valid event causes pre-repair quarantine and traversal of the importer's local descendant closure across relevant stores.
 3. Mixed descendants are rebuilt or retired while unrelated memory is preserved.
 4. Conformance requires negative, positive when applicable, and preservation checks.
-5. The importer returns a signed callback bound to the triggering event and pre-/post-repair state, with explicit `partial`, `unknown`, or `failed` coverage where full verification is impossible.
+5. The importer returns an authenticated callback bound to the triggering event and pre-/post-repair state, with separately evaluated coverage truthfulness and explicit `partial`, `unknown`, or `failed` results where full verification is impossible.
 
 Partial matches should be added to [PRIOR_ART.md](PRIOR_ART.md), not concealed. A future implementation that closes the whole gap would not make the user problem disappear; it would invalidate the claim that the conformance boundary remained unimplemented.
 

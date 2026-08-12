@@ -15,7 +15,7 @@ The proposal survives only if the following four requirements are evaluated toge
 | A | **Post-export update delivery:** an authenticated correction, supersession, or erasure reaches an importer after the original memory transfer. |
 | B | **Descendant quarantine and repair:** the importer blocks the root and its known local derivation closure before recall, then retires or rebuilds affected descendants. |
 | C | **Repair triad:** conformance tests the negative, positive when applicable, and preservation postconditions. |
-| D | **Coverage-aware callback:** the importer returns a signed result bound to the erratum and pre-/post-repair state, including incomplete or unknown store coverage. |
+| D | **Authenticated, coverage-truthful callback:** D1 authenticates the importer and signed receipt bytes; D2 requires the signed stores, aggregate, and limitations to match the declared required scope, including incomplete or unknown coverage. |
 
 No individual mechanism is claimed as new.
 
@@ -147,7 +147,7 @@ A complete collision should identify one dated public implementation or normativ
 2. a valid event causes quarantine of the root and the importer's known local descendant closure before recall;
 3. descendants are rebuilt or retired without destroying unrelated retained memory;
 4. conformance requires negative, positive when applicable, and preservation tests;
-5. the importer returns a signed callback bound to the erratum and pre-/post-repair state with explicit incomplete or unknown coverage.
+5. the importer returns an authenticated callback bound to the erratum and pre-/post-repair state, while a separate coverage-truthfulness check requires explicit incomplete or unknown coverage.
 
 When such evidence appears, this repository should record it, narrow or withdraw the novelty statement, and preserve the correction in [CHANGELOG.md](CHANGELOG.md). The correct response to a complete collision is not semantic argument—it is an erratum to LLM Errata itself.
 

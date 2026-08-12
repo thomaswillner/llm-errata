@@ -95,6 +95,8 @@ The opaque adapter is not a toy edge case. It is the control that proves the agg
 - a stale export cannot silently restore the retired state;
 - an `unknown`, `partial`, or `failed` required store prevents aggregate success;
 - receipts bind the erratum plus deterministic pre-repair and post-repair state roots;
+- signature verification authenticates receipt bytes but cannot certify coverage truthfulness;
+- signed stores, aggregate, and limitations match the declared required scope without upgrading missing or opaque evidence;
 - tests run without an API key; model-graded probes are optional and clearly separated;
 - the complete demo is reproducible from a clean checkout.
 
