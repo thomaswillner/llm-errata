@@ -13,10 +13,16 @@ repository can check.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Sequence
 
 from prototype.adapters import CannotEnumerate
+from prototype.checkpoints import (
+    AdapterCheckpoint,
+    CheckpointError,
+    QuarantineCheckpoint,
+)
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, verify_feed
 from prototype.lineage import LineageLedger
 from prototype.receipts import Receipt, aggregate_coverage
@@ -136,16 +142,57 @@ class Importer:
         # receipt. The sequence check still passes on a genuine resume because
         # an interrupted attempt never reached attest, so `last_sequence` did
         # not advance.
-        validated = self.observe(erratum)
+        checkpoint = self.quarantine(erratum)
         if resume:
             self.journal.append(
                 JournalEvent(Phase.OBSERVE, {"resumed": erratum.erratum_id})
             )
+        return self.repair_quarantined(erratum, checkpoint)
 
+    def quarantine(self, erratum: Erratum) -> QuarantineCheckpoint:
+        """Authenticate and gate one erratum without beginning its rebuild."""
+
+        validated = self.observe(erratum)
         pre_state_root = self.state_root()
         root = validated.target_root
-
         gated, unenumerable = self._quarantine(root)
+        unknown = set(unenumerable)
+        records = []
+        for adapter in sorted(self.adapters, key=lambda item: item.name):
+            limitation = self._opaque_limitation(adapter.name) if adapter.name in unknown else None
+            records.append(
+                AdapterCheckpoint(
+                    name=adapter.name,
+                    required=bool(getattr(adapter, "required", True)),
+                    artifact_ids=tuple(sorted(gated[adapter.name])),
+                    coverage="unknown" if adapter.name in unknown else "verified",
+                    limitation=limitation,
+                )
+            )
+        return QuarantineCheckpoint.create(
+            erratum_id=validated.erratum_id,
+            sequence=validated.sequence,
+            target_root=root,
+            pre_state_root=pre_state_root,
+            adapters=tuple(records),
+            created_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        )
+
+    def repair_quarantined(
+        self, erratum: Erratum, checkpoint: QuarantineCheckpoint
+    ) -> Receipt:
+        """Re-authenticate and repair only state proven gated by a checkpoint."""
+
+        validated = self.observe(erratum)
+        self._validate_checkpoint(validated, checkpoint)
+
+        root = validated.target_root
+        gated = {
+            record.name: list(record.artifact_ids) for record in checkpoint.adapters
+        }
+        unenumerable = [
+            record.name for record in checkpoint.adapters if record.coverage == "unknown"
+        ]
 
         self.journal.append(JournalEvent(Phase.REBUILD_BEGIN, {"root": root}))
         self.strategy.apply(self, validated, gated)
@@ -154,13 +201,61 @@ class Importer:
         triad = self._run_triad(validated)
         self.journal.append(JournalEvent(Phase.TEST, dict(triad)))
 
-        receipt = self._attest(validated, pre_state_root, unenumerable, triad)
+        receipt = self._attest(
+            validated, checkpoint.pre_state_root, unenumerable, triad
+        )
         self.last_sequence = validated.sequence
         self._applied[root] = validated.sequence
         self.journal.append(
             JournalEvent(Phase.ATTEST, {"aggregate": receipt.aggregate.value})
         )
         return receipt
+
+    def _validate_checkpoint(
+        self, erratum: Erratum, checkpoint: QuarantineCheckpoint
+    ) -> None:
+        if checkpoint.consumed:
+            raise CheckpointError("checkpoint is already consumed")
+        if (
+            checkpoint.erratum_id != erratum.erratum_id
+            or checkpoint.sequence != erratum.sequence
+            or checkpoint.target_root != erratum.target_root
+        ):
+            raise CheckpointError("checkpoint erratum binding does not match")
+        if checkpoint.pre_state_root != self.state_root():
+            raise CheckpointError("checkpoint pre-state root does not match current state")
+
+        records = {record.name: record for record in checkpoint.adapters}
+        adapters = {adapter.name: adapter for adapter in self.adapters}
+        if set(records) != set(adapters):
+            raise CheckpointError("checkpoint adapter inventory has drifted")
+        for name, adapter in adapters.items():
+            record = records[name]
+            if record.required != bool(getattr(adapter, "required", True)):
+                raise CheckpointError(f"checkpoint adapter requirement drifted: {name}")
+            try:
+                current = tuple(sorted(adapter.enumerate(erratum.target_root)))
+            except CannotEnumerate:
+                if (
+                    record.artifact_ids
+                    or record.coverage != "unknown"
+                    or record.limitation != self._opaque_limitation(name)
+                ):
+                    raise CheckpointError(f"checkpoint opaque coverage drifted: {name}")
+                continue
+            if record.coverage != "verified" or record.limitation is not None:
+                raise CheckpointError(f"checkpoint adapter coverage drifted: {name}")
+            if record.artifact_ids != current:
+                raise CheckpointError(f"checkpoint gated artifact set drifted: {name}")
+            if not all(adapter.is_quarantined(item) for item in current):
+                raise CheckpointError(f"checkpoint artifact is no longer gated: {name}")
+
+    @staticmethod
+    def _opaque_limitation(name: str) -> str:
+        return (
+            f"{name}: store exposes no enumeration interface, so its coverage "
+            "is unknown and no repair elsewhere changes that"
+        )
 
     def _quarantine(self, root: str) -> tuple[dict[str, list[str]], list[str]]:
         """Gate every known descendant everywhere, before any rebuild starts."""
@@ -215,8 +310,7 @@ class Importer:
             triad=triad,
             aggregate=aggregate_coverage(stores, triad),
             limitations=[
-                f"{name}: store exposes no enumeration interface, so its coverage "
-                "is unknown and no repair elsewhere changes that"
+                self._opaque_limitation(name)
                 for name in unenumerable
             ],
             history_retained=erratum.operation is Operation.SUPERSEDE,

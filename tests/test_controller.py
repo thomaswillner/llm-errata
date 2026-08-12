@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 import unittest
-
 from prototype.adapters import Coverage
+from prototype.checkpoints import CheckpointError, QuarantineCheckpoint
 from prototype.controller import Phase
 from prototype.errata import Erratum, Operation
 from prototype.scenario import DIET, build_importer
@@ -102,6 +102,41 @@ class QuarantinePrecedesRepair(unittest.TestCase):
         self.assertIn("fact:diet", gated.detail["markdown"])
         self.assertIn("summary:dining", gated.detail["markdown"])
         self.assertIn("vec:diet", gated.detail["vector"])
+
+    def test_explicit_quarantine_returns_bound_evidence_without_rebuild(self) -> None:
+        importer = build_importer(OWNER)
+        checkpoint = importer.quarantine(supersede())
+        self.assertEqual(checkpoint.erratum_id, "err_supersede")
+        self.assertEqual(checkpoint.pre_state_root, importer.state_root())
+        self.assertEqual(
+            {item.name: item.coverage for item in checkpoint.adapters},
+            {"markdown": "verified", "prompt_cache": "unknown", "vector": "verified"},
+        )
+        self.assertNotIn(Phase.REBUILD_BEGIN, [event.phase for event in importer.journal])
+
+    def test_checkpointed_repair_does_not_quarantine_twice(self) -> None:
+        importer = build_importer(OWNER)
+        checkpoint = importer.quarantine(supersede())
+        receipt = importer.repair_quarantined(supersede(), checkpoint)
+        self.assertEqual(receipt.erratum_id, checkpoint.erratum_id)
+        self.assertEqual(
+            [event.phase for event in importer.journal].count(Phase.QUARANTINE_BEGIN), 1
+        )
+
+    def test_drifted_checkpoint_is_refused_before_rebuild(self) -> None:
+        importer = build_importer(OWNER)
+        checkpoint = importer.quarantine(supersede())
+        drifted = QuarantineCheckpoint.create(
+            erratum_id=checkpoint.erratum_id,
+            sequence=checkpoint.sequence,
+            target_root=checkpoint.target_root,
+            pre_state_root="b" * 32,
+            adapters=checkpoint.adapters,
+            created_at=checkpoint.created_at,
+        )
+        with self.assertRaisesRegex(CheckpointError, "state"):
+            importer.repair_quarantined(supersede(), drifted)
+        self.assertNotIn(Phase.REBUILD_BEGIN, [event.phase for event in importer.journal])
 
 
 class EveryDescendantGetsADisposition(unittest.TestCase):
