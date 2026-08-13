@@ -249,6 +249,15 @@ class ReceiptsAreVerifiable(CliCase):
         self.assertIn("receipt is vacuous", result.stdout)
         self.assertNotIn("Traceback", result.stderr)
 
+    def test_malformed_receipt_json_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "malformed.json"
+        path.write_text("{not json", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt JSON is unreadable", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_a_tampered_aggregate_is_caught(self) -> None:
         self.seed()
         self.publish_supersession()
