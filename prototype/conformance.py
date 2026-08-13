@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import importlib.abc
+import importlib.util
 import inspect
 import json
 import re
@@ -981,26 +983,62 @@ def load_binding_factory(
         "sha256": hashlib.sha256(admitted_bytes).hexdigest(),
     }
 
-    try:
-        search_locations = [str(admitted_path.parent)] if admitted_path.name == "__init__.py" else None
-        spec = importlib.util.spec_from_loader(
-            module_name, loader=None, origin=str(admitted_path),
-            is_package=search_locations is not None,
-        )
-        if spec is None:
-            raise ImportError("binding module specification is unavailable")
-        if search_locations is not None:
-            spec.submodule_search_locations = search_locations
-        module = importlib.util.module_from_spec(spec)
-        module.__file__ = str(admitted_path)
-        prior_module = sys.modules.get(module_name)
-        sys.modules[module_name] = module
+    executed_sources: dict[str, tuple[str, bytes]] = {}
 
-        def execute_import() -> None:
-            code = compile(admitted_bytes, str(admitted_path), "exec")
+    class AdmittedLoader(importlib.abc.Loader):
+        def __init__(self, fullname: str, path: Path, payload: bytes) -> None:
+            self.fullname = fullname
+            self.path = path
+            self.payload = payload
+
+        def create_module(self, spec: object) -> None:
+            return None
+
+        def exec_module(self, module: object) -> None:
+            relative_path = self.path.relative_to(root).as_posix()
+            executed_sources[self.fullname] = (relative_path, self.payload)
+            code = compile(self.payload, str(self.path), "exec")
             exec(code, module.__dict__)
 
-        _run_with_timeout(execute_import)
+    class AdmittedFinder(importlib.abc.MetaPathFinder):
+        def find_spec(
+            self, fullname: str, path: object = None, target: object = None
+        ) -> object:
+            if fullname != module_name and not fullname.startswith(f"{module_name}."):
+                return None
+            name_parts = fullname.split(".")
+            source_path = root.joinpath(*name_parts).with_suffix(".py")
+            init_path = root.joinpath(*name_parts, "__init__.py")
+            matches = [item.resolve() for item in (source_path, init_path) if item.is_file()]
+            if len(matches) != 1:
+                raise ImportError(f"binding dependency {fullname!r} is ambiguous or missing")
+            selected = matches[0]
+            selected_relative = selected.relative_to(root).as_posix()
+            if selected_relative not in tracked:
+                raise ImportError(f"binding dependency {fullname!r} is not tracked")
+            payload = admitted_bytes if fullname == module_name else selected.read_bytes()
+            loader = AdmittedLoader(fullname, selected, payload)
+            is_package = selected.name == "__init__.py"
+            return importlib.util.spec_from_file_location(
+                fullname,
+                selected,
+                loader=loader,
+                submodule_search_locations=[str(selected.parent)] if is_package else None,
+            )
+
+    namespace_prefix = f"{module_name}."
+    saved_modules = {
+        name: module
+        for name, module in tuple(sys.modules.items())
+        if name == module_name or name.startswith(namespace_prefix)
+    }
+    for name in saved_modules:
+        sys.modules.pop(name, None)
+    finder = AdmittedFinder()
+    sys.meta_path.insert(0, finder)
+
+    try:
+        module = _run_with_timeout(lambda: importlib.import_module(module_name))
         factory = getattr(module, object_name)
     except _BindingTimeout as error:
         raise ConformanceInputError("binding import timed out") from error
@@ -1011,11 +1049,12 @@ def load_binding_factory(
             f"binding import failed: {type(error).__name__}"
         ) from error
     finally:
-        if "prior_module" in locals():
-            if prior_module is None:
-                sys.modules.pop(module_name, None)
-            else:
-                sys.modules[module_name] = prior_module
+        if finder in sys.meta_path:
+            sys.meta_path.remove(finder)
+        for name in tuple(sys.modules):
+            if name == module_name or name.startswith(namespace_prefix):
+                sys.modules.pop(name, None)
+        sys.modules.update(saved_modules)
     if not callable(factory):
         raise ConformanceInputError("binding factory must be callable")
     try:
@@ -1027,6 +1066,15 @@ def load_binding_factory(
     post_commit, post_tree = _runtime_identity(root)
     if post_commit != commit or post_tree != tree:
         raise ConformanceInputError("binding repository identity changed during import")
+    dependency_digest = hashlib.sha256()
+    for fullname, (dependency_path, payload) in sorted(executed_sources.items()):
+        dependency_digest.update(fullname.encode("utf-8"))
+        dependency_digest.update(b"\0")
+        dependency_digest.update(dependency_path.encode("utf-8"))
+        dependency_digest.update(b"\0")
+        dependency_digest.update(hashlib.sha256(payload).digest())
+        dependency_digest.update(b"\0")
+    source["dependency_manifest_sha256"] = dependency_digest.hexdigest()
     return factory, source
 
 

@@ -45,6 +45,8 @@ For an independently implemented binding in another checkout, add
 `--binding module:factory --binding-root /path/to/its/clean/git/checkout`.
 Reports bind the LLM Errata runtime commit/tree, exact corpus SHA-256, and the
 binding repository commit/tree plus tracked source path and SHA-256 separately.
+Binding-package modules are loaded from admitted tracked bytes rather than any
+preloaded module cache, and the report binds their dependency-manifest digest.
 
 Exit `0` means the supplied binding and validator controls passed this
 internal corpus. Exit `1` means a behavioral or mutation control failed. Exit

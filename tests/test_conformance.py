@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -434,6 +435,44 @@ class RuntimeSourceIdentity(unittest.TestCase):
             with patch("pathlib.Path.read_bytes", substitute_after_read):
                 with self.assertRaisesRegex(ConformanceInputError, "dirty"):
                     load_binding_factory("stable:factory", root)
+
+    def test_preloaded_package_dependency_cannot_inject_unbound_behavior(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-package-") as directory:
+            root = Path(directory)
+            package = root / "bindingpkg"
+            package.mkdir()
+            (package / "__init__.py").write_text(
+                "from .helper import VALUE\n"
+                "def factory():\n"
+                "    return VALUE\n",
+                encoding="utf-8",
+            )
+            (package / "helper.py").write_text(
+                'VALUE = "COMMITTED"\n', encoding="utf-8"
+            )
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "bindingpkg"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            cached = types.ModuleType("bindingpkg.helper")
+            cached.VALUE = "CACHED-UNBOUND"
+            prior = sys.modules.get("bindingpkg.helper")
+            sys.modules["bindingpkg.helper"] = cached
+            try:
+                factory, identity = load_binding_factory("bindingpkg:factory", root)
+            finally:
+                if prior is None:
+                    sys.modules.pop("bindingpkg.helper", None)
+                else:
+                    sys.modules["bindingpkg.helper"] = prior
+            self.assertEqual(factory(), "COMMITTED")
+            self.assertRegex(
+                identity["dependency_manifest_sha256"], r"^[0-9a-f]{64}$"
+            )
 
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
