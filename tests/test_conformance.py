@@ -263,6 +263,17 @@ class AdapterCases(unittest.TestCase):
             with self.assertRaisesRegex(ConformanceInputError, "timed out"):
                 validate_adapter_conformance(CORPUS, ROOT, SlowConstructorBinding)
 
+    def test_binding_metadata_has_a_hard_timeout(self) -> None:
+        class SlowMetadataBinding(ReferenceConformanceBinding):
+            @property
+            def name(self):
+                time.sleep(0.1)
+                return "slow-metadata"
+
+        with patch("prototype.conformance.BINDING_TIMEOUT_SECONDS", 0.01):
+            with self.assertRaisesRegex(ConformanceInputError, "timed out"):
+                validate_adapter_conformance(CORPUS, ROOT, SlowMetadataBinding)
+
 
 class RuntimeSourceIdentity(unittest.TestCase):
     def test_report_binds_clean_runtime_commit_tree_and_binding_source(self) -> None:
@@ -338,6 +349,12 @@ class AntiVacuity(unittest.TestCase):
         controls = run_validator_anti_vacuity_controls(
             corpus, ROOT, receipt_validator=lambda value: (),
         )
+        self.assertFalse(controls[0].passed)
+
+    def test_permissive_production_receipt_schema_makes_control_fail(self) -> None:
+        corpus = load_corpus(CORPUS, ROOT)
+        with patch("prototype.receipts.validate_schema", return_value=[]):
+            controls = run_validator_anti_vacuity_controls(corpus, ROOT)
         self.assertFalse(controls[0].passed)
 
     def test_no_op_feed_verifier_makes_acceptance_control_fail(self) -> None:

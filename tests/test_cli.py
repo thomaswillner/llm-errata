@@ -15,6 +15,7 @@ import unittest
 from pathlib import Path
 
 from prototype.conformance import ReferenceConformanceBinding
+from prototype.receipts import receipt_acceptance_errors
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -230,6 +231,9 @@ class RepairReportsHonestly(CliCase):
 
 
 class ReceiptsAreVerifiable(CliCase):
+    def test_empty_receipt_is_rejected_by_shared_acceptance_seam(self) -> None:
+        self.assertIn("receipt is vacuous", receipt_acceptance_errors({}))
+
     def test_a_genuine_receipt_verifies(self) -> None:
         self.seed()
         self.publish_supersession()
