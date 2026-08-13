@@ -385,7 +385,8 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            rewrite(root / "SECURITY.md", f"| {major}.{minor}.x | Yes |", "| 0.0.x | Yes |")
+            expected = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
+            rewrite(root / "SECURITY.md", expected, "| 0.0.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
@@ -395,7 +396,7 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            supported = f"| {major}.{minor}.x | Yes |"
+            supported = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
             rewrite(root / "SECURITY.md", supported, supported + "\n| 0.2.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
@@ -406,7 +407,7 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            row = f"| {major}.{int(minor) - 1}.x and earlier |"
+            row = f"| {major}.{int(minor) - 2}.x and earlier |"
             rewrite(
                 root / "SECURITY.md",
                 f"{row} No |",
