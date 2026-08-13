@@ -607,6 +607,19 @@ class ReferenceConformanceBinding:
     """Reference binding; external implementations supply an equivalent class."""
 
     name = "llm-errata-reference"
+    preserved_proposition_ids = frozenset(
+        {"fixture:quiet", "fixture:budget", "fixture:pet"}
+    )
+
+    @classmethod
+    def preserved_observations(
+        cls, adapter: ReferenceConformanceAdapter
+    ) -> tuple[PropositionObservation, ...]:
+        return tuple(
+            item
+            for item in adapter.proposition_observations()
+            if item.proposition_id in cls.preserved_proposition_ids
+        )
 
     def build(self, case: AdapterCase):
         from prototype.controller import Importer
@@ -630,7 +643,7 @@ class ReferenceConformanceBinding:
         return importer, traced, {
             "adapter": adapter,
             "owner": owner,
-            "before_observations": adapter.proposition_observations(),
+            "before_observations": self.preserved_observations(adapter),
         }
 
     def erratum(self, case: AdapterCase, context: dict[str, Any]):
@@ -686,7 +699,7 @@ class ReferenceConformanceBinding:
         )
         triad = dict(receipt.triad)
         multiplicity = compare_proposition_multiplicity(
-            context["before_observations"], target.proposition_observations()
+            context["before_observations"], self.preserved_observations(target)
         )
         preserved = all(
             target.recall(term)
