@@ -41,5 +41,8 @@ jobs:
       - name: Validate production-readiness evidence
         run: make readiness
 
+      - name: Validate active publication surfaces
+        run: make publication
+
       - name: Run self-tests, including the negative cases
         run: make test

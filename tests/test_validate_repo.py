@@ -108,6 +108,40 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
             "Licence attribution provides security certification",
         )
 
+    def test_publication_discipline_cannot_be_removed(self) -> None:
+        required = {
+            "AGENTS.md": (
+                "publication/active-surfaces.json",
+                "git cat-file -e <commit>:<path>",
+                "Recruitment evidence is not independent readiness evidence",
+            ),
+            "CONTRIBUTING.md": (
+                "append-only supersession",
+                "make publication",
+                "read-after-write",
+            ),
+            "docs/PUBLICATION_STRATEGY.md": (
+                "Active surface",
+                "Historical surface",
+                "publication/active-surfaces.json",
+            ),
+        }
+        for relative_path, phrases in required.items():
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    target = root / path
+                    text = target.read_text(encoding="utf-8")
+                    for phrase in required[path]:
+                        self.assertIn(phrase, text, f"missing publication contract: {phrase}")
+                    target.write_text(
+                        text.replace(required[path][0], "removed publication rule", 1),
+                        encoding="utf-8",
+                    )
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("publication discipline", result.stdout)
+
     def test_missing_required_file_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             (root / "SECURITY.md").unlink()
@@ -139,6 +173,19 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
                 self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
                 self.assertIn("required files", result.stdout)
 
+    def test_missing_publication_guard_artifacts_are_rejected(self) -> None:
+        for relative_path in (
+            "publication/active-surfaces.json",
+            "scripts/check_publication.py",
+            "tests/test_publication.py",
+        ):
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    (root / path).unlink()
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("required files", result.stdout)
     def test_internal_phase_two_completion_cannot_upgrade_g2(self) -> None:
         def mutate(root: Path) -> None:
             path = root / "readiness" / "production-readiness.json"
@@ -372,6 +419,26 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("canonical link", result.stdout)
+
+
+class PublicationGuardIntegration(unittest.TestCase):
+    def test_make_check_runs_publication_guard(self) -> None:
+        makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("check: lint claim readiness publication test demo", makefile)
+        self.assertIn(
+            "publication: ## Validate active public calls without upgrading readiness",
+            makefile,
+        )
+        self.assertIn("$(PYTHON) scripts/check_publication.py", makefile)
+
+    def test_ci_runs_publication_guard_explicitly(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows" / "validate.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("- name: Validate active publication surfaces", workflow)
+        self.assertIn("run: make publication", workflow)
 
 
 if __name__ == "__main__":

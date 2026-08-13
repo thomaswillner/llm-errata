@@ -74,7 +74,22 @@ Never submit secrets, personal data, proprietary customer material, or confident
 
 ## Issues and pull requests
 
-Run `make check` before opening a pull request; CI covers the same four validation components: repository structure and metadata, the bounded claim, readiness-evidence honesty, and checker self-tests. Readiness-check exit `0` validates structural honesty of the recorded evidence; it does **not** mean `PROD_READY`. If a citation was added or changed, run `make links` too, and record the pin and access date in [SOURCES.md](SOURCES.md).
+Run `make check` before opening a pull request; CI covers repository structure
+and metadata, the bounded claim, readiness-evidence honesty, active publication
+surfaces, and checker self-tests. Run `make publication` directly when changing
+an active public call. Readiness-check exit `0` validates structural honesty of
+the recorded evidence; it does **not** mean `PROD_READY`. If a citation was added
+or changed, run `make links` too, and record the pin and access date in
+[SOURCES.md](SOURCES.md).
+
+Public corrections use append-only supersession: retain the historical GitHub
+artifact, publish a replacement that names it as historical, and update
+`publication/active-surfaces.json`. Before posting a pinned blob URL, prove the
+path exists at the exact commit with `git cat-file -e <commit>:<path>`. After
+posting, perform read-after-write verification of rendered body, author, URL,
+and mentions. A call, mention, or acceptance message is recruitment evidence,
+not independent review, implementation, validator, system, or operational
+evidence.
 
 If a checker is wrong, fix it in its own pull request with a test that fails before the fix. Widening an anchor, deleting a test, or adding a quotation exception so that an unrelated change passes is not an acceptable fix.
 

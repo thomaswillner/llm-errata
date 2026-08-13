@@ -9,6 +9,20 @@ https://github.com/thomaswillner/llm-errata
 Substantive prior-art, conformance, implementation, or security findings return
 to traceable GitHub issues, pull requests, or private security reports.
 
+## Active and historical surfaces
+
+An **Active surface** is a current public instruction recorded in
+`publication/active-surfaces.json`; it binds one immutable commit and digest to
+named evidence roles and an explicit evidence boundary. A **Historical surface**
+records an earlier project state and remains visible for provenance, but must not
+be used as current instructions.
+
+Corrections are append-only. Publish a superseding artifact, name the older URL
+as historical, update the manifest, verify every pinned path with
+`git cat-file -e <commit>:<path>`, and read the rendered result back before
+recording success. Network observations remain publication-time evidence;
+`make publication` validates the deterministic tracked contract offline.
+
 ## Message
 
 **Problem:** portable AI memory can be corrected at its source while stale local
@@ -69,3 +83,6 @@ specialists to review the exact four-part conjunction and identify collisions.
 For every successful post, record channel, URL, publication timestamp, account,
 source commit, exact copy digest, and moderation state. A submitted or queued
 post is not recorded as publicly available until its URL is accessible.
+Recruitment evidence records a bounded request only. It never establishes an
+independent review, implementation, validator result, operated-system result, or
+production-readiness pass.

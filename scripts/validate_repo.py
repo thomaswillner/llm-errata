@@ -46,6 +46,7 @@ REQUIRED_FILES = (
     "INDEPENDENT_IMPLEMENTATION.md",
     "PHASE3_SYSTEMS.md",
     "docs/PUBLICATION_STRATEGY.md",
+    "publication/active-surfaces.json",
     "VERSION",
     "LICENSE",
     "NOTICE",
@@ -56,9 +57,11 @@ REQUIRED_FILES = (
     "scripts/validate_repo.py",
     "scripts/claim_guard.py",
     "scripts/check_links.py",
+    "scripts/check_publication.py",
     "tests/test_readiness.py",
     "tests/test_validate_repo.py",
     "tests/test_claim_guard.py",
+    "tests/test_publication.py",
     ".github/workflows/validate.yml",
     "prototype/README.md",
     "prototype/controller.py",
@@ -424,6 +427,36 @@ def check_publication_metadata(reporter: Reporter) -> None:
         "public documents preserve implementation rights, attribution, clean-room, and no-endorsement boundaries",
         "Synchronize README, NOTICE, INDEPENDENT_IMPLEMENTATION, CONTRIBUTING, "
         "and SECURITY with the dual licence contract.",
+    )
+
+    publication_requirements = {
+        "AGENTS.md": (
+            "publication/active-surfaces.json",
+            "git cat-file -e <commit>:<path>",
+            "Recruitment evidence is not independent readiness evidence",
+        ),
+        "CONTRIBUTING.md": (
+            "append-only supersession",
+            "make publication",
+            "read-after-write",
+        ),
+        "docs/PUBLICATION_STRATEGY.md": (
+            "Active surface",
+            "Historical surface",
+            "publication/active-surfaces.json",
+        ),
+    }
+    publication_alignment = all(
+        (ROOT / name).is_file()
+        and all(phrase in read_utf8(ROOT / name) for phrase in phrases)
+        for name, phrases in publication_requirements.items()
+    )
+    reporter.check(
+        "publication discipline",
+        publication_alignment,
+        "active/historical surfaces, pinned-path proof, read-after-write, and evidence boundaries are documented",
+        "Restore the active-surface manifest, append-only supersession, pinned "
+        "blob proof, read-after-write verification, and recruitment-evidence rules.",
     )
 
 
