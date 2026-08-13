@@ -25,11 +25,17 @@ class Release040Metadata(unittest.TestCase):
         self.assertIn("version: 0.4.0", citation)
         self.assertIn("date-released: 2026-08-13", citation)
         self.assertIn("Version 0.4.0", (root / "README.md").read_text())
-        self.assertIn("| 0.4.x | Yes |", (root / "SECURITY.md").read_text())
+        self.assertIn(
+            "| 0.4.x | Yes, after `v0.4.0` is published |",
+            (root / "SECURITY.md").read_text(),
+        )
         changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn("## [0.4.0]", changelog)
         self.assertIn("Rastislav Drahos", changelog)
         self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
+        security = (root / "SECURITY.md").read_text(encoding="utf-8")
+        self.assertIn("beginning with the immutable `v0.4.0` release", security)
+        self.assertIn("until `v0.4.0` is published", security)
 
 
 class ValidatorPasses(unittest.TestCase):

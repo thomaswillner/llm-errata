@@ -94,12 +94,13 @@ class AdapterConformanceCommand(CliCase):
             payload, sort_keys=True, separators=(",", ":")
         ))
 
-    def test_failed_mutation_control_exits_one(self) -> None:
+    def test_binding_execution_fault_exits_two(self) -> None:
         result = self.run_conformance(
             "--binding", "tests.test_cli:ExplodingConformanceBinding"
         )
-        self.assertEqual(result.returncode, EXIT_REFUSED)
-        self.assertFalse(json.loads(result.stdout)["passed"])
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("invalid conformance evidence", result.stderr)
 
     def test_invalid_source_evidence_exits_two(self) -> None:
         result = self.run_cli(

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import re
+import signal
 import subprocess
+import threading
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
 
@@ -73,6 +75,42 @@ def compare_complete_outcome(
 class NormativeTarget:
     commit: str
     surface_digest: str
+
+
+@dataclass(frozen=True, order=True)
+class PropositionObservation:
+    """Content-safe multiplicity for one stable provider-local proposition."""
+
+    proposition_id: str
+    fixture_label: str
+    active_count: int
+
+    def __post_init__(self) -> None:
+        if not self.proposition_id or not self.fixture_label:
+            raise ConformanceInputError("proposition identity and label must be non-empty")
+        if isinstance(self.active_count, bool) or self.active_count < 0:
+            raise ConformanceInputError("proposition active count must be non-negative")
+
+
+def compare_proposition_multiplicity(
+    before: tuple[PropositionObservation, ...] | None,
+    after: tuple[PropositionObservation, ...] | None,
+) -> str:
+    """Compare exact stable identities; text similarity is never an identity seam."""
+
+    if before is None or after is None:
+        return "unknown"
+    before_by_id = {item.proposition_id: item for item in before}
+    after_by_id = {item.proposition_id: item for item in after}
+    if len(before_by_id) != len(before) or len(after_by_id) != len(after):
+        return "unknown"
+    for proposition_id, prior in before_by_id.items():
+        current = after_by_id.get(proposition_id)
+        if current is None or current.fixture_label != prior.fixture_label:
+            return "unknown"
+        if current.active_count > prior.active_count:
+            return "increased"
+    return "known"
 
 
 @dataclass(frozen=True)
@@ -154,6 +192,8 @@ class ConformanceReport:
     normative_commit: str
     normative_surface_digest: str
     runtime_commit: str | None
+    runtime_tree: str
+    binding_source: dict[str, str]
     cases: tuple[CaseResult, ...]
     validator_controls: tuple[ControlResult, ...]
     provenance: dict[str, str]
@@ -175,6 +215,8 @@ class ConformanceReport:
                 "surface_digest": self.normative_surface_digest,
             },
             "runtime_commit": self.runtime_commit,
+            "runtime_tree": self.runtime_tree,
+            "binding_source": dict(sorted(self.binding_source.items())),
             "cases": [item.to_dict() for item in self.cases],
             "validator_controls": [
                 item.to_dict() for item in self.validator_controls
@@ -208,6 +250,34 @@ MUTATION_KEYS = {"id", "exact_counter_result"}
 CONTROL_KEYS = {"id", "mutation", "required_failure"}
 REQUIRED_TARGET = "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
 REQUIRED_DIGEST = "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
+GIT_TIMEOUT_SECONDS = 10.0
+BINDING_TIMEOUT_SECONDS = 10.0
+REQUIRED_PROVENANCE = {
+    "reported_by": "Rastislav Drahos / DanceNitra",
+    "source_url": "https://github.com/DanceNitra/agora/tree/2ba1e299b3483b9038d03387345702427608b90b/contrib/llm-errata-adapter-conformance",
+    "source_commit": "2ba1e299b3483b9038d03387345702427608b90b",
+    "source_license": "MIT",
+    "relationship": "interested-party: Inspeximus is a G4 adapter candidate",
+    "ai_assistance": "Source commit discloses Claude Opus 5 co-authorship.",
+    "implementation": "Independently authored in LLM Errata; external runner and fixture files were not copied or vendored.",
+}
+REQUIRED_CONTROLS = (
+    {
+        "id": "empty-receipt-must-fail",
+        "mutation": "empty-receipt",
+        "required_failure": "receipt is vacuous",
+    },
+    {
+        "id": "no-op-feed-verification-must-fail",
+        "mutation": "no-op-feed-verification",
+        "required_failure": "accepted feed is incomplete",
+    },
+    {
+        "id": "constant-unknown-aggregator-must-fail",
+        "mutation": "constant-unknown-aggregator",
+        "required_failure": "semantic verdict diversity is missing",
+    },
+)
 
 
 def _exact(value: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -223,9 +293,13 @@ def _nonempty(value: object, label: str) -> str:
 
 
 def _git(root: Path, *args: str) -> bytes:
-    result = subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            ["git", *args], cwd=root, capture_output=True, check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ConformanceInputError("Git source verification timed out") from error
     if result.returncode != 0:
         raise ConformanceInputError("immutable source commit is unavailable")
     return result.stdout
@@ -300,10 +374,8 @@ def load_corpus(path: Path, source_root: Path) -> AdapterCorpus:
         raise ConformanceInputError("normative surface digest does not match source")
 
     provenance = _exact(root["provenance"], PROVENANCE_KEYS, "provenance")
-    if any(not isinstance(value, str) or not value.strip() for value in provenance.values()):
-        raise ConformanceInputError("provenance fields must be non-empty")
-    if not re.fullmatch(r"[0-9a-f]{40}", provenance["source_commit"]):
-        raise ConformanceInputError("provenance source commit must be immutable")
+    if provenance != REQUIRED_PROVENANCE:
+        raise ConformanceInputError("provenance does not match the accepted contribution")
 
     raw_cases = root["cases"]
     if not isinstance(raw_cases, list) or len(raw_cases) != 5:
@@ -347,6 +419,8 @@ def load_corpus(path: Path, source_root: Path) -> AdapterCorpus:
         if any(not isinstance(item, str) or not item.strip() for item in control.values()):
             raise ConformanceInputError("validator control fields must be non-empty")
         controls.append(control)
+    if tuple(controls) != REQUIRED_CONTROLS:
+        raise ConformanceInputError("validator controls do not match the executable attacks")
     return AdapterCorpus(
         schema_version=1,
         normative_target=NormativeTarget(target["commit"], target["surface_digest"]),
@@ -372,15 +446,28 @@ class ReferenceConformanceAdapter:
 
     def __init__(self, *, undeclared: bool = False) -> None:
         self._records = {
-            "diet": {"text": "is vegetarian", "inputs": (), "root": "fact:diet"},
-            "quiet": {
-                "text": "prefers quiet restaurants", "inputs": (), "root": "fact:quiet"
+            "diet": {
+                "text": "is vegetarian", "inputs": (), "root": "fact:diet",
+                "propositions": ("fixture:diet",),
             },
-            "budget": {"text": "moderate budget", "inputs": (), "root": "fact:budget"},
-            "pet": {"text": "has a cat", "inputs": (), "root": "fact:pet"},
+            "quiet": {
+                "text": "prefers quiet restaurants", "inputs": (), "root": "fact:quiet",
+                "propositions": ("fixture:quiet",),
+            },
+            "budget": {
+                "text": "moderate budget", "inputs": (), "root": "fact:budget",
+                "propositions": ("fixture:budget",),
+            },
+            "pet": {
+                "text": "has a cat", "inputs": (), "root": "fact:pet",
+                "propositions": ("fixture:pet",),
+            },
             "summary": {
                 "text": "is vegetarian; prefers quiet restaurants; moderate budget",
                 "inputs": ("diet", "quiet", "budget"), "root": None,
+                "propositions": (
+                    "fixture:diet", "fixture:quiet", "fixture:budget",
+                ),
             },
         }
         if undeclared:
@@ -388,8 +475,12 @@ class ReferenceConformanceAdapter:
                 "text": "synthetic undeclared derivative",
                 "inputs": (),
                 "root": None,
+                "propositions": (),
             }
         self._active = {key: value["text"] for key, value in self._records.items()}
+        self._active_propositions = {
+            key: tuple(value["propositions"]) for key, value in self._records.items()
+        }
         self._quarantined: set[str] = set()
         self._retired: set[str] = set()
         self._rebuilt: set[str] = set()
@@ -433,6 +524,7 @@ class ReferenceConformanceAdapter:
         for target in targets:
             self._retired.add(target)
             self._active.pop(target, None)
+            self._active_propositions.pop(target, None)
 
     def rebuild(
         self, artifact_id: str, *, inputs: tuple[str, ...], replacement: str | None
@@ -444,10 +536,19 @@ class ReferenceConformanceAdapter:
             parts.insert(0, replacement)
         text = "; ".join(parts)
         self._active[artifact_id] = text
+        propositions = tuple(
+            proposition
+            for item in inputs
+            for proposition in self._records[item]["propositions"]
+        )
+        self._active_propositions[artifact_id] = propositions
         if self._duplicate_inputs:
             for item in inputs:
                 duplicate = f"duplicate:{item}"
                 self._active[duplicate] = self._records[item]["text"]
+                self._active_propositions[duplicate] = tuple(
+                    self._records[item]["propositions"]
+                )
         self._rebuilt.add(artifact_id)
         self._quarantined.discard(artifact_id)
         return text
@@ -485,17 +586,21 @@ class ReferenceConformanceAdapter:
                 result[item] = "untouched"
         return result
 
-    def proposition_counts(self) -> dict[str, int]:
+    def proposition_observations(self) -> tuple[PropositionObservation, ...]:
         counts: dict[str, int] = {}
-        for text in self._active.values():
-            for label, phrase in (
-                ("quiet", "prefers quiet restaurants"),
-                ("budget", "moderate budget"),
-                ("pet", "has a cat"),
-            ):
-                if phrase in text:
-                    counts[label] = counts.get(label, 0) + 1
-        return counts
+        for identities in self._active_propositions.values():
+            for proposition_id in identities:
+                counts[proposition_id] = counts.get(proposition_id, 0) + 1
+        labels = {
+            "fixture:diet": "diet",
+            "fixture:quiet": "quiet",
+            "fixture:budget": "budget",
+            "fixture:pet": "pet",
+        }
+        return tuple(
+            PropositionObservation(proposition_id, labels[proposition_id], count)
+            for proposition_id, count in sorted(counts.items())
+        )
 
 
 class ReferenceConformanceBinding:
@@ -525,7 +630,7 @@ class ReferenceConformanceBinding:
         return importer, traced, {
             "adapter": adapter,
             "owner": owner,
-            "before_counts": adapter.proposition_counts(),
+            "before_observations": adapter.proposition_observations(),
         }
 
     def erratum(self, case: AdapterCase, context: dict[str, Any]):
@@ -580,11 +685,8 @@ class ReferenceConformanceBinding:
             receipt.to_dict(), sort_keys=True
         )
         triad = dict(receipt.triad)
-        after = target.proposition_counts()
-        multiplicity = (
-            "increased"
-            if any(after.get(key, 0) > value for key, value in context["before_counts"].items())
-            else "known"
+        multiplicity = compare_proposition_multiplicity(
+            context["before_observations"], target.proposition_observations()
         )
         preserved = all(
             target.recall(term)
@@ -638,44 +740,180 @@ def _run_case(
     return binding.observe(case, importer, adapter, context, checkpoint, receipt), adapter.calls
 
 
-def run_validator_anti_vacuity_controls() -> tuple[ControlResult, ...]:
-    """Attack validator acceptance rules, not adapter behavior."""
+def _receipt_errors(value: object) -> tuple[str, ...]:
+    """Exercise the production receipt schema plus non-vacuity acceptance rule."""
 
-    # These inputs are intentionally minimal demonstrations of each historical
-    # false pass. The acceptance predicate names the semantic evidence that is
-    # absent instead of treating any exception or mismatch as success.
-    receipt = {}
-    empty_failure = "receipt is vacuous" if not receipt else ""
+    from prototype.schema import load as load_schema, validate as validate_schema
 
-    offered = ("event-1", "event-2")
-    accepted = offered[:1]  # no-op/partial verifier failed to return every event
-    feed_failure = "accepted feed is incomplete" if accepted != offered else ""
+    if not isinstance(value, dict) or not value:
+        return ("receipt is vacuous",)
+    errors = tuple(validate_schema(value, load_schema("receipt")))
+    return errors
 
-    verdicts = ("unknown",) * 8
-    semantic_failure = (
-        "semantic verdict diversity is missing"
-        if len(set(verdicts)) < 3 else ""
+
+def _anti_vacuity_receipt(
+    corpus: AdapterCorpus, receipt_validator: Callable[[object], tuple[str, ...]]
+) -> str:
+    mutation = next(
+        item for item in corpus.validator_controls if item["mutation"] == "empty-receipt"
     )
-    return (
-        ControlResult("empty-receipt-must-fail", bool(empty_failure), empty_failure),
-        ControlResult(
-            "no-op-feed-verification-must-fail", bool(feed_failure), feed_failure
-        ),
-        ControlResult(
-            "constant-unknown-aggregator-must-fail",
-            bool(semantic_failure),
-            semantic_failure,
-        ),
+    errors = tuple(receipt_validator({}))
+    return mutation["required_failure"] if mutation["required_failure"] in errors else ""
+
+
+def _anti_vacuity_feed(
+    corpus: AdapterCorpus, feed_verifier: Callable[..., list[object]]
+) -> str:
+    from prototype.errata import Erratum, Operation, RootRegistry
+    from prototype.signing import Ed25519Signer
+
+    mutation = next(
+        item for item in corpus.validator_controls
+        if item["mutation"] == "no-op-feed-verification"
+    )
+    owner = Ed25519Signer(b"conformance-validator-feed")
+    event = owner.sign_erratum(
+        Erratum(
+            erratum_id="anti-vacuity-gap",
+            sequence=2,
+            target_root="fact:diet",
+            operation=Operation.SUPERSEDE,
+            valid_from="2026-08-01T00:00:00Z",
+            replacement="eats meat again",
+            postconditions={
+                "negative": "vegetarian",
+                "positive": "eats meat again",
+                "preserve": "quiet restaurants",
+            },
+        )
+    )
+    try:
+        feed_verifier([event], owner=owner.public, roots=RootRegistry({"fact:diet"}))
+    except Exception as error:
+        message = str(error)
+        return mutation["required_failure"] if "gap" in message else ""
+    return ""
+
+
+def _semantic_fixture(source_root: Path, case_name: str):
+    from prototype.semantic import (
+        RecordedSemanticVerifier, SemanticObservation, SemanticProbe, VerifierConfig,
+    )
+
+    semantic_root = source_root / "spec" / "semantic"
+    probes_payload = json.loads((semantic_root / "probes.json").read_text())["cases"]
+    observations_payload = json.loads(
+        (semantic_root / "observations.json").read_text()
+    )["cases"]
+    config = VerifierConfig.from_dict(
+        json.loads((semantic_root / "verifier-config.json").read_text())
+    )
+    probes = tuple(SemanticProbe.from_dict(item) for item in probes_payload[case_name])
+    observations = tuple(
+        SemanticObservation.from_dict(item) for item in observations_payload[case_name]
+    )
+    return probes, config, RecordedSemanticVerifier(observations)
+
+
+def _anti_vacuity_semantic(
+    corpus: AdapterCorpus, source_root: Path, semantic_runner_factory: Callable[[], object]
+) -> str:
+    from prototype.semantic import SemanticCoverage
+
+    mutation = next(
+        item for item in corpus.validator_controls
+        if item["mutation"] == "constant-unknown-aggregator"
+    )
+    runner = semantic_runner_factory()
+    coverages = {
+        runner.run(*_semantic_fixture(source_root, case_name)).coverage
+        for case_name in ("verified-correction", "failed-supersession", "unknown-erasure")
+    }
+    required = {
+        SemanticCoverage.VERIFIED, SemanticCoverage.FAILED, SemanticCoverage.UNKNOWN,
+    }
+    return mutation["required_failure"] if coverages == required else ""
+
+
+def run_validator_anti_vacuity_controls(
+    corpus: AdapterCorpus,
+    source_root: Path,
+    *,
+    receipt_validator: Callable[[object], tuple[str, ...]] = _receipt_errors,
+    feed_verifier: Callable[..., list[object]] | None = None,
+    semantic_runner_factory: Callable[[], object] | None = None,
+) -> tuple[ControlResult, ...]:
+    """Install declared flattering mutations against actual acceptance seams."""
+
+    from prototype.errata import verify_feed
+    from prototype.semantic import SemanticProbeRunner
+
+    feed = feed_verifier or verify_feed
+    semantic = semantic_runner_factory or SemanticProbeRunner
+    failures = (
+        _anti_vacuity_receipt(corpus, receipt_validator),
+        _anti_vacuity_feed(corpus, feed),
+        _anti_vacuity_semantic(corpus, source_root, semantic),
+    )
+    return tuple(
+        ControlResult(control["id"], failure == control["required_failure"], failure)
+        for control, failure in zip(corpus.validator_controls, failures)
     )
 
 
-def _runtime_commit(root: Path) -> str | None:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
-        check=False,
+def _runtime_identity(root: Path) -> tuple[str, str]:
+    status = _git(root, "status", "--porcelain=v1", "--untracked-files=all")
+    if status.strip():
+        raise ConformanceInputError("runtime source tree is dirty")
+    commit = _git(root, "rev-parse", "HEAD").decode().strip()
+    tree = _git(root, "rev-parse", "HEAD^{tree}").decode().strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", commit) or not re.fullmatch(
+        r"[0-9a-f]{40}", tree
+    ):
+        raise ConformanceInputError("runtime source identity is invalid")
+    return commit, tree
+
+
+def _binding_source(
+    source_root: Path, binding_factory: Callable[[], ReferenceConformanceBinding]
+) -> dict[str, str]:
+    try:
+        file_path = Path(inspect.getsourcefile(binding_factory) or "").resolve()
+        relative = file_path.relative_to(source_root.resolve()).as_posix()
+        payload = file_path.read_bytes()
+    except (OSError, ValueError) as error:
+        raise ConformanceInputError(
+            "binding source is not inside the declared source root"
+        ) from error
+    if relative.startswith(".git/"):
+        raise ConformanceInputError("binding source is not executable repository source")
+    tracked = set(
+        _git(source_root, "ls-files", "--cached").decode("utf-8").splitlines()
     )
-    value = result.stdout.strip()
-    return value if result.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", value) else None
+    if relative not in tracked:
+        raise ConformanceInputError("binding source is not tracked by the runtime tree")
+    return {"path": relative, "sha256": hashlib.sha256(payload).hexdigest()}
+
+
+class _BindingTimeout(Exception):
+    pass
+
+
+def _run_with_timeout(action: Callable[[], Any]) -> Any:
+    if threading.current_thread() is not threading.main_thread():
+        return action()
+
+    def expire(signum: int, frame: object) -> None:
+        raise _BindingTimeout
+
+    prior = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, expire)
+    signal.setitimer(signal.ITIMER_REAL, BINDING_TIMEOUT_SECONDS)
+    try:
+        return action()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, prior)
 
 
 def validate_adapter_conformance(
@@ -683,28 +921,40 @@ def validate_adapter_conformance(
     source_root: Path,
     binding_factory: Callable[[], ReferenceConformanceBinding],
 ) -> ConformanceReport:
+    runtime_commit, runtime_tree = _runtime_identity(source_root)
     corpus = load_corpus(corpus_path, source_root)
+    binding_source = _binding_source(source_root, binding_factory)
     binding = binding_factory()
     results = []
     for case in corpus.cases:
         try:
-            observed, calls = _run_case(binding, case, mutate=False)
+            observed, calls = _run_with_timeout(
+                lambda case=case: _run_case(binding, case, mutate=False)
+            )
             failures = compare_complete_outcome(case.value["expected"], observed)
             missing = tuple(sorted(set(case.value["required_calls"]) - set(calls)))
+        except _BindingTimeout as error:
+            raise ConformanceInputError("binding execution timed out") from error
         except Exception as error:
-            observed, calls, missing = {}, (), tuple(case.value["required_calls"])
-            failures = (f"honest run raised unexpected {type(error).__name__}: {error}",)
+            raise ConformanceInputError(
+                f"binding execution failed for {case.case_id}: {type(error).__name__}"
+            ) from error
         mutation_observed = None
         mutation_failures: tuple[str, ...]
         try:
-            mutation_observed, _ = _run_case(binding, case, mutate=True)
+            mutation_observed, _ = _run_with_timeout(
+                lambda case=case: _run_case(binding, case, mutate=True)
+            )
             mutation_failures = compare_complete_outcome(
                 case.value["mutation"]["exact_counter_result"], mutation_observed
             )
+        except _BindingTimeout as error:
+            raise ConformanceInputError("binding execution timed out") from error
         except Exception as error:
-            mutation_failures = (
-                f"mutation raised unexpected {type(error).__name__}: {error}",
-            )
+            raise ConformanceInputError(
+                f"binding execution failed for {case.case_id} mutation: "
+                f"{type(error).__name__}"
+            ) from error
         results.append(
             CaseResult(
                 case_id=case.case_id,
@@ -724,9 +974,11 @@ def validate_adapter_conformance(
         binding=binding.name,
         normative_commit=corpus.normative_target.commit,
         normative_surface_digest=corpus.normative_target.surface_digest,
-        runtime_commit=_runtime_commit(source_root),
+        runtime_commit=runtime_commit,
+        runtime_tree=runtime_tree,
+        binding_source=binding_source,
         cases=tuple(results),
-        validator_controls=run_validator_anti_vacuity_controls(),
+        validator_controls=run_validator_anti_vacuity_controls(corpus, source_root),
         provenance=corpus.provenance,
         evidence_boundary=corpus.evidence_boundary,
     )
