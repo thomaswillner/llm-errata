@@ -14,29 +14,21 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "publication" / "active-surfaces.json"
 
-CANONICAL_COMMIT = "a477fe4f5c86730031b6285d9505778fb8eec060"
+CANONICAL_COMMIT = "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
 CANONICAL_DIGEST = (
-    "a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3"
+    "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
 )
 REPOSITORY_URL = "https://github.com/thomaswillner/llm-errata"
 ALLOWED_GATES = {"G2", "G3", "G4", "G5", "G6"}
 REQUIRED_ATTRIBUTION = {"LLM Errata", "Thomas Willner", REPOSITORY_URL}
 REQUIRED_SURFACES = {
-    "g4-inspeximus-adapter-call": {
+    "g4-inspeximus-current-target-reply": {
         "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5280210050",
-        "gates": ["G4"],
+        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5282207719",
+        "gates": ["G2", "G4"],
         "roles": ["inspeximus-adapter-author"],
         "mentions": ["DanceNitra"],
         "evidence_boundary": "recruitment-only",
-    },
-    "pr8-feedback-remediation": {
-        "kind": "pull-request-comment",
-        "url": f"{REPOSITORY_URL}/pull/8#issuecomment-5280225709",
-        "gates": ["G2", "G3", "G4", "G5", "G6"],
-        "roles": [],
-        "mentions": [],
-        "evidence_boundary": "publication-only",
     },
 }
 

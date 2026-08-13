@@ -90,23 +90,23 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
 
     def test_duplicate_surface_url_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][1]["url"] = payload["surfaces"][0]["url"]
+            payload["surfaces"].append(dict(payload["surfaces"][0]))
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique surface URLs")
 
     def test_duplicate_evidence_role_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][1]["roles"] = [
+            payload["surfaces"][0]["roles"].append(
                 payload["surfaces"][0]["roles"][0]
-            ]
+            )
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique evidence roles")
 
     def test_duplicate_mention_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][1]["mentions"] = [
+            payload["surfaces"][0]["mentions"].append(
                 payload["surfaces"][0]["mentions"][0]
-            ]
+            )
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique GitHub mentions")
 
