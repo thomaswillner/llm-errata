@@ -10,6 +10,18 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Durable quarantine checkpoints now preserve adapter-supplied phase coverage
+  instead of hardcoding every enumerable adapter to `verified`; a later final
+  success cannot erase an earlier `partial`, `unknown`, or `failed` result.
+- `StoreAdapter` now declares the complete controller and repair call surface,
+  including quarantine coverage, source mapping, store-owned repair inputs,
+  retirement, rebuild, and recall. Independent adapters no longer have to copy
+  their lineage into the reference `LineageLedger`.
+- Recorded Inspeximus `v2.7.0` as a tagged external adapter candidate with its
+  preserved v2.6.1 contamination disclosure and claimed clean-room rewrite. It
+  targets historical LLM Errata commit `a477fe4` and remains unvalidated G4
+  evidence until provenance review and current-target rebinding are complete.
+
 - Corrected two conflict-disclosed external findings. Importers now remember
   same-view sequence conflicts across separate observe calls, while receipts
   explicitly disclaim global non-equivocation across split views. Required

@@ -9,6 +9,11 @@ than this one can be built and checked against the same contract.
 | `receipt.schema.json` | What an importer returns after acting on one. |
 | `vectors/manifest.json` | Every vector, which schema it belongs to, whether it must validate, and — for an invalid vector — the text that must appear in the rejection. |
 | `vendor/json-schema-test-suite/` | Cases from the official JSON-Schema-Test-Suite, vendored unmodified. |
+| `semantic/probes.json` | Named, strict semantic-probe sets for offline conformance. |
+| `semantic/verifier-config.json` | Exact synthetic verifier configuration, whose canonical digest binds every observation. |
+| `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |
+| `vectors/protocol-manifest.json` | Executable key-rotation, concurrency, invalid-target, and confidentiality cases that JSON Schema cannot express. |
+| `vectors/receipt-binding-mutations.json` | Valid-domain mutations proving every signed receipt field is bound. |
 
 Receipt conformance evaluates two independent properties. D1 authenticity
 verifies the importer and every signable byte. D2 coverage truthfulness checks
@@ -21,11 +26,12 @@ root-specific lineage-completeness evidence as `unknown`. Receipts also carry a
 signed limitation that importer-local sequencing cannot establish global owner
 non-equivocation across split views. The wire coverage vocabulary remains the
 four terminal results `verified`, `partial`, `unknown`, and `failed`.
-| `semantic/probes.json` | Named, strict semantic-probe sets for offline conformance. |
-| `semantic/verifier-config.json` | Exact synthetic verifier configuration, whose canonical digest binds every observation. |
-| `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |
-| `vectors/protocol-manifest.json` | Executable key-rotation, concurrency, invalid-target, and confidentiality cases that JSON Schema cannot express. |
-| `vectors/receipt-binding-mutations.json` | Valid-domain mutations proving every signed receipt field is bound. |
+
+The importer-local checkpoint uses the same terminal vocabulary but measures a
+different phase: whether the known affected set is durably gated before repair.
+It records adapter-supplied quarantine coverage, and the final signed receipt
+cannot improve past a worse checkpoint result. Final `coverage(root)` measures
+post-repair dispositions and substrate evidence.
 
 ## Offline semantic-probe fixtures
 

@@ -59,6 +59,12 @@ store remains `unknown`. A receipt also speaks only for the signed feed view
 that one importer accepted. Detecting different views delivered to different
 importers requires an external witness or append-only transparency mechanism.
 
+A durable quarantine checkpoint records the adapter's own phase-specific
+coverage rather than assuming every enumerable store is verified. Final repair
+cannot erase an earlier `partial`, `unknown`, or `failed` checkpoint. Independent
+adapters own their lineage inputs behind the published interface; they do not
+have to mirror store internals into the reference ledger.
+
 ## The repair triad
 
 Every repair is evaluated against three postconditions:
@@ -173,7 +179,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface are implemented with two conflict-disclosed external findings remediated: split-view equivocation is now stated as outside importer-local proof, and empty enumeration cannot become verified without root-specific lineage-completeness evidence. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, and mutation coverage for every signed receipt field. G2 remains `BLOCKED`: the reviewer disclosed a commercial conflict and did not cover the full required conformance scope, so a qualifying independent review is still absent.
+Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface include conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, and mutation coverage for every signed receipt field. G2 remains `BLOCKED`: the reviewer disclosed a commercial conflict and did not cover the full required conformance scope. G4 also remains `BLOCKED`: one tagged external adapter candidate exists, but its clean-room provenance and behavior are not third-party validated and no separate validator result exists.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 

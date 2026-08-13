@@ -92,9 +92,9 @@ COMPARATORS = {
 }
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Phase 2 implementation includes conflict-disclosed remediation for split-view "
-    "equivocation and unsupported empty enumeration, plus schemas, checkpoints, semantic "
-    "probes, key rotation, invalid-target, confidentiality, and receipt binding; no "
-    "qualifying independent review is recorded."
+    "equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract "
+    "completeness, plus schemas, semantic probes, key rotation, invalid-target, confidentiality, "
+    "and receipt binding; no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
     "Dated independent external conformance-review result covering the exact complete Phase 2 surface after remediation."

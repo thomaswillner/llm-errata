@@ -176,8 +176,7 @@ class Importer:
         validated = self.observe(erratum)
         pre_state_root = self.state_root()
         root = validated.target_root
-        gated, coverage_limitations = self._quarantine(root)
-        unknown = set(coverage_limitations)
+        gated, checkpoint_coverage, coverage_limitations = self._quarantine(root)
         records = []
         for adapter in sorted(self.adapters, key=lambda item: item.name):
             limitation = coverage_limitations.get(adapter.name)
@@ -186,7 +185,7 @@ class Importer:
                     name=adapter.name,
                     required=bool(getattr(adapter, "required", True)),
                     artifact_ids=tuple(sorted(gated[adapter.name])),
-                    coverage="unknown" if adapter.name in unknown else "verified",
+                    coverage=checkpoint_coverage[adapter.name].value,
                     limitation=limitation,
                 )
             )
@@ -214,7 +213,11 @@ class Importer:
         coverage_limitations = {
             record.name: record.limitation
             for record in checkpoint.adapters
-            if record.coverage == "unknown" and record.limitation is not None
+            if record.limitation is not None
+        }
+        checkpoint_coverage = {
+            record.name: Coverage(record.coverage)
+            for record in checkpoint.adapters
         }
 
         self.journal.append(JournalEvent(Phase.REBUILD_BEGIN, {"root": root}))
@@ -225,7 +228,11 @@ class Importer:
         self.journal.append(JournalEvent(Phase.TEST, dict(triad)))
 
         receipt = self._attest(
-            validated, checkpoint.pre_state_root, coverage_limitations, triad
+            validated,
+            checkpoint.pre_state_root,
+            checkpoint_coverage,
+            coverage_limitations,
+            triad,
         )
         self.last_sequence = validated.sequence
         self._applied[root] = validated.sequence
@@ -267,9 +274,11 @@ class Importer:
                     raise CheckpointError(f"checkpoint opaque coverage drifted: {name}")
                 continue
             current_limitation = self._lineage_limitation(adapter, erratum.target_root)
-            expected_coverage = "unknown" if current_limitation else "verified"
+            expected_coverage, current_limitation = self._checkpoint_coverage(
+                adapter, erratum.target_root, current_limitation
+            )
             if (
-                record.coverage != expected_coverage
+                record.coverage != expected_coverage.value
                 or record.limitation != current_limitation
             ):
                 raise CheckpointError(f"checkpoint adapter coverage drifted: {name}")
@@ -300,8 +309,14 @@ class Importer:
             complete = audit(root) is True if audit is not None else False
         except Exception:
             complete = False
-        if complete:
+        snapshot = getattr(adapter, "snapshot", None)
+        if complete and callable(snapshot):
             return None
+        if complete:
+            return (
+                f"{adapter.name}: adapter exposes no state snapshot for {root}; "
+                "checkpoint and receipt state roots cannot bind its mutations"
+            )
         return (
             f"{adapter.name}: enumeration returned a result but the adapter did "
             f"not establish complete root-specific lineage for {root}; empty or "
@@ -316,11 +331,41 @@ class Importer:
             "non-equivocation without an external witnessed or append-only log"
         )
 
-    def _quarantine(self, root: str) -> tuple[dict[str, list[str]], dict[str, str]]:
+    @staticmethod
+    def _checkpoint_coverage(
+        adapter: StoreAdapter, root: str, limitation: str | None
+    ) -> tuple[Coverage, str | None]:
+        """Read quarantine-phase coverage without inventing success.
+
+        This is deliberately distinct from ``coverage(root)``, which evaluates
+        final repair dispositions. Missing, raising, or malformed checkpoint
+        evidence becomes ``unknown`` and is bound into the durable record.
+        """
+
+        report = getattr(adapter, "quarantine_coverage", None)
+        try:
+            result = report(root) if report is not None else Coverage.UNKNOWN
+        except Exception:
+            result = Coverage.UNKNOWN
+        if not isinstance(result, Coverage):
+            result = Coverage.UNKNOWN
+        if report is None or result is Coverage.UNKNOWN:
+            limitation = limitation or (
+                f"{adapter.name}: adapter did not establish quarantine-phase "
+                f"coverage for {root}"
+            )
+        if limitation is not None and result is Coverage.VERIFIED:
+            result = Coverage.UNKNOWN
+        return result, limitation
+
+    def _quarantine(
+        self, root: str
+    ) -> tuple[dict[str, list[str]], dict[str, Coverage], dict[str, str]]:
         """Gate every known descendant everywhere, before any rebuild starts."""
 
         self.journal.append(JournalEvent(Phase.QUARANTINE_BEGIN, {"root": root}))
         gated: dict[str, list[str]] = {}
+        checkpoint_coverage: dict[str, Coverage] = {}
         limitations: dict[str, str] = {}
         for adapter in self.adapters:
             try:
@@ -331,19 +376,25 @@ class Importer:
                     acknowledge(root)
                 limitations[adapter.name] = self._opaque_limitation(adapter.name)
                 gated[adapter.name] = []
+                checkpoint_coverage[adapter.name] = Coverage.UNKNOWN
                 continue
             lineage_limitation = self._lineage_limitation(adapter, root)
-            if lineage_limitation is not None:
-                limitations[adapter.name] = lineage_limitation
             adapter.quarantine(descendants)
             gated[adapter.name] = list(descendants)
+            reported, limitation = self._checkpoint_coverage(
+                adapter, root, lineage_limitation
+            )
+            checkpoint_coverage[adapter.name] = reported
+            if limitation is not None:
+                limitations[adapter.name] = limitation
         self.journal.append(JournalEvent(Phase.QUARANTINE_COMPLETE, gated))
-        return gated, limitations
+        return gated, checkpoint_coverage, limitations
 
     def _attest(
         self,
         erratum: Erratum,
         pre_state_root: str,
+        checkpoint_coverage: dict[str, Coverage],
         coverage_limitations: dict[str, str],
         triad: dict[str, str],
     ) -> Receipt:
@@ -357,13 +408,8 @@ class Importer:
             if not getattr(adapter, "required", True):
                 continue
             reported = adapter.coverage(root)
-            # Missing lineage evidence may downgrade a claimed success, never
-            # upgrade a failure the adapter already reported.
-            stores[adapter.name] = (
-                Coverage.UNKNOWN
-                if adapter.name in coverage_limitations
-                and reported is Coverage.VERIFIED
-                else reported
+            stores[adapter.name] = self._conservative_coverage(
+                checkpoint_coverage[adapter.name], reported
             )
         receipt = Receipt(
             importer=self.name,
@@ -387,6 +433,21 @@ class Importer:
             adapter_versions={adapter.name: "0.1.0" for adapter in self.adapters},
         )
         return replace(receipt, signature=self.signer.sign(receipt.signable()))
+
+    @staticmethod
+    def _conservative_coverage(
+        checkpoint: Coverage, final: Coverage
+    ) -> Coverage:
+        """Final repair cannot erase an earlier coverage failure or limitation."""
+
+        if Coverage.FAILED in {checkpoint, final}:
+            return Coverage.FAILED
+        rank = {
+            Coverage.VERIFIED: 0,
+            Coverage.PARTIAL: 1,
+            Coverage.UNKNOWN: 2,
+        }
+        return max((checkpoint, final), key=rank.__getitem__)
 
     # -- probes --------------------------------------------------------
 

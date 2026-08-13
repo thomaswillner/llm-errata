@@ -47,6 +47,8 @@ A conformance change should state:
 - observable inputs, outputs, and state transitions;
 - failure, timeout, replay, partial-coverage, and unobservable-store behavior;
 - empty enumeration with and without root-specific lineage-completeness evidence;
+- adapter-supplied quarantine-phase coverage separately from final repair coverage;
+- store-owned source mapping and repair inputs without hidden reference-ledger coupling;
 - same-importer conflicts separately from owner split views across importers;
 - security and privacy consequences;
 - positive, negative, and preservation tests;

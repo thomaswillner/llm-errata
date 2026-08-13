@@ -15,6 +15,7 @@ from prototype.adapters import (
     CannotEnumerate,
     MarkdownAdapter,
     OpaqueAdapter,
+    StoreAdapter,
     VectorAdapter,
 )
 from prototype.lineage import Artifact, LineageLedger
@@ -72,6 +73,26 @@ class LineageTracksTheDerivationClosure(unittest.TestCase):
         ledger = ledger_with_a_mixed_summary()
         retained = ledger.valid_inputs("summary:dining", retired={"fact:diet"})
         self.assertEqual(retained, ("fact:venue", "fact:budget"))
+
+
+class StoreAdapterContractIsComplete(unittest.TestCase):
+    def test_protocol_names_every_method_the_reference_repair_invokes(self) -> None:
+        required = {
+            "enumerate",
+            "lineage_complete",
+            "quarantine",
+            "is_quarantined",
+            "quarantine_coverage",
+            "source_artifact",
+            "repair_inputs",
+            "retire",
+            "rebuild",
+            "recall",
+            "snapshot",
+            "coverage",
+            "dispositions",
+        }
+        self.assertTrue(required.issubset(vars(StoreAdapter)))
 
 
 class MarkdownAdapterExposesExactLineage(unittest.TestCase):

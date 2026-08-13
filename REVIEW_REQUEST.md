@@ -34,6 +34,11 @@ from global non-equivocation. A receipt proves which signed event one importer
 accepted; it does not prove every importer received the same event. Also test
 whether an empty adapter enumeration has root-specific lineage-completeness
 evidence. Empty-without-evidence must be `unknown`, not `verified`.
+Also verify that a durable checkpoint records the adapter's own quarantine-
+phase coverage and that final repair cannot overwrite an earlier `partial`,
+`unknown`, or `failed` result. Build one adapter using only the published
+contract: it must not discover `retire`, `rebuild`, `recall`, source mapping, or
+lineage-input requirements through exceptions or reference-ledger internals.
 
 ## Required review record
 

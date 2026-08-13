@@ -126,6 +126,11 @@ Never convert missing lineage, inaccessible stores, skipped tests, timeouts, or 
 - Verify receipt binding to the erratum and relevant pre-repair and post-repair state.
 - Keep deterministic structural checks separate from model-graded behavioral probes.
 - Never mark an opaque required store green merely because accessible stores passed.
+- Never hardcode checkpoint success from enumeration. Preserve adapter-supplied
+  quarantine-phase coverage and carry a worse checkpoint result into the receipt.
+- Keep the declared adapter protocol synchronized with every controller and
+  strategy call; independent adapters must own their repair inputs rather than
+  depending silently on reference-ledger registration.
 
 ## Required completion check
 

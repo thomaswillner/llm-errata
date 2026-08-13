@@ -99,6 +99,16 @@ ANCHORS: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "IDEA.md",
+        "A durable checkpoint records adapter-supplied quarantine coverage; final repair cannot upgrade a worse checkpoint result.",
+        "checkpoint coverage cannot be fabricated or upgraded",
+    ),
+    (
+        "IDEA.md",
+        "The published adapter contract must expose every controller and repair operation without hidden reference-ledger dependencies.",
+        "adapter contract exposes the complete runtime surface",
+    ),
+    (
+        "IDEA.md",
         "A receipt establishes the signed event accepted by one importer.",
         "receipt is importer-view evidence",
     ),

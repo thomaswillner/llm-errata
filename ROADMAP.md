@@ -124,18 +124,19 @@ Only after the file-backed proof passes:
    errata audit
    ```
 
-4. Define an adapter interface for enumeration, root-specific lineage-completeness evidence, quarantine, reconstruction, verification, and coverage reporting. Empty enumeration without that evidence is `unknown`.
+4. Define the complete adapter interface for enumeration, root-specific lineage-completeness evidence, quarantine and quarantine-phase coverage, store-owned repair inputs, retirement, reconstruction, recall probes, final dispositions, and coverage reporting. Empty enumeration or missing phase evidence is `unknown`; final success cannot overwrite a worse durable checkpoint.
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
 6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
 
 The CLI quarantine checkpoint is also implemented internally. `errata quarantine`
 authenticates exactly the next pending erratum, gates enumerable descendants,
 records opaque stores as `unknown`, and atomically persists a digest bound to
-the erratum, sequence, target, pre-state, adapter inventory, and gated set.
+the erratum, sequence, target, pre-state, adapter inventory, gated set, and each
+adapter's own quarantine-phase coverage.
 `errata repair` re-authenticates and refuses missing, consumed, replayed, or
 drifted checkpoints before rebuild.
 
-Phase 2 internal implementation is complete. G2 remains blocked until a dated independent external reviewer evaluates the exact committed surface; local tests and author-directed review cannot satisfy that gate. Broader interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
+Phase 2 internal implementation is complete. G2 remains blocked until a dated independent external reviewer evaluates the exact committed surface; local tests and author-directed review cannot satisfy that gate. Inspeximus `v2.7.0` is one tagged externally authored adapter candidate with a claimed clean-room rewrite, not established independent evidence. It targets historical commit `a477fe4f5c86730031b6285d9505778fb8eec060`; provenance review and rebinding to the current immutable target are required before current conformance results can be evaluated. Broader interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
 
 ## Phase 3 — Interoperability experiment
 

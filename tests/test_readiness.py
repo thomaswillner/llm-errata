@@ -435,7 +435,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Phase 2 implementation includes conflict-disclosed remediation for split-view equivocation and unsupported empty enumeration, plus schemas, checkpoints, semantic probes, key rotation, invalid-target, confidentiality, and receipt binding; no qualifying independent review is recorded.",
+                "Phase 2 implementation includes conflict-disclosed remediation for split-view equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract completeness, plus schemas, semantic probes, key rotation, invalid-target, confidentiality, and receipt binding; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 

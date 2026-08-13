@@ -79,10 +79,11 @@ A full lifecycle without importing Python: `init`, `export`, `derive`,
 `verify`.
 
 `quarantine` authenticates exactly the next pending erratum, gates every
-enumerable descendant, records opaque stores as `unknown`, and atomically
+enumerable descendant, records each adapter's own quarantine-phase coverage,
+records opaque or missing checkpoint evidence as `unknown`, and atomically
 writes `checkpoints/<sequence>-<erratum>.json`. Its canonical digest binds the
 erratum, target, inspectable pre-state root, adapter inventory, limitations,
-and gated artifact set. `repair` re-authenticates and refuses missing, mutated,
+gated artifact set, and reported checkpoint coverage. `repair` re-authenticates and refuses missing, mutated,
 consumed, wrong-target, state-drifted, adapter-drifted, or ungated evidence.
 Consumption happens only after receipt and applied-state writeback, so an
 interrupted rebuild retains an unconsumed checkpoint for safe resume.
@@ -93,6 +94,13 @@ audited root-specific lineage authority. Missing or false evidence makes that
 required store `unknown`, even when enumeration returns an empty tuple and the
 adapter's own coverage method claims `verified`. This is an adapter attestation,
 not independent proof against a dishonest store.
+
+Checkpoint coverage and final repair coverage are different observations. The
+adapter supplies both through `quarantine_coverage(root)` and `coverage(root)`;
+the controller carries the worse result into the signed receipt, so a later
+success cannot erase an earlier partial or failed gate. Repair planning also
+uses adapter-owned `source_artifact(id)` and `repair_inputs(id)` rather than
+requiring independent store records to be copied into the reference ledger.
 
 Exit codes are part of the interface. `0` is success, `1` is a refusal or a
 failed check, and **`2` means the repair ran and the result is not verified**.

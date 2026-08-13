@@ -11,8 +11,9 @@ import json
 import unittest
 from prototype.adapters import Coverage
 from prototype.checkpoints import CheckpointError, QuarantineCheckpoint
-from prototype.controller import Phase
-from prototype.errata import Erratum, Operation
+from prototype.controller import Importer, Phase
+from prototype.errata import Erratum, Operation, RootRegistry
+from prototype.lineage import LineageLedger
 from prototype.scenario import DIET, build_importer
 from prototype.signing import DemoSigner
 from prototype.strategies import (
@@ -42,6 +43,29 @@ class SilentLineageAdapter:
     def is_quarantined(self, artifact_id: str) -> bool:
         return False
 
+    def quarantine_coverage(self, root: str) -> Coverage:
+        return Coverage.VERIFIED
+
+    def source_artifact(self, artifact_id: str) -> str:
+        return artifact_id
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        return ()
+
+    def retire(self, artifact_id: str, *, superseded_at: str | None = None) -> None:
+        return None
+
+    def rebuild(
+        self, artifact_id: str, *, inputs: tuple[str, ...], replacement: str | None
+    ) -> str:
+        return replacement or ""
+
+    def recall(self, query: str):
+        return ()
+
+    def snapshot(self) -> dict[str, str]:
+        return {}
+
     def coverage(self, root: str) -> Coverage:
         return Coverage.VERIFIED
 
@@ -61,6 +85,138 @@ class SilentFailingAdapter(SilentLineageAdapter):
 
     def coverage(self, root: str) -> Coverage:
         return Coverage.FAILED
+
+
+class PartialQuarantineAdapter(SilentLineageAdapter):
+    """The adapter can enumerate but reports incomplete quarantine coverage."""
+
+    name = "partial_quarantine_store"
+
+    def __init__(self) -> None:
+        self.quarantined: set[str] = set()
+
+    def enumerate(self, root: str) -> tuple[str, ...]:
+        return ("external:root",)
+
+    def lineage_complete(self, root: str) -> bool:
+        return True
+
+    def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
+        self.quarantined.update(artifact_ids)
+
+    def is_quarantined(self, artifact_id: str) -> bool:
+        return artifact_id in self.quarantined
+
+    def quarantine_coverage(self, root: str) -> Coverage:
+        return Coverage.PARTIAL
+
+
+class MissingQuarantineCoverageAdapter(PartialQuarantineAdapter):
+    name = "missing_quarantine_coverage"
+    quarantine_coverage = None
+
+
+class IndependentStoreAdapter:
+    """A complete adapter whose lineage lives in its own store, not the ledger."""
+
+    name = "independent_store"
+    required = True
+
+    def __init__(self) -> None:
+        self.records = {
+            "external:diet": {"content": "is vegetarian", "inputs": ()},
+            "external:venue": {"content": "prefers quiet restaurants", "inputs": ()},
+            "external:budget": {"content": "moderate budget", "inputs": ()},
+            "external:summary": {
+                "content": "is vegetarian; prefers quiet restaurants; moderate budget",
+                "inputs": (
+                    "external:diet",
+                    "external:venue",
+                    "external:budget",
+                ),
+            },
+        }
+        self.quarantined: set[str] = set()
+        self.retired: set[str] = set()
+        self.rebuilt: set[str] = set()
+
+    def enumerate(self, root: str) -> tuple[str, ...]:
+        return ("external:diet", "external:summary")
+
+    def lineage_complete(self, root: str) -> bool:
+        return True
+
+    def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
+        self.quarantined.update(artifact_ids)
+
+    def is_quarantined(self, artifact_id: str) -> bool:
+        return artifact_id in self.quarantined
+
+    def quarantine_coverage(self, root: str) -> Coverage:
+        return (
+            Coverage.VERIFIED
+            if set(self.enumerate(root)).issubset(self.quarantined)
+            else Coverage.FAILED
+        )
+
+    def source_artifact(self, artifact_id: str) -> str:
+        return artifact_id
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        return self.records[artifact_id]["inputs"]
+
+    def retire(self, artifact_id: str, *, superseded_at: str | None = None) -> None:
+        self.retired.add(artifact_id)
+
+    def rebuild(
+        self, artifact_id: str, *, inputs: tuple[str, ...], replacement: str | None
+    ) -> str:
+        parts = [self.records[item]["content"] for item in inputs]
+        if replacement:
+            parts.insert(0, replacement)
+        content = "; ".join(parts)
+        self.records[artifact_id]["content"] = content
+        self.rebuilt.add(artifact_id)
+        self.quarantined.discard(artifact_id)
+        return content
+
+    def recall(self, query: str):
+        from prototype.adapters import Hit
+
+        return tuple(
+            Hit(artifact_id, record["content"])
+            for artifact_id, record in self.records.items()
+            if artifact_id not in self.quarantined
+            and artifact_id not in self.retired
+            and query.lower() in record["content"].lower()
+        )
+
+    def snapshot(self) -> dict[str, str]:
+        return {
+            artifact_id: record["content"]
+            for artifact_id, record in self.records.items()
+            if artifact_id not in self.retired
+        }
+
+    def coverage(self, root: str) -> Coverage:
+        return (
+            Coverage.VERIFIED
+            if "external:diet" in self.retired
+            and "external:summary" in self.rebuilt
+            else Coverage.FAILED
+        )
+
+    def dispositions(self, root: str) -> dict[str, str]:
+        return {
+            item: (
+                "retired"
+                if item in self.retired
+                else "rebuilt"
+                if item in self.rebuilt
+                else "quarantined-only"
+            )
+            for item in self.enumerate(root)
+        }
 
 
 def supersede(sequence: int = 1) -> Erratum:
@@ -174,6 +330,37 @@ class QuarantinePrecedesRepair(unittest.TestCase):
             importer.repair_quarantined(supersede(), drifted)
         self.assertNotIn(Phase.REBUILD_BEGIN, [event.phase for event in importer.journal])
 
+    def test_checkpoint_preserves_adapter_partial_quarantine_coverage(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        importer.adapters.append(PartialQuarantineAdapter())
+        checkpoint = importer.quarantine(supersede())
+        record = next(
+            item for item in checkpoint.adapters
+            if item.name == "partial_quarantine_store"
+        )
+        self.assertEqual(record.coverage, "partial")
+        receipt = importer.repair_quarantined(supersede(), checkpoint)
+        self.assertEqual(
+            receipt.stores["partial_quarantine_store"], Coverage.PARTIAL
+        )
+
+    def test_missing_quarantine_coverage_fails_closed_as_unknown(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        importer.adapters.append(MissingQuarantineCoverageAdapter())
+        checkpoint = importer.quarantine(supersede())
+        record = next(
+            item for item in checkpoint.adapters
+            if item.name == "missing_quarantine_coverage"
+        )
+        self.assertEqual(record.coverage, "unknown")
+        self.assertIn("quarantine-phase", record.limitation)
+
+    def test_unknown_checkpoint_cannot_be_improved_to_partial(self) -> None:
+        self.assertEqual(
+            Importer._conservative_coverage(Coverage.UNKNOWN, Coverage.PARTIAL),
+            Coverage.UNKNOWN,
+        )
+
 
 class EveryDescendantGetsADisposition(unittest.TestCase):
     """Acceptance: every known descendant receives an explicit disposition."""
@@ -235,6 +422,21 @@ class MixedArtifactsAreRebuiltNotDeleted(unittest.TestCase):
         self.assertIn("quiet restaurants", summary)
         self.assertIn("moderate budget", summary)
         self.assertIn("eats meat again", summary)
+
+    def test_an_independent_adapter_needs_no_reference_ledger_registration(self) -> None:
+        adapter = IndependentStoreAdapter()
+        importer = Importer(
+            "independent-importer",
+            ledger=LineageLedger(),
+            adapters=[adapter],
+            signer=DemoSigner(b"independent-importer-secret"),
+            owner=OWNER.public,
+            roots=RootRegistry({DIET}),
+        )
+        receipt = importer.repair(supersede())
+        self.assertEqual(receipt.aggregate, Coverage.VERIFIED)
+        self.assertIn("eats meat again", adapter.records["external:summary"]["content"])
+        self.assertIn("quiet restaurants", adapter.records["external:summary"]["content"])
 
 
 class OperationsStayDistinct(unittest.TestCase):

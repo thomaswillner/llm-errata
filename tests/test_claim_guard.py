@@ -117,6 +117,34 @@ class ClaimGuardRejectsInvariantLoss(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("empty enumeration", result.stdout)
 
+    def test_checkpoint_cannot_upgrade_adapter_coverage(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "A durable checkpoint records adapter-supplied quarantine coverage; "
+                "final repair cannot upgrade a worse checkpoint result.",
+                "A durable checkpoint may infer verified coverage and final repair may "
+                "upgrade an earlier result.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("checkpoint coverage", result.stdout)
+
+    def test_adapter_contract_cannot_hide_reference_ledger_dependency(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "The published adapter contract must expose every controller and "
+                "repair operation without hidden reference-ledger dependencies.",
+                "The published adapter contract may omit repair operations and depend "
+                "on the reference ledger implicitly.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("adapter contract", result.stdout)
+
     def test_receipt_cannot_claim_global_feed_consistency(self) -> None:
         def mutate(root: Path) -> None:
             rewrite(

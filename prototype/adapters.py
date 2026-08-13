@@ -63,7 +63,7 @@ class HistoricalHit:
 
 
 class StoreAdapter(Protocol):
-    """Minimum fail-closed contract for one required retrieval store."""
+    """Complete fail-closed surface exercised by the reference controller."""
 
     name: str
     required: bool
@@ -78,6 +78,34 @@ class StoreAdapter(Protocol):
     def quarantine(self, artifact_ids: tuple[str, ...]) -> None: ...
 
     def is_quarantined(self, artifact_id: str) -> bool: ...
+
+    def quarantine_coverage(self, root: str) -> Coverage:
+        """Coverage at the durable quarantine checkpoint, before repair."""
+
+        ...
+
+    def source_artifact(self, artifact_id: str) -> str:
+        """Stable lineage node represented by one store artifact."""
+
+        ...
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        """Store-owned direct inputs used to classify and rebuild an artifact."""
+
+        ...
+
+    def retire(self, artifact_id: str, *, superseded_at: str | None = None) -> None: ...
+
+    def rebuild(
+        self, artifact_id: str, *, inputs: tuple[str, ...], replacement: str | None
+    ) -> str: ...
+
+    def recall(self, query: str) -> tuple[Hit, ...]: ...
+
+    def snapshot(self) -> dict[str, str]:
+        """Inspectable state bound into checkpoint and receipt state roots."""
+
+        ...
 
     def coverage(self, root: str) -> Coverage: ...
 
@@ -120,6 +148,16 @@ class MarkdownAdapter:
 
     def is_quarantined(self, artifact_id: str) -> bool:
         return artifact_id in self._quarantined
+
+    def quarantine_coverage(self, root: str) -> Coverage:
+        descendants = set(self.enumerate(root))
+        if not self.lineage_complete(root):
+            return Coverage.UNKNOWN
+        if descendants.issubset(self._quarantined):
+            return Coverage.VERIFIED
+        if descendants & self._quarantined:
+            return Coverage.PARTIAL
+        return Coverage.FAILED
 
     def retire(self, artifact_id: str, *, superseded_at: str | None = None) -> None:
         """Remove an artifact from present-tense recall.
@@ -166,6 +204,9 @@ class MarkdownAdapter:
         """The ledger artifact this store item derives from. Here, itself."""
 
         return artifact_id
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        return self._ledger.artifact(artifact_id).inputs
 
     def release(self, artifact_id: str) -> None:
         """Un-gate without repairing. Only a non-conforming strategy does this."""
@@ -278,7 +319,17 @@ class VectorAdapter:
     def is_quarantined(self, artifact_id: str) -> bool:
         return artifact_id in self._quarantined
 
-    def retire(self, entry_id: str) -> None:
+    def quarantine_coverage(self, root: str) -> Coverage:
+        descendants = set(self.enumerate(root))
+        if not self.lineage_complete(root):
+            return Coverage.UNKNOWN
+        if descendants.issubset(self._quarantined):
+            return Coverage.VERIFIED
+        if descendants & self._quarantined:
+            return Coverage.PARTIAL
+        return Coverage.FAILED
+
+    def retire(self, entry_id: str, *, superseded_at: str | None = None) -> None:
         self._retired.add(entry_id)
         self._text.pop(entry_id, None)
 
@@ -306,6 +357,12 @@ class VectorAdapter:
 
     def source_of(self, entry_id: str) -> str:
         return self._source_of[entry_id]
+
+    def source_artifact(self, entry_id: str) -> str:
+        return self.source_of(entry_id)
+
+    def repair_inputs(self, entry_id: str) -> tuple[str, ...]:
+        return self._ledger.artifact(self.source_artifact(entry_id)).inputs
 
     def release(self, entry_id: str) -> None:
         self._quarantined.discard(entry_id)
@@ -378,7 +435,18 @@ class OpaqueAdapter:
     def is_quarantined(self, artifact_id: str) -> bool:
         return False
 
-    def retire(self, artifact_id: str) -> None:
+    def quarantine_coverage(self, root: str) -> Coverage:
+        return Coverage.UNKNOWN
+
+    def source_artifact(self, artifact_id: str) -> str:
+        return artifact_id
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        return ()
+
+    def retire(
+        self, artifact_id: str, *, superseded_at: str | None = None
+    ) -> None:
         return None
 
     def rebuild(
@@ -388,6 +456,9 @@ class OpaqueAdapter:
 
     def recall(self, query: str) -> tuple[Hit, ...]:
         return ()
+
+    def snapshot(self) -> dict[str, str]:
+        return {}
 
     def coverage(self, root: str) -> Coverage:
         return Coverage.UNKNOWN

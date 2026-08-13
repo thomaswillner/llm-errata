@@ -114,6 +114,22 @@ own adapter or store instrumentation and neither result is independent
 certification. The maintainer's 0.0000 dogfood ratio remains interested-party
 testimony, not independently reproduced evidence.
 
+The Inspeximus maintainer then published a tagged adapter candidate at
+[`v2.7.0`](https://github.com/DanceNitra/inspeximus/tree/v2.7.0), commit
+`ccdb30de5a32896fafcb4ed18a7a6f228691e078`. Its preserved history and source
+header disclose that v2.6.1 was written with this repository's reference adapter
+open and therefore does not qualify as independent evidence; the maintainer says
+v2.7.0 was rewritten from the protocol signature and prose contract. That
+externally authored candidate confirmed the empty-lineage remediation against
+historical target `a477fe4f5c86730031b6285d9505778fb8eec060`, then exposed two further reference
+defects: checkpoint coverage had been hardcoded for enumerable adapters, and the
+published adapter interface omitted repair methods and a hidden reference-ledger
+dependency. Those findings are accepted and remediated. The v2.7.0 adapter is a
+candidate external implementation, not established independent evidence or a G4
+pass: its clean-room provenance and behavior still require separate validation,
+its producer cannot validate its own adapter, and it must rebind to the current
+immutable target before current conformance results can be evaluated.
+
 These mechanisms apply to explicitly keyed or successfully extractor-keyed
 assertions and recorded lineage. The documented scope is one store, not every
 vector index, prompt log, backup, or independently operated importer.

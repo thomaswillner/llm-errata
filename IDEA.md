@@ -265,6 +265,10 @@ may report `verified` for an empty root scope only when it also establishes a
 root-specific write-time or audited lineage authority; otherwise the signed
 store result is `unknown` with a limitation.
 
+A durable checkpoint records adapter-supplied quarantine coverage; final repair cannot upgrade a worse checkpoint result.
+
+The published adapter contract must expose every controller and repair operation without hidden reference-ledger dependencies.
+
 A receipt establishes the signed event accepted by one importer. Importer-local
 sequence checks detect conflicts visible in that view, but cannot establish
 global owner non-equivocation across split views without an external witnessed
