@@ -1000,11 +1000,13 @@ def load_binding_factory(
             code = compile(self.payload, str(self.path), "exec")
             exec(code, module.__dict__)
 
+    top_package = parts[0]
+
     class AdmittedFinder(importlib.abc.MetaPathFinder):
         def find_spec(
             self, fullname: str, path: object = None, target: object = None
         ) -> object:
-            if fullname != module_name and not fullname.startswith(f"{module_name}."):
+            if fullname != top_package and not fullname.startswith(f"{top_package}."):
                 return None
             name_parts = fullname.split(".")
             source_path = root.joinpath(*name_parts).with_suffix(".py")
@@ -1016,7 +1018,7 @@ def load_binding_factory(
             selected_relative = selected.relative_to(root).as_posix()
             if selected_relative not in tracked:
                 raise ImportError(f"binding dependency {fullname!r} is not tracked")
-            payload = admitted_bytes if fullname == module_name else selected.read_bytes()
+            payload = admitted_bytes if selected == admitted_path else selected.read_bytes()
             loader = AdmittedLoader(fullname, selected, payload)
             is_package = selected.name == "__init__.py"
             return importlib.util.spec_from_file_location(
@@ -1026,11 +1028,11 @@ def load_binding_factory(
                 submodule_search_locations=[str(selected.parent)] if is_package else None,
             )
 
-    namespace_prefix = f"{module_name}."
+    namespace_prefix = f"{top_package}."
     saved_modules = {
         name: module
         for name, module in tuple(sys.modules.items())
-        if name == module_name or name.startswith(namespace_prefix)
+        if name == top_package or name.startswith(namespace_prefix)
     }
     for name in saved_modules:
         sys.modules.pop(name, None)
@@ -1052,7 +1054,7 @@ def load_binding_factory(
         if finder in sys.meta_path:
             sys.meta_path.remove(finder)
         for name in tuple(sys.modules):
-            if name == module_name or name.startswith(namespace_prefix):
+            if name == top_package or name.startswith(namespace_prefix):
                 sys.modules.pop(name, None)
         sys.modules.update(saved_modules)
     if not callable(factory):

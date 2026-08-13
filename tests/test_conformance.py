@@ -474,6 +474,57 @@ class RuntimeSourceIdentity(unittest.TestCase):
                 identity["dependency_manifest_sha256"], r"^[0-9a-f]{64}$"
             )
 
+    def test_dotted_binding_isolates_parent_and_sibling_module_cache(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-package-") as directory:
+            root = Path(directory)
+            package = root / "bindingpkg"
+            package.mkdir()
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "subbinding.py").write_text(
+                "from .helper import VALUE\n"
+                "def factory():\n"
+                "    return VALUE\n",
+                encoding="utf-8",
+            )
+            (package / "helper.py").write_text(
+                'VALUE = "COMMITTED"\n', encoding="utf-8"
+            )
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "bindingpkg"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            cached_parent = types.ModuleType("bindingpkg")
+            cached_parent.__path__ = [str(package)]
+            cached_helper = types.ModuleType("bindingpkg.helper")
+            cached_helper.VALUE = "CACHED-UNBOUND"
+            prior_parent = sys.modules.get("bindingpkg")
+            prior_helper = sys.modules.get("bindingpkg.helper")
+            sys.modules["bindingpkg"] = cached_parent
+            sys.modules["bindingpkg.helper"] = cached_helper
+            try:
+                factory, identity = load_binding_factory(
+                    "bindingpkg.subbinding:factory", root
+                )
+                self.assertIs(sys.modules["bindingpkg"], cached_parent)
+                self.assertIs(sys.modules["bindingpkg.helper"], cached_helper)
+            finally:
+                if prior_parent is None:
+                    sys.modules.pop("bindingpkg", None)
+                else:
+                    sys.modules["bindingpkg"] = prior_parent
+                if prior_helper is None:
+                    sys.modules.pop("bindingpkg.helper", None)
+                else:
+                    sys.modules["bindingpkg.helper"] = prior_helper
+            self.assertEqual(factory(), "COMMITTED")
+            self.assertRegex(
+                identity["dependency_manifest_sha256"], r"^[0-9a-f]{64}$"
+            )
+
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
             source_root = Path(directory)
