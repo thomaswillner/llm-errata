@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "status": "candidate-internal",
+  "evidence_boundary": "Passing this corpus is internal conformance evidence. It is not G2 or G4 evidence.",
+  "normative_target": {
+    "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+    "surface_digest": "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
+  },
+  "provenance": {
+    "reported_by": "Rastislav Drahos / DanceNitra",
+    "source_url": "https://github.com/DanceNitra/agora/tree/2ba1e299b3483b9038d03387345702427608b90b/contrib/llm-errata-adapter-conformance",
+    "source_commit": "2ba1e299b3483b9038d03387345702427608b90b",
+    "source_license": "MIT",
+    "relationship": "interested-party: Inspeximus is a G4 adapter candidate",
+    "ai_assistance": "Source commit discloses Claude Opus 5 co-authorship.",
+    "implementation": "Independently authored in LLM Errata; external runner and fixture files were not copied or vendored."
+  },
+  "cases": [
+    {
+      "id": "undeclared-derivative-must-not-reach-verified",
+      "operation": "supersede",
+      "normative": {
+        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        "path": "IDEA.md",
+        "quote": "- **No silent completeness:** missing lineage, inaccessible stores, backups, provider logs, model weights, screenshots, and copied prose with severed lineage remain `partial` or `unknown`."
+      },
+      "scenario": "undeclared-derivative",
+      "required_calls": ["enumerate", "lineage_complete", "quarantine_coverage", "coverage"],
+      "expected": {
+        "checkpoint": "unknown",
+        "aggregate": "unknown",
+        "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+        "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+        "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+      },
+      "mutation": {
+        "id": "constant-lineage-complete",
+        "exact_counter_result": {
+          "checkpoint": "verified",
+          "aggregate": "verified",
+          "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+          "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+          "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+        }
+      }
+    },
+    {
+      "id": "complete-lineage-can-reach-verified",
+      "operation": "supersede",
+      "normative": {
+        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        "path": "prototype/receipts.py",
+        "quote": "Aggregate success requires every required store to be `verified`."
+      },
+      "scenario": "complete-lineage",
+      "required_calls": ["enumerate", "lineage_complete", "quarantine_coverage", "coverage"],
+      "expected": {
+        "checkpoint": "verified",
+        "aggregate": "verified",
+        "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+        "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+        "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+      },
+      "mutation": {
+        "id": "constant-unknown-coverage",
+        "exact_counter_result": {
+          "checkpoint": "unknown",
+          "aggregate": "unknown",
+          "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+          "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+          "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+        }
+      }
+    },
+    {
+      "id": "repair-preserves-proposition-multiplicity",
+      "operation": "supersede",
+      "normative": {
+        "commit": "333ffcc98c0b8bd5521906357e7454bd61a0d2f0",
+        "path": "docs/superpowers/specs/2026-08-13-adapter-conformance-validator-hardening-design.md",
+        "quote": "Within a declared, inspectable adapter scope, repair must not increase the\nactive multiplicity of a preserved proposition unless the erratum explicitly\nrequires an additional assertion."
+      },
+      "scenario": "complete-lineage",
+      "required_calls": ["repair_inputs", "retire", "rebuild"],
+      "expected": {
+        "checkpoint": "verified",
+        "aggregate": "verified",
+        "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+        "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+        "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+      },
+      "mutation": {
+        "id": "duplicate-preserved-inputs",
+        "exact_counter_result": {
+          "checkpoint": "verified",
+          "aggregate": "failed",
+          "triad": {"negative": "pass", "positive": "pass", "preserve": "fail"},
+          "store": {"multiplicity": "increased", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+          "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+        }
+      }
+    },
+    {
+      "id": "erasure-evidence-is-content-free-and-non-vacuous",
+      "operation": "erase",
+      "normative": {
+        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        "path": "spec/README.md",
+        "quote": "Erasure fixtures carry only fixed content-free protocol labels, timestamps,\nverdicts, and digests. They never contain a retired value or raw provider\nresponse."
+      },
+      "scenario": "erasure",
+      "required_calls": ["retire", "recall", "snapshot", "dispositions"],
+      "expected": {
+        "checkpoint": "verified",
+        "aggregate": "verified",
+        "triad": {"negative": "pass", "preserve": "pass"},
+        "store": {"multiplicity": "known", "erased_absent": true, "preserved_present": true, "unrelated_present": true},
+        "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": true}
+      },
+      "mutation": {
+        "id": "empty-receipt",
+        "exact_counter_result": {
+          "checkpoint": "verified",
+          "aggregate": "failed",
+          "triad": {"negative": "pass", "preserve": "pass"},
+          "store": {"multiplicity": "known", "erased_absent": true, "preserved_present": true, "unrelated_present": true},
+          "receipt": {"names_store": false, "non_trivial": false, "forbidden_absent": true}
+        }
+      }
+    },
+    {
+      "id": "collateral-survives-complete-supersession",
+      "operation": "supersede",
+      "normative": {
+        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        "path": "IDEA.md",
+        "quote": "Erasure has no positive replacement, but still needs negative and preservation checks. The triad defeats two cheap tricks: adding a new fact while still retrieving the old one, and “fixing” the problem by wiping the whole profile."
+      },
+      "scenario": "complete-lineage",
+      "required_calls": ["enumerate", "recall", "retire"],
+      "expected": {
+        "checkpoint": "verified",
+        "aggregate": "verified",
+        "triad": {"negative": "pass", "positive": "pass", "preserve": "pass"},
+        "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": true, "unrelated_present": true},
+        "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+      },
+      "mutation": {
+        "id": "retire-entire-store",
+        "exact_counter_result": {
+          "checkpoint": "verified",
+          "aggregate": "failed",
+          "triad": {"negative": "pass", "positive": "pass", "preserve": "fail"},
+          "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": false, "unrelated_present": false},
+          "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
+        }
+      }
+    }
+  ],
+  "validator_controls": [
+    {"id": "empty-receipt-must-fail", "mutation": "empty-receipt", "required_failure": "receipt is vacuous"},
+    {"id": "no-op-feed-verification-must-fail", "mutation": "no-op-feed-verification", "required_failure": "accepted feed is incomplete"},
+    {"id": "constant-unknown-aggregator-must-fail", "mutation": "constant-unknown-aggregator", "required_failure": "semantic verdict diversity is missing"}
+  ]
+}
