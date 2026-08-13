@@ -281,11 +281,26 @@ class RuntimeSourceIdentity(unittest.TestCase):
         self.assertRegex(report.binding_source["sha256"], r"^[0-9a-f]{64}$")
 
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
-        marker = ROOT / "conformance-dirty-sentinel.tmp"
-        marker.write_text("untracked runtime input", encoding="utf-8")
-        self.addCleanup(marker.unlink, missing_ok=True)
-        with self.assertRaisesRegex(ConformanceInputError, "dirty"):
-            validate_adapter_conformance(CORPUS, ROOT, ReferenceConformanceBinding)
+        with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
+            source_root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=source_root, check=True)
+            marker = source_root / "tracked.txt"
+            marker.write_text("clean\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=source_root, check=True)
+            subprocess.run(
+                [
+                    "git", "-c", "user.name=LLM Errata Tests",
+                    "-c", "user.email=tests@example.invalid",
+                    "commit", "-q", "-m", "fixture",
+                ],
+                cwd=source_root,
+                check=True,
+            )
+            marker.write_text("dirty\n", encoding="utf-8")
+            with self.assertRaisesRegex(ConformanceInputError, "dirty"):
+                validate_adapter_conformance(
+                    CORPUS, source_root, ReferenceConformanceBinding
+                )
 
     def test_git_timeout_is_invalid_source_evidence(self) -> None:
         with patch(
