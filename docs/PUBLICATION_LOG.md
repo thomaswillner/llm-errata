@@ -129,6 +129,21 @@ role that overlaps validator authorship. They also do not satisfy G2.
 | DEV Community | Attempted; authentication-blocked. No verified authenticated editor was available. | No public post URL recorded. |
 | Medium | Attempted; authentication-blocked. No verified authenticated editor was available. | No public post URL recorded. |
 | X | Attempted; authentication-blocked. Live signed-out state observed. | No public post URL recorded. |
+| publishto.us | [Public challenge page](https://publishto.us/p/oJ88e94KEN) published and read back on 2026-08-13 at 19:07 UTC, then updated and read back after current-target feedback at 19:13 UTC. No account or login was used. | Public recruitment mirror only. It links commit `ac4468faf73c2cc7949dd29b2a2a151f5bd23116`, digest `7e0d6c88…`, repository terms, and `NOT_PROD_READY`. It does not establish review, conformance, interoperability, endorsement, or any G2–G6 pass. |
+| Telegra.ph | [Attributed public challenge page](https://telegra.ph/LLM-Errata-please-try-to-break-this-experimental-AI-memory-correction-protocol-08-13) published and read back on 2026-08-13 at 19:08 UTC, then updated and read back after current-target feedback at 19:13 UTC. The official API created a page without user login; author is Thomas Willner and links to the repository. | Public recruitment mirror only. Same immutable target, attribution, `NOT_PROD_READY`, and non-endorsement boundary; no readiness evidence. |
+| InstantPost | [Public-stream challenge page](https://instantpost.us/p/di32CWRcqx) published and read back on 2026-08-13 at 19:10 UTC, then updated and read back after current-target feedback at 19:13 UTC. It was visible in the service's public `All posts` stream; no user account or login was used. | Public recruitment mirror only. Same immutable target and boundary; publication and public-stream visibility do not establish independent evidence or upgrade readiness. |
+
+All three successful no-login mirrors use the same reviewed publication copy;
+the final amended copy SHA-256 is
+`89cdc0dea3bae126f12250a40f84cb385f36b7f8f8a8bd875bab22cd86f21365`. It identifies Thomas Rainer Willner as the
+responsible publishing author, discloses substantial AI assistance, names the
+commercial and non-commercial attribution requirement, and records the latest
+interested-party result as 28/28 published wire/controller cases with only 1/28
+reaching an adapter. The producer explicitly states that result does not
+validate adapter behavior or move G2 or G4. Write.as returned HTTP/application
+code `201` with `id=contentisblocked` and no public URL; InstantPost's first
+unauthenticated REST attempt returned `401` before its documented no-account
+API-key generation path was used. Neither failed attempt is a public placement.
 
 Zenodo and OSF remain deferred until a stable reviewed release. arXiv and
 standards engagement remain deferred pending a paper-quality manuscript and
