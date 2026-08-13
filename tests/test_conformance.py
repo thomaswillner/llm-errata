@@ -254,6 +254,15 @@ class AdapterCases(unittest.TestCase):
             with self.assertRaisesRegex(ConformanceInputError, "timed out"):
                 validate_adapter_conformance(CORPUS, ROOT, SlowBinding)
 
+    def test_binding_constructor_has_a_hard_timeout(self) -> None:
+        class SlowConstructorBinding(ReferenceConformanceBinding):
+            def __init__(self):
+                time.sleep(0.1)
+
+        with patch("prototype.conformance.BINDING_TIMEOUT_SECONDS", 0.01):
+            with self.assertRaisesRegex(ConformanceInputError, "timed out"):
+                validate_adapter_conformance(CORPUS, ROOT, SlowConstructorBinding)
+
 
 class RuntimeSourceIdentity(unittest.TestCase):
     def test_report_binds_clean_runtime_commit_tree_and_binding_source(self) -> None:
