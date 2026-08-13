@@ -914,7 +914,9 @@ class _BindingTimeout(Exception):
 
 def _run_with_timeout(action: Callable[[], Any]) -> Any:
     if threading.current_thread() is not threading.main_thread():
-        return action()
+        raise ConformanceInputError(
+            "binding execution requires the main thread for timeout enforcement"
+        )
 
     def expire(signum: int, frame: object) -> None:
         raise _BindingTimeout
@@ -937,7 +939,16 @@ def validate_adapter_conformance(
     runtime_commit, runtime_tree = _runtime_identity(source_root)
     corpus = load_corpus(corpus_path, source_root)
     binding_source = _binding_source(source_root, binding_factory)
-    binding = binding_factory()
+    try:
+        binding = _run_with_timeout(binding_factory)
+    except _BindingTimeout as error:
+        raise ConformanceInputError("binding construction timed out") from error
+    except ConformanceInputError:
+        raise
+    except Exception as error:
+        raise ConformanceInputError(
+            f"binding construction failed: {type(error).__name__}"
+        ) from error
     results = []
     for case in corpus.cases:
         try:
