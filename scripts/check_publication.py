@@ -14,17 +14,17 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "publication" / "active-surfaces.json"
 
-CANONICAL_COMMIT = "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
+CANONICAL_COMMIT = "ad36ed5e209a53aacab17751b5a183ca8a1aac1f"
 CANONICAL_DIGEST = (
-    "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
+    "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d"
 )
 REPOSITORY_URL = "https://github.com/thomaswillner/llm-errata"
 ALLOWED_GATES = {"G2", "G3", "G4", "G5", "G6"}
 REQUIRED_ATTRIBUTION = {"LLM Errata", "Thomas Willner", REPOSITORY_URL}
 REQUIRED_SURFACES = {
-    "g4-inspeximus-current-target-reply": {
+    "g4-inspeximus-v040-target-reply": {
         "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5282207719",
+        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5287579823",
         "gates": ["G2", "G4"],
         "roles": ["inspeximus-adapter-author"],
         "mentions": ["DanceNitra"],
@@ -32,7 +32,9 @@ REQUIRED_SURFACES = {
     },
 }
 
-ROOT_KEYS = {"schema_version", "review_target", "license", "surfaces"}
+ROOT_KEYS = {
+    "schema_version", "review_target", "license", "historical_surfaces", "surfaces"
+}
 TARGET_KEYS = {"commit", "surface_digest"}
 LICENSE_KEYS = {
     "specification_implementation",
@@ -53,6 +55,28 @@ SURFACE_KEYS = {
     "supersedes",
     "evidence_boundary",
 }
+HISTORICAL_SURFACE_KEYS = SURFACE_KEYS | {"superseded_by"}
+REQUIRED_HISTORICAL_SURFACES = [
+    {
+        "id": "g4-inspeximus-current-target-reply",
+        "kind": "issue-comment",
+        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5282207719",
+        "published": "2026-08-13",
+        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        "surface_digest": (
+            "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
+        ),
+        "gates": ["G2", "G4"],
+        "roles": ["inspeximus-adapter-author"],
+        "mentions": ["DanceNitra"],
+        "supersedes": [
+            f"{REPOSITORY_URL}/issues/4#issuecomment-5280210050",
+            f"{REPOSITORY_URL}/pull/8#issuecomment-5280225709",
+        ],
+        "evidence_boundary": "recruitment-only",
+        "superseded_by": f"{REPOSITORY_URL}/issues/4#issuecomment-5287579823",
+    }
+]
 
 
 def load_manifest(path: Path) -> object:
@@ -64,8 +88,8 @@ def validate_manifest(payload: object) -> list[str]:
     if not isinstance(payload, dict) or set(payload) != ROOT_KEYS:
         return ["manifest schema: root must contain the exact required fields"]
 
-    if payload.get("schema_version") != 1:
-        failures.append("manifest schema: schema_version must be 1")
+    if payload.get("schema_version") != 2:
+        failures.append("manifest schema: schema_version must be 2")
 
     target = payload.get("review_target")
     target_valid = (
@@ -126,6 +150,12 @@ def validate_manifest(payload: object) -> list[str]:
             failures.append(
                 "reference code boundary: personal-use prototype/, scripts/, and tests/ scope is required"
             )
+
+    historical = payload.get("historical_surfaces")
+    if historical != REQUIRED_HISTORICAL_SURFACES:
+        failures.append(
+            "historical surfaces: exact immutable superseded records are required"
+        )
 
     surfaces = payload.get("surfaces")
     if not isinstance(surfaces, list):
@@ -245,6 +275,13 @@ def validate_manifest(payload: object) -> list[str]:
                     "surface fields: active surface URL cannot also be superseded"
                 )
                 break
+
+    if isinstance(historical, list):
+        historical_urls = {
+            item.get("url") for item in historical if isinstance(item, dict)
+        }
+        if active_url_set.intersection(historical_urls):
+            failures.append("historical surfaces: historical URL cannot remain active")
 
     return failures
 

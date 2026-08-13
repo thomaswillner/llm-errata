@@ -19,13 +19,13 @@ independent specification implementations remain permitted under the
 attributed implementation grant; Reference Code remains separately restricted.
 
 This log records publication and outreach evidence. It does not upgrade a
-readiness gate. Last verified: 2026-08-13.
+readiness gate. Last verified: 2026-08-14.
 
 ## GitHub public calls
 
 | Surface | Public artifact | Status |
 |---|---|---|
-| Draft implementation and review surface | [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) | Open draft, targeting `agent/prod-readiness`. |
+| Integrated implementation and review surface | [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) | Merged into `agent/prod-readiness`; PR #3 remains the protected integration gate to `main`. |
 | Independent review request | [Issue #4](https://github.com/thomaswillner/llm-errata/issues/4) and its [corrected targeted review request](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5274367774) | Open call against corrected immutable target. Portable Agent Memory and libsodium maintainers were asked for distinct, bounded review or referral roles. Invitation only; G2 and G3 remain `BLOCKED`. |
 | Targeted independent-review recruitment | [Inspeximus maintainer invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269444341) | Invitation to challenge the stated collision boundary; it is not external evidence. |
 | Interested-party prior-art feedback | [Inspeximus maintainer response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5271988057) | Conflict-disclosed preliminary feedback. Source verification confirmed `retract_lineage` as a stronger local quarantine/rebuild collision and narrowed the coverage comparison. The disclosed dogfood ratio was not independently reproduced. Maintainer offered a future scoped review, but explicitly does not meet G2 independence alone. |
@@ -43,7 +43,8 @@ readiness gate. Last verified: 2026-08-13.
 | Historical Phase 2 review target | Commit [`50e895fbfec544b16c94caa07bf2d1f4049a42e2`](https://github.com/thomaswillner/llm-errata/commit/50e895fbfec544b16c94caa07bf2d1f4049a42e2), digest `9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804` | Stale: this target predated the accepted prior-art corrections and must not be used for a current review. Preserved as historical publication evidence. |
 | Corrected complete Phase 2 review target | Commit [`08b95263c9ed700c43aea0b285696956cc23e878`](https://github.com/thomaswillner/llm-errata/commit/08b95263c9ed700c43aea0b285696956cc23e878), digest `03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14` | Complete corrected specification, prior-art, licensing, and cryptographic-qualification surface. Checkout and committed-source digests match; exact-target CI passed Python 3.11 and 3.13. Internal evidence does not satisfy G2. |
 | Former feedback-remediation target | Commit [`a477fe4f5c86730031b6285d9505778fb8eec060`](https://github.com/thomaswillner/llm-errata/commit/a477fe4f5c86730031b6285d9505778fb8eec060), digest `a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3` | Remediated same-importer conflict persistence, signed split-view limitations, and unsupported empty enumeration. Later adapter testing found checkpoint-coverage and contract defects, so this target is historical. Exact-target [CI run 31698542878](https://github.com/thomaswillner/llm-errata/actions/runs/31698542878) passed Python 3.11 and 3.13. |
-| Current adapter-contract remediation target | Commit [`ac4468faf73c2cc7949dd29b2a2a151f5bd23116`](https://github.com/thomaswillner/llm-errata/commit/ac4468faf73c2cc7949dd29b2a2a151f5bd23116), digest `7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12` | Preserves adapter-supplied checkpoint coverage, exposes complete adapter runtime surface, and removes hidden reference-ledger coupling. Checkout and committed-tree digests match; exact-target [CI run 31713580146](https://github.com/thomaswillner/llm-errata/actions/runs/31713580146) passed Python 3.11 and 3.13. Internal evidence does not satisfy G2 or G4. |
+| Historical adapter-contract remediation target | Commit [`ac4468faf73c2cc7949dd29b2a2a151f5bd23116`](https://github.com/thomaswillner/llm-errata/commit/ac4468faf73c2cc7949dd29b2a2a151f5bd23116), digest `7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12` | Preserved adapter-supplied checkpoint coverage, exposed the complete adapter runtime surface, and removed hidden reference-ledger coupling. Later adapter-conformance hardening supersedes it as the active target. |
+| Current complete v0.4.0 review target | Commit [`ad36ed5e209a53aacab17751b5a183ca8a1aac1f`](https://github.com/thomaswillner/llm-errata/commit/ad36ed5e209a53aacab17751b5a183ca8a1aac1f), digest `3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d` | Includes independently authored adapter corpus and validator hardening derived from external findings without copying the external runner or fixtures. Exact-target [CI run 31753547018](https://github.com/thomaswillner/llm-errata/actions/runs/31753547018) passed Python 3.11 and 3.13 with 358 tests. Internal and interested-party evidence does not satisfy G2 or G4. |
 | Adapter checkpoint finding | [Inspeximus implementation report](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280326386) | Reproduced `partial` adapter quarantine coverage being recorded as `verified`; accepted and fixed. Interested-party technical evidence, not a qualifying G2 review. |
 | Adapter provenance and contract findings | [Inspeximus v2.7.0 report](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5281287746) | Preserves v2.6.1 contamination disclosure, claims a clean-room v2.7.0 rewrite, and reports omitted repair methods plus hidden ledger coupling. Findings reproduced and fixed; independence and current-target behavior remain unverified. |
 | Current human remediation reply | [Point-by-point response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5282207719) | Read back from GitHub with author and body verified. Publishes commit `ac4468f`, digest `7e0d6c88…`, exact-head CI, accepted fixes, provenance boundary, current vector set, and request to rebind Inspeximus. Recruitment and response only; G2 and G4 remain `BLOCKED`. |
@@ -51,6 +52,7 @@ readiness gate. Last verified: 2026-08-13.
 | Cross-project remediation and adapter offer | [Inspeximus follow-up](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5279081884) | Inspeximus source commit `3661102` fixes an adjacent known-hole audit defect and offers an independently authored adapter plus benchmark harness with explicit commercial interest. No adapter artifact exists yet; the producer cannot also validate its own adapter for G4. |
 | Cryptography maintainer response | [Pure-Python Ed25519 reference](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5275036522) | Useful referral and evidence that the outreach lacked plain-language context. The linked pure-Python project is a comparison oracle, not audited constant-time G3 evidence. |
 | Human cryptography/context reply | [Plain-language response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280206599) | Read back from GitHub with author and body verified. Explains the project and AI-assistance boundary, records the comparison oracle, and states why G3 remains blocked. Technical response only; no further review request. |
+| Consolidated contributor acknowledgment and current-target request | [Rastislav Drahoš / DanceNitra reply](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5287579823) | Read back from GitHub with author and exact body verified. Enumerates incorporated changes and preserved credit, publishes `ad36ed5…` plus digest `3ca427…`, and requests only an optional current-target adapter run. G2 and G4 remain `BLOCKED`. |
 | Human findings and adapter reply | [Point-by-point remediation response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280210050) | Read back from GitHub with author and body verified. Accepts both reproduced findings, explains the `unknown` decision, records the split-view limitation, and defines a clean-room Inspeximus adapter plus separate-validator shape. Recruitment-only for G4; conflict disclosure remains controlling. |
 | Current PR remediation checkpoint | [PR #8 feedback checkpoint](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5280225709) | Read back from GitHub with author and body verified. Publishes current commit/digest, exact-head CI, reply URLs, and unchanged G2–G6 blockers without additional mentions. Publication only; it supersedes prior active target pointers. |
 | Final independent-implementation call | [Issue #5 completion update](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5272475120) | Publishes the immutable Phase 2 commit and digest for two independent adapters and a separate validator. No implementation has been accepted; G4 remains `BLOCKED`. |
@@ -66,20 +68,26 @@ readiness gate. Last verified: 2026-08-13.
 | Six-step readiness checkpoint | [PR #8 checkpoint](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272526975) | Audits every approved production-readiness step against exact internal and external evidence. Records `NOT_PROD_READY`, the external blockers, PR #3 status, validation, and publication boundaries without claiming certification. |
 
 One current-target reply asks the conflict-disclosed Inspeximus maintainer to
-rebind the externally authored adapter candidate to the corrected immutable
+rebind the externally authored adapter candidate to the complete v0.4.0
 surface. It does not establish clean-room independence or satisfy G2 or G4 by
 itself. Prior role-specific calls remain historical and visible. No qualifying
 second adapter, separate validator, operated-system approval, or CODEOWNER
 volunteer is recorded.
 
 The current complete conformance review target is source commit
-[`ac4468faf73c2cc7949dd29b2a2a151f5bd23116`](https://github.com/thomaswillner/llm-errata/commit/ac4468faf73c2cc7949dd29b2a2a151f5bd23116)
+[`ad36ed5e209a53aacab17751b5a183ca8a1aac1f`](https://github.com/thomaswillner/llm-errata/commit/ad36ed5e209a53aacab17751b5a183ca8a1aac1f)
 with canonical Phase 2 surface digest
-`7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12`.
+`3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d`.
 The digest was recomputed from checkout and committed tree with an exact match.
 The exact-target [GitHub Actions run
-31713580146](https://github.com/thomaswillner/llm-errata/actions/runs/31713580146)
-passed Python 3.11 and Python 3.13.
+31753547018](https://github.com/thomaswillner/llm-errata/actions/runs/31753547018)
+passed Python 3.11 and Python 3.13 with 358 tests.
+
+The former adapter-contract remediation target is source commit
+[`ac4468faf73c2cc7949dd29b2a2a151f5bd23116`](https://github.com/thomaswillner/llm-errata/commit/ac4468faf73c2cc7949dd29b2a2a151f5bd23116)
+with digest `7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12`.
+It remains historical evidence for the adapter-contract remediation and the
+Inspeximus 2.9.0 rebind.
 
 The former feedback-remediation target is source commit
 [`a477fe4f5c86730031b6285d9505778fb8eec060`](https://github.com/thomaswillner/llm-errata/commit/a477fe4f5c86730031b6285d9505778fb8eec060)
@@ -174,8 +182,8 @@ interested-party review are not qualifying independent evidence. Phase 2 now
 also preserves adapter-supplied quarantine coverage, exposes the complete
 runtime adapter contract, and removes hidden reference-ledger coupling. G2
 remains `BLOCKED` pending a dated qualifying independent review of commit
-`ac4468faf73c2cc7949dd29b2a2a151f5bd23116` and digest
-`7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12`.
+`ad36ed5e209a53aacab17751b5a183ca8a1aac1f` and digest
+`3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d`.
 G4 remains `BLOCKED` pending two independently established current-target
 adapters and a separately produced validator. Repository verdict remains
 `NOT_PROD_READY`.

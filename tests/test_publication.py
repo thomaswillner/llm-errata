@@ -37,7 +37,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
     def test_stale_commit_is_rejected(self) -> None:
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["review_target"].__setitem__(
-                "commit", "08b95263c9ed700c43aea0b285696956cc23e878"
+                "commit", "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
             ),
             "review target",
         )
@@ -46,7 +46,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["review_target"].__setitem__(
                 "surface_digest",
-                "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
+                "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12",
             ),
             "review target",
         )
@@ -86,6 +86,20 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
     def test_missing_required_surface_is_rejected(self) -> None:
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["surfaces"].pop(), "required active surfaces"
+        )
+
+    def test_historical_surface_cannot_be_deleted(self) -> None:
+        self._assert_manifest_mutation_is_rejected(
+            lambda payload: payload["historical_surfaces"].clear(),
+            "historical surfaces",
+        )
+
+    def test_historical_surface_cannot_be_rewritten(self) -> None:
+        self._assert_manifest_mutation_is_rejected(
+            lambda payload: payload["historical_surfaces"][0].__setitem__(
+                "commit", "0" * 40
+            ),
+            "historical surfaces",
         )
 
     def test_duplicate_surface_url_is_rejected(self) -> None:
