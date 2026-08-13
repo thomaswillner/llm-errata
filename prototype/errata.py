@@ -1,7 +1,7 @@
 """The errata feed: an append-only, monotonically sequenced channel of
 authorised corrections, supersessions, and erasures for exported memory roots.
 
-This module is the trust boundary. Everything downstream — quarantine, rebuild,
+This module is one importer-view trust boundary. Everything downstream — quarantine, rebuild,
 probes, receipts — assumes that an erratum which reached the controller was
 authorised by the owner, arrived in order, and named exactly one known root.
 
@@ -12,6 +12,7 @@ conflicting events, and ambiguous targets. Each has a test.
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any, Iterable, Iterator, Mapping, Sequence
@@ -57,6 +58,32 @@ class RootRegistry:
 
 
 @dataclass(frozen=True)
+class OwnerKeySchedule:
+    """Owner verification keys activated at explicit feed sequences."""
+
+    activations: tuple[tuple[int, VerificationKey], ...]
+
+    def __post_init__(self) -> None:
+        sequences = tuple(item[0] for item in self.activations)
+        key_ids = tuple(item[1].key_id for item in self.activations)
+        if (
+            not self.activations
+            or sequences[0] != 1
+            or sequences != tuple(sorted(set(sequences)))
+            or len(key_ids) != len(set(key_ids))
+        ):
+            raise ValueError("key schedule must start at 1 with unique ordered activations")
+
+    def key_for(self, sequence: int) -> VerificationKey:
+        active = self.activations[0][1]
+        for activation, key in self.activations:
+            if activation > sequence:
+                break
+            active = key
+        return active
+
+
+@dataclass(frozen=True)
 class Erratum:
     erratum_id: str
     sequence: int
@@ -65,6 +92,7 @@ class Erratum:
     valid_from: str
     postconditions: Mapping[str, str]
     replacement: str | None = None
+    signing_key_id: str | None = None
     signature: str | None = None
 
     def replace(self, **changes: Any) -> Erratum:
@@ -81,6 +109,7 @@ class Erratum:
             "valid_from": self.valid_from,
             "postconditions": dict(self.postconditions),
             "replacement": self.replacement,
+            "signing_key_id": self.signing_key_id,
         }
 
     def to_json(self) -> str:
@@ -99,6 +128,7 @@ class Erratum:
             valid_from=raw["valid_from"],
             postconditions=raw["postconditions"],
             replacement=raw.get("replacement"),
+            signing_key_id=raw.get("signing_key_id"),
             signature=raw.get("signature"),
         )
 
@@ -107,6 +137,15 @@ def read_feed(text: str) -> list[Erratum]:
     """Parse a JSONL feed. Parsing is not acceptance — call `verify_feed`."""
 
     return [Erratum.from_json(line) for line in text.splitlines() if line.strip()]
+
+
+def event_fingerprint(erratum: Erratum) -> str:
+    """Bind one sequence to the complete signed event, not only its ID."""
+
+    canonical = json.dumps(
+        erratum.signable(), sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _check_shape(erratum: Erratum, roots: RootRegistry) -> None:
@@ -143,24 +182,31 @@ def _check_shape(erratum: Erratum, roots: RootRegistry) -> None:
 def verify_feed(
     errata: Sequence[Erratum],
     *,
-    owner: VerificationKey,
+    owner: VerificationKey | OwnerKeySchedule,
     roots: RootRegistry,
     last_sequence: int = 0,
 ) -> list[Erratum]:
     """Authenticate and order a feed, or raise `FeedError`.
 
-    Returns the accepted errata in sequence order. Refuses the whole feed
-    rather than the offending entry: a feed that equivocates or skips has
+    Returns the accepted errata in sequence order. Refuses the whole observed
+    feed rather than the offending entry: one view that conflicts or skips has
     already failed as a channel, and salvaging the entries an attacker chose to
     make well formed is not a safe default.
     """
 
     accepted: list[Erratum] = []
-    seen: dict[int, str] = {}
+    seen: dict[int, tuple[str, str]] = {}
     previous = last_sequence
 
     for erratum in errata:
-        if erratum.signature is None or not owner.verify(
+        schedule = owner if isinstance(owner, OwnerKeySchedule) else OwnerKeySchedule(((1, owner),))
+        active_key = schedule.key_for(erratum.sequence)
+        if erratum.signing_key_id != active_key.key_id:
+            raise FeedError(
+                f"{erratum.erratum_id}: signing key {erratum.signing_key_id!r} is not "
+                f"the active key {active_key.key_id!r} at sequence {erratum.sequence}."
+            )
+        if erratum.signature is None or not active_key.verify(
             erratum.signable(), erratum.signature
         ):
             raise FeedError(
@@ -168,11 +214,15 @@ def verify_feed(
                 "durable memory poisoning, so the feed is refused."
             )
 
-        if erratum.sequence in seen and seen[erratum.sequence] != erratum.erratum_id:
+        fingerprint = event_fingerprint(erratum)
+        if (
+            erratum.sequence in seen
+            and seen[erratum.sequence][1] != fingerprint
+        ):
             raise FeedError(
-                f"sequence {erratum.sequence} conflict: {seen[erratum.sequence]!r} "
+                f"sequence {erratum.sequence} conflict: {seen[erratum.sequence][0]!r} "
                 f"and {erratum.erratum_id!r} both claim it. The owner has "
-                "equivocated, or the feed was spliced."
+                "equivocated within this observed view, or the feed was spliced."
             )
 
         if erratum.sequence <= previous:
@@ -191,7 +241,7 @@ def verify_feed(
 
         _check_shape(erratum, roots)
 
-        seen[erratum.sequence] = erratum.erratum_id
+        seen[erratum.sequence] = (erratum.erratum_id, fingerprint)
         previous = erratum.sequence
         accepted.append(erratum)
 

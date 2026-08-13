@@ -1,0 +1,204 @@
+{
+  "cases": {
+    "verified-correction": [
+      {
+    "kind": "negative",
+    "operation": "correct",
+    "probe_id": "correct-negative-v1",
+    "prompt_template": "synthetic-negative-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      },
+      {
+    "kind": "positive",
+    "operation": "correct",
+    "probe_id": "correct-positive-v1",
+    "prompt_template": "synthetic-positive-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      },
+      {
+    "kind": "preservation",
+    "operation": "correct",
+    "probe_id": "correct-preservation-v1",
+    "prompt_template": "synthetic-preservation-v1",
+    "required": true,
+    "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "failed-supersession": [
+      {
+        "kind": "negative",
+        "operation": "supersede",
+        "probe_id": "supersede-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "supersede",
+        "probe_id": "supersede-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "supersede",
+        "probe_id": "supersede-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "unknown-erasure": [
+      {
+        "kind": "negative",
+        "operation": "erase",
+        "probe_id": "erase-negative-v1",
+        "prompt_template": "erasure-content-free-v1",
+        "required": true,
+        "scope": "declared-store-set-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "erase",
+        "probe_id": "erase-preservation-v1",
+        "prompt_template": "erasure-content-free-v1",
+        "required": true,
+        "scope": "declared-store-set-v1"
+      }
+    ],
+    "provider-error": [
+      {
+        "kind": "negative",
+        "operation": "correct",
+        "probe_id": "provider-error-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "correct",
+        "probe_id": "provider-error-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "correct",
+        "probe_id": "provider-error-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "missing-response": [
+      {
+        "kind": "negative",
+        "operation": "correct",
+        "probe_id": "missing-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "correct",
+        "probe_id": "missing-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "correct",
+        "probe_id": "missing-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "duplicate-response": [
+      {
+        "kind": "negative",
+        "operation": "correct",
+        "probe_id": "duplicate-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "correct",
+        "probe_id": "duplicate-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "correct",
+        "probe_id": "duplicate-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "configuration-drift": [
+      {
+        "kind": "negative",
+        "operation": "correct",
+        "probe_id": "drift-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "correct",
+        "probe_id": "drift-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "correct",
+        "probe_id": "drift-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ],
+    "nonconforming-output": [
+      {
+        "kind": "negative",
+        "operation": "correct",
+        "probe_id": "nonconforming-negative-v1",
+        "prompt_template": "synthetic-negative-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "positive",
+        "operation": "correct",
+        "probe_id": "nonconforming-positive-v1",
+        "prompt_template": "synthetic-positive-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      },
+      {
+        "kind": "preservation",
+        "operation": "correct",
+        "probe_id": "nonconforming-preservation-v1",
+        "prompt_template": "synthetic-preservation-v1",
+        "required": true,
+        "scope": "synthetic-declared-scope-v1"
+      }
+    ]
+  }
+}

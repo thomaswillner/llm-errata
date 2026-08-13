@@ -104,6 +104,20 @@ class SqliteAdapter:
         rows = self._db.execute("SELECT artifact_id FROM artifacts").fetchall()
         return tuple(sorted(r[0] for r in rows if r[0] in closure))
 
+    def lineage_complete(self, root: str) -> bool:
+        """Database and write-time ledger inventories agree for this store."""
+
+        rows = {
+            row[0]
+            for row in self._db.execute("SELECT artifact_id FROM artifacts").fetchall()
+        }
+        expected = {
+            artifact.artifact_id
+            for artifact in self._ledger.artifacts()
+            if artifact.store == self.name
+        }
+        return root in self._ledger.roots_seen() and rows == expected
+
     def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
         """Commit the gate immediately, in its own transaction.
 
@@ -129,6 +143,30 @@ class SqliteAdapter:
             "SELECT quarantined FROM artifacts WHERE artifact_id=?", (artifact_id,)
         ).fetchone()
         return bool(row and row[0])
+
+    def quarantine_coverage(self, root: str) -> Coverage:
+        descendants = set(self.enumerate(root))
+        if not self.lineage_complete(root):
+            return Coverage.UNKNOWN
+        quarantined = {
+            artifact_id
+            for artifact_id in descendants
+            if self.is_quarantined(artifact_id)
+        }
+        if quarantined == descendants:
+            return Coverage.VERIFIED
+        if quarantined:
+            return Coverage.PARTIAL
+        return Coverage.FAILED
+
+    def source_artifact(self, artifact_id: str) -> str:
+        return artifact_id
+
+    def repair_inputs(self, artifact_id: str) -> tuple[str, ...]:
+        row = self._db.execute(
+            "SELECT inputs FROM artifacts WHERE artifact_id=?", (artifact_id,)
+        ).fetchone()
+        return tuple(json.loads(row[0])) if row else ()
 
     def retire(self, artifact_id: str, *, superseded_at: str | None = None) -> None:
         """Remove the row, and remember what it said.

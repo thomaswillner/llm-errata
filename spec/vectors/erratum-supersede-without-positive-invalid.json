@@ -1,6 +1,7 @@
 {
   "erratum_id": "err_0001",
   "sequence": 1,
+  "signing_key_id": "owner",
   "target_root": "mem_01HX",
   "valid_from": "2026-08-01T00:00:00Z",
   "operation": "supersede",

@@ -6,10 +6,110 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.3.0...HEAD)
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.4.0...HEAD)
+
+## [0.4.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.0) - 2026-08-13
+
+### Added — adapter conformance and validator hardening
+
+- Added five provider-neutral adapter cases with complete checkpoint,
+  aggregate, triad, store, and receipt outcomes. Calls are traced through the
+  exact target adapter instance rather than matched globally by function name.
+- Added bounded proposition-multiplicity preservation. Synthetic conformance
+  bindings expose stable provider-local proposition identity and active count;
+  an unobservable count is `unknown`, not a pass.
+- Added exact semantic mutation controls. A mutation must complete and produce
+  its declared counter-result; an exception or different failure cannot earn
+  credit.
+- Added three executable validator attacks covering empty receipts, incomplete
+  no-op feed acceptance, and constant-`unknown` semantic aggregation.
+- Added `errata adapter-conformance`, canonical JSON reporting, and distinct
+  pass, failed-control, and invalid-evidence exit codes.
+
+Rastislav Drahos/DanceNitra materially advanced this release by reporting the
+adapter-coverage gap, a real duplicate-preservation defect, candidate adapter
+behaviors, and the three anti-vacuity attacks. The immutable MIT-licensed source
+artifact is
+`DanceNitra/agora@2ba1e299b3483b9038d03387345702427608b90b`; Inspeximus is a G4
+candidate and the source commit discloses Claude Opus 5 co-authorship, so the
+input remains interested-party evidence. LLM Errata independently authored its
+corpus and validator without copying or vendoring that runner or fixture.
+
+### Status and ownership
+
+- Repository files authored here remain copyright Thomas Rainer Willner.
+  Contributor credit and MIT permission do not transfer copyright.
+- Existing licence terms are unchanged: independent commercial and
+  non-commercial specification implementations are permitted under the
+  attributed implementation grant; Reference Code remains restricted.
+- Verdict remains `NOT_PROD_READY`. G2 through G6 remain blocked by their
+  existing external evidence requirements.
 
 ### Added — production-readiness evidence
 
+- Durable quarantine checkpoints now preserve adapter-supplied phase coverage
+  instead of hardcoding every enumerable adapter to `verified`; a later final
+  success cannot erase an earlier `partial`, `unknown`, or `failed` result.
+- `StoreAdapter` now declares the complete controller and repair call surface,
+  including quarantine coverage, source mapping, store-owned repair inputs,
+  retirement, rebuild, and recall. Independent adapters no longer have to copy
+  their lineage into the reference `LineageLedger`.
+- Recorded Inspeximus `v2.7.0` as a tagged external adapter candidate with its
+  preserved v2.6.1 contamination disclosure and claimed clean-room rewrite. It
+  targets historical LLM Errata commit `a477fe4` and remains unvalidated G4
+  evidence until provenance review and current-target rebinding are complete.
+
+- Corrected two conflict-disclosed external findings. Importers now remember
+  same-view sequence conflicts across separate observe calls, while receipts
+  explicitly disclaim global non-equivocation across split views. Required
+  adapters must establish root-specific lineage completeness before an empty
+  enumeration can receive `verified`; unsupported empty walks become `unknown`
+  with a signed limitation. The earlier categorical comparison claiming LLM
+  Errata was stricter than Inspeximus is withdrawn and replaced with the
+  verified limits and remediations in both projects.
+- Upgraded both GitHub Actions workflows to immutable `actions/checkout`
+  v7.0.1 and `actions/setup-python` v7.0.0 commit pins. Both action releases use
+  Node 24, removing GitHub's Node 20 deprecation path without changing the
+  Python 3.11/3.13 validation matrix or local Node runtime. Repository lint and
+  negative tests now reject missing, mutable, or downgraded action references.
+- Granted irrevocable, worldwide, royalty-free rights for independently
+  authored commercial and non-commercial implementations of the specification,
+  conditioned on accessible product attribution to LLM Errata and Thomas
+  Willner. Reference code remains personal-use, no patent or certification
+  right is granted, and the historical Apache-2.0 grant remains unchanged.
+- Split the callback requirement into independently evaluated authenticity and
+  coverage-truthfulness properties. A valid signature authenticates the
+  importer and receipt bytes; it cannot turn overstated, missing, or opaque
+  coverage into a truthful claim.
+- Reordered the production-cryptography qualification to foreground observed
+  refusal of malformed lengths, non-canonical scalars, tampered messages and
+  signatures, and wrong keys. Successful RFC vectors remain compatibility
+  evidence and do not establish constant-time or production assurance.
+
+- Corrected the Inspeximus comparison after conflict-disclosed maintainer
+  feedback and source verification. `retract_lineage` plus `rederive` is a
+  stronger local quarantine/rebuild collision than the earlier erasure-focused
+  row; its coverage audit remains weaker than required-store aggregation.
+- Completed internal Phase 2 conformance surface with owner-key rotation,
+  rotated-key refusal, concurrent sequence-conflict, invalid-target,
+  content-free confidentiality, and every-field receipt-binding vectors. G2
+  remains `BLOCKED` until dated independent review of exact committed surface.
+- Added a ten-scope G6 operational evidence contract and fail-closed checker.
+  One independent report must bind exact commit and deployment, declare
+  workload, platform, failure domain, observation window, numeric thresholds,
+  units, comparators, and raw artifacts, then pass every measurement. Internal
+  tests validate the contract but leave G6 `BLOCKED`.
+- Added durable `errata quarantine` checkpoints. CLI repair now requires an
+  authenticated, atomic checkpoint bound to erratum, sequence, target,
+  inspectable pre-state, adapters, opaque limitations, and gated artifacts;
+  consumption occurs only after durable receipt and applied-state writeback.
+  G2 remains `BLOCKED` for remaining Phase 2 vectors and independent review.
+- Added a fail-closed production-cryptography qualification record. PyCA
+  reproduced the repository's RFC 8032 vectors but documents no external
+  project audit; libsodium has a published assessment for older releases, not
+  the current 1.0.22 build. G3 remains `BLOCKED` pending exact-build
+  qualification, lifecycle implementation, and independent security review.
+- Added provider-neutral semantic probes, deterministic recorded fixtures, and `errata semantic-test` documentation as Phase 2 item 6 internal implementation. Opened independent review, independent implementation, and Phase 3 system-nomination programs. G2 remains `BLOCKED`: repository artifacts and local tests do not substitute for dated independent external review.
 - Added a fail-closed production-readiness ledger and human verification matrix. Local green tests cannot produce `PROD_READY`; every required gate must pass, and external gates require dated evidence naming an independent producer.
 - Added drift checks binding README maturity and SECURITY support policy to `VERSION`. The current verdict remains `NOT_PROD_READY`: only G1, document consistency, is complete.
 - Normalize complete-cell Markdown presentation decoration before readiness-matrix duplicate and contradiction checks.
@@ -89,7 +189,7 @@ All six were found by adversarial review after the suite was green, and each has
 
 - `CHANGELOG.md` used `[version]` heading syntax with no link definitions, so the headings rendered as literal brackets, and it listed a placeholder as though it were a change. Version headings are now plain until the repository has a public URL to compare against.
 
-## [0.1.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.1.0) - 2026-08-01
+## 0.1.0 - 2026-08-01
 
 ### Added
 

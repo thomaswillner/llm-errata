@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Iterable
 from urllib.parse import unquote
 
+from check_readiness import qualifying_g2_review_evidence, valid_g2_review_evidence
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,6 +42,11 @@ REQUIRED_FILES = (
     "CITATION.cff",
     "CHANGELOG.md",
     "PUBLISHING.md",
+    "REVIEW_REQUEST.md",
+    "INDEPENDENT_IMPLEMENTATION.md",
+    "PHASE3_SYSTEMS.md",
+    "docs/PUBLICATION_STRATEGY.md",
+    "publication/active-surfaces.json",
     "VERSION",
     "LICENSE",
     "NOTICE",
@@ -50,9 +57,12 @@ REQUIRED_FILES = (
     "scripts/validate_repo.py",
     "scripts/claim_guard.py",
     "scripts/check_links.py",
+    "scripts/check_publication.py",
     "tests/test_readiness.py",
     "tests/test_validate_repo.py",
     "tests/test_claim_guard.py",
+    "tests/test_publication.py",
+    ".github/workflows/links.yml",
     ".github/workflows/validate.yml",
     "prototype/README.md",
     "prototype/controller.py",
@@ -99,6 +109,16 @@ CANONICAL_LINKS = {
     ),
     "W3C PROV-DM": "https://www.w3.org/TR/prov-dm/",
 }
+
+GITHUB_ACTION_PINS = {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+}
+
+GITHUB_WORKFLOWS = (
+    ".github/workflows/links.yml",
+    ".github/workflows/validate.yml",
+)
 
 LOCAL_PATH_PATTERNS = (
     (
@@ -347,6 +367,52 @@ def check_local_links(reporter: Reporter) -> None:
     )
 
 
+def check_github_actions_runtime(reporter: Reporter) -> None:
+    """Require reviewed immutable pins for GitHub's Node 24 action runtime."""
+
+    violations: list[str] = []
+    for workflow_name in GITHUB_WORKFLOWS:
+        path = ROOT / workflow_name
+        if not path.is_file():
+            violations.append(f"{workflow_name}: missing")
+            continue
+        text = read_utf8(path)
+        for action, expected_sha in GITHUB_ACTION_PINS.items():
+            refs = re.findall(
+                rf"(?m)^\s*uses:\s*{re.escape(action)}@([^\s#]+)", text
+            )
+            if refs != [expected_sha]:
+                observed = ", ".join(refs) if refs else "missing"
+                violations.append(
+                    f"{workflow_name}: {action} expected {expected_sha}, got {observed}"
+                )
+
+    reporter.check(
+        "GitHub Actions Node 24 pins",
+        not violations,
+        "validate and links workflows pin reviewed checkout v7.0.1 and setup-python v7.0.0 commits",
+        "Restore immutable Node 24 action pins. " + "; ".join(violations),
+    )
+
+    validate_workflow = ROOT / ".github" / "workflows" / "validate.yml"
+    validate_text = read_utf8(validate_workflow) if validate_workflow.is_file() else ""
+    checkout_step = re.search(
+        rf"(?ms)^\s{{6}}- name: Check out the repository\s*$\n"
+        rf"^\s{{8}}uses: actions/checkout@{GITHUB_ACTION_PINS['actions/checkout']}[^\n]*$\n"
+        rf"^\s{{8}}with:\s*$\n"
+        rf"(?:(?:^\s{{10}}#.*$\n)*)"
+        rf"^\s{{10}}fetch-depth:\s*0\s*$",
+        validate_text,
+    )
+    reporter.check(
+        "GitHub Actions source history",
+        checkout_step is not None,
+        "validation checkout fetches immutable Git history required by conformance",
+        "Set actions/checkout fetch-depth to 0 in validate.yml so historical "
+        "normative commits are available to fail-closed conformance checks.",
+    )
+
+
 def check_publication_metadata(reporter: Reporter) -> None:
     readme_path = ROOT / "README.md"
     license_path = ROOT / "LICENSE"
@@ -370,22 +436,127 @@ def check_publication_metadata(reporter: Reporter) -> None:
 
     license_text = read_utf8(license_path)
     notice_text = read_utf8(notice_path)
+    required_license = (
+        "LLM Errata Specification Implementation and Personal Use Licence",
+        "commercial and non-commercial products and services",
+        "Implements the LLM Errata specification by Thomas Willner",
+        "https://github.com/thomaswillner/llm-errata",
+        "does not cover `prototype/`, `scripts/`, or `tests/`",
+        "does not imply endorsement, sponsorship, certification, or audit",
+        "No patent rights are granted",
+        "Apache License 2.0",
+        "irrevocable",
+    )
     reporter.check(
         "license and notice",
-        "Personal Use Licence" in license_text
+        all(value in license_text for value in required_license)
         and "Copyright 2026 Thomas Rainer Willner" in license_text
-        and "Copyright 2026 Thomas Rainer Willner" in notice_text
+        and "Copyright 2026 Thomas Rainer Willner" in notice_text,
         # The Apache-2.0 grant on 0.2.0 and earlier is irrevocable. Deleting
         # the sentence that says so would misrepresent the rights of anyone who
         # already holds those releases.
-        and "Apache License 2.0" in license_text
-        and "irrevocable" in license_text,
-        "personal-use licence, author notice, and the irrevocable prior grant are present",
-        "Restore the Personal Use Licence, the Thomas Rainer Willner copyright "
-        "notice, and the statement that the Apache-2.0 grant on earlier releases "
-        "is irrevocable.",
+        "dual licence, product attribution, source-code boundary, author notice, and irrevocable prior grant are present",
+        "Restore the attributed specification implementation grant, personal-use "
+        "Reference Code boundary, no-endorsement and no-patent rules, Thomas "
+        "Rainer Willner copyright notice, and irrevocable earlier Apache grant.",
     )
 
+    public_requirements = {
+        "README.md": (
+            "Commercial and non-commercial independent implementations are permitted",
+            "Thomas Willner",
+        ),
+        "NOTICE": ("Implements the LLM Errata specification by Thomas Willner",),
+        "INDEPENDENT_IMPLEMENTATION.md": ("No per-implementer permission is required",),
+        "CONTRIBUTING.md": ("independently authored implementation",),
+        "SECURITY.md": (
+            "Licence attribution does not imply security review, endorsement, or certification",
+        ),
+    }
+    public_alignment = all(
+        (ROOT / name).is_file()
+        and all(phrase in read_utf8(ROOT / name) for phrase in phrases)
+        for name, phrases in public_requirements.items()
+    )
+    reporter.check(
+        "public licence alignment",
+        public_alignment,
+        "public documents preserve implementation rights, attribution, clean-room, and no-endorsement boundaries",
+        "Synchronize README, NOTICE, INDEPENDENT_IMPLEMENTATION, CONTRIBUTING, "
+        "and SECURITY with the dual licence contract.",
+    )
+
+    publication_requirements = {
+        "AGENTS.md": (
+            "publication/active-surfaces.json",
+            "git cat-file -e <commit>:<path>",
+            "Recruitment evidence is not independent readiness evidence",
+        ),
+        "CONTRIBUTING.md": (
+            "append-only supersession",
+            "make publication",
+            "read-after-write",
+        ),
+        "docs/PUBLICATION_STRATEGY.md": (
+            "Active surface",
+            "Historical surface",
+            "publication/active-surfaces.json",
+        ),
+    }
+    publication_alignment = all(
+        (ROOT / name).is_file()
+        and all(phrase in read_utf8(ROOT / name) for phrase in phrases)
+        for name, phrases in publication_requirements.items()
+    )
+    reporter.check(
+        "publication discipline",
+        publication_alignment,
+        "active/historical surfaces, pinned-path proof, read-after-write, and evidence boundaries are documented",
+        "Restore the active-surface manifest, append-only supersession, pinned "
+        "blob proof, read-after-write verification, and recruitment-evidence rules.",
+    )
+
+
+def check_g2_independent_review_gate(reporter: Reporter) -> None:
+    """Keep internal Phase 2 work from being represented as external review."""
+
+    path = ROOT / "readiness" / "production-readiness.json"
+    if not path.is_file():
+        return
+    try:
+        import json
+
+        payload = json.loads(read_utf8(path))
+        gates = payload.get("gates") if isinstance(payload, dict) else None
+        g2 = next(
+            (gate for gate in gates if isinstance(gate, dict) and gate.get("id") == "G2"),
+            None,
+        ) if isinstance(gates, list) else None
+        status = g2.get("status") if isinstance(g2, dict) else None
+        evidence = g2.get("evidence") if isinstance(g2, dict) else None
+        qualifying_external_review = any(
+            isinstance(entry, dict)
+            and entry.get("kind") == "external"
+            and qualifying_g2_review_evidence(entry, root=ROOT)
+            for entry in evidence
+        ) if isinstance(evidence, list) else False
+        g2_external_entries_valid = all(
+            not isinstance(entry, dict)
+            or entry.get("kind") != "external"
+            or valid_g2_review_evidence(entry, root=ROOT)
+            for entry in evidence
+        ) if isinstance(evidence, list) else False
+        valid = g2_external_entries_valid and (
+            status != "PASS" or qualifying_external_review
+        )
+    except (ValueError, OSError, UnicodeError):
+        valid = False
+    reporter.check(
+        "G2 independent review gate",
+        valid,
+        "G2 external entries are schema-valid declared-independent reviews; a PASS has a qualifying complete review",
+        "Keep G2 BLOCKED until its evidence includes a complete schema-valid declared-independent review.",
+    )
 
 def check_document_version_alignment(
     reporter: Reporter, repository_version: str | None
@@ -440,23 +611,29 @@ def check_document_version_alignment(
             cells = [cell.strip() for cell in row.split("|")]
             if len(cells) == 4 and cells[0] == cells[-1] == "":
                 supported_rows.append((cells[1], cells[2]))
-    supported_yes = [
-        version
-        for version, status in supported_rows
-        if status == "Yes"
-    ]
     previous_minor = int(minor) - 1
-    required_unsupported_rows = {
+    released_rows = {
+        (f"{major}.{minor}.x", "Yes"),
         (f"{major}.{previous_minor}.x and earlier", "No"),
         ("Unreleased development revisions", "No"),
     }
+    prepared_rows = {
+        (f"{major}.{minor}.x", f"Yes, after `v{repository_version}` is published"),
+        (
+            f"{major}.{previous_minor}.x",
+            f"Yes, until `v{repository_version}` is published",
+        ),
+        (f"{major}.{previous_minor - 1}.x and earlier", "No"),
+        ("Unreleased development revisions", "No"),
+    }
+    supported_set = frozenset(supported_rows)
     reporter.check(
         "SECURITY supported version",
-        supported_yes == [f"{major}.{minor}.x"]
-        and required_unsupported_rows.issubset(set(supported_rows)),
-        f"SECURITY.md supports {major}.{minor}.x",
-        "Keep exactly one Yes row for VERSION major.minor.x and No rows for "
-        "the prior-version family and unreleased revisions.",
+        supported_set in {frozenset(released_rows), frozenset(prepared_rows)}
+        and len(supported_rows) == len(supported_set),
+        f"SECURITY.md is either release-prepared for or supports {major}.{minor}.x",
+        "Use exactly the conditional pre-release transition rows or the final "
+        "released VERSION row plus prior/unreleased No rows.",
     )
 
 
@@ -545,7 +722,9 @@ def main() -> int:
     check_trailing_whitespace(reporter)
     check_local_paths(reporter)
     check_local_links(reporter)
+    check_github_actions_runtime(reporter)
     check_publication_metadata(reporter)
+    check_g2_independent_review_gate(reporter)
     check_document_version_alignment(reporter, repository_version)
     check_citation(reporter, repository_version)
     return reporter.finish()

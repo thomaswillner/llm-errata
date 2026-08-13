@@ -116,7 +116,8 @@ class Ed25519Signer:
         return ed25519.sign(self._seed, canonical_bytes(payload)).hex()
 
     def sign_erratum(self, erratum: Erratum) -> Erratum:
-        return erratum.replace(signature=self.sign(erratum.signable()))
+        bound = erratum.replace(signing_key_id=self._key_id, signature=None)
+        return bound.replace(signature=self.sign(bound.signable()))
 
 
 #: Retained so existing fixtures keep working. The name is deliberately no

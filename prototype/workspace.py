@@ -14,13 +14,19 @@ importer holds only the public key.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
+from prototype.checkpoints import CheckpointStore, QuarantineCheckpoint
 from prototype.errata import Erratum
 from prototype.lineage import LineageLedger
 from prototype.receipts import Receipt
 from prototype.signing import Ed25519Signer, VerificationKey
+
+
+class ReceiptReadError(ValueError):
+    """A persisted receipt cannot be parsed as JSON evidence."""
 
 
 class Workspace:
@@ -42,6 +48,10 @@ class Workspace:
         return self.root / "receipts"
 
     @property
+    def checkpoints_dir(self) -> Path:
+        return self.root / "checkpoints"
+
+    @property
     def store_path(self) -> Path:
         return self.root / "store.sqlite3"
 
@@ -59,7 +69,7 @@ class Workspace:
     # -- setup ---------------------------------------------------------
 
     def initialise(self) -> None:
-        for directory in ("feeds", "registry", "receipts", "identity"):
+        for directory in ("feeds", "registry", "receipts", "checkpoints", "identity"):
             (self.root / directory).mkdir(parents=True, exist_ok=True)
         self.feed_path.touch()
         self.lineage_path.touch()
@@ -171,10 +181,11 @@ class Workspace:
 
     def record_applied(self, root: str, sequence: int) -> None:
         state = self.applied()
+        current = state.get(root)
+        if current is not None and current != sequence:
+            raise ValueError("applied state contradicts checkpoint sequence")
         state[root] = sequence
-        self.applied_path.write_text(
-            json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+        self._atomic_json(self.applied_path, state)
 
     def last_applied_sequence(self) -> int:
         values = self.applied().values()
@@ -185,19 +196,62 @@ class Workspace:
     def write_receipt(self, receipt: Receipt) -> Path:
         self.receipts_dir.mkdir(parents=True, exist_ok=True)
         path = self.receipts_dir / f"{receipt.sequence:04d}-{receipt.erratum_id}.json"
-        path.write_text(
-            json.dumps(receipt.to_dict(), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        payload = receipt.to_dict()
+        if path.exists():
+            if json.loads(path.read_text(encoding="utf-8")) != payload:
+                raise ValueError("existing receipt contradicts checkpointed repair")
+            return path
+        self._atomic_json(path, payload)
         return path
+
+    # -- quarantine checkpoints --------------------------------------
+
+    def checkpoint_path(self, sequence: int, erratum_id: str) -> Path:
+        return self.checkpoints_dir / f"{sequence:04d}-{erratum_id}.json"
+
+    def write_checkpoint(self, checkpoint: QuarantineCheckpoint) -> Path:
+        return CheckpointStore(self.checkpoints_dir).write(checkpoint)
+
+    def load_checkpoint(self, sequence: int, erratum_id: str) -> QuarantineCheckpoint:
+        path = self.checkpoint_path(sequence, erratum_id)
+        return CheckpointStore(self.checkpoints_dir).load(path)
+
+    def consume_checkpoint(
+        self, sequence: int, erratum_id: str, timestamp: str
+    ) -> QuarantineCheckpoint:
+        path = self.checkpoint_path(sequence, erratum_id)
+        return CheckpointStore(self.checkpoints_dir).consume(path, timestamp)
+
+    def _atomic_json(self, path: Path, payload: object) -> None:
+        temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+        data = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        try:
+            with temporary.open("x", encoding="utf-8") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+            directory = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def all_receipts(self) -> list[tuple[str, dict[str, Any]]]:
         if not self.receipts_dir.is_dir():
             return []
-        return [
-            (p.name, json.loads(p.read_text(encoding="utf-8")))
-            for p in sorted(self.receipts_dir.glob("*.json"))
-        ]
+        receipts = []
+        for path in sorted(self.receipts_dir.glob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ReceiptReadError(
+                    f"{path.name}: receipt JSON is unreadable"
+                ) from error
+            receipts.append((path.name, payload))
+        return receipts
 
     def latest_receipt(self) -> dict[str, Any] | None:
         receipts = self.all_receipts()

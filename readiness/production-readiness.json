@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "project_version": "0.3.0",
+  "project_version": "0.4.0",
   "verdict": "NOT_PROD_READY",
-  "last_reviewed": "2026-08-10",
+  "last_reviewed": "2026-08-13",
   "gates": [
     {
       "id": "G1",
@@ -29,8 +29,24 @@
       "name": "Phase 2 complete with external conformance review",
       "class": "external",
       "status": "BLOCKED",
-      "criterion": "Phase 2 item 6 is implemented and an independent reviewer evaluates the complete conformance surface.",
-      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+      "criterion": "Complete Phase 2 implementation, including provider-neutral semantic probes, and an independent reviewer evaluates the complete conformance surface.",
+      "evidence": [
+        {"kind": "repository", "ref": "ROADMAP.md"},
+        {"kind": "repository", "ref": "prototype/checkpoints.py"},
+        {"kind": "repository", "ref": "prototype/semantic.py"},
+        {"kind": "repository", "ref": "spec/semantic/probes.json"},
+        {"kind": "repository", "ref": "spec/semantic/verifier-config.json"},
+        {"kind": "repository", "ref": "spec/semantic/observations.json"},
+        {"kind": "repository", "ref": "spec/vectors/protocol-manifest.json"},
+        {"kind": "repository", "ref": "spec/vectors/receipt-binding-mutations.json"},
+        {"kind": "repository", "ref": "spec/adapter-conformance.json"},
+        {"kind": "repository", "ref": "prototype/conformance.py"},
+        {"kind": "repository", "ref": "tests/test_conformance.py"},
+        {"kind": "repository", "ref": "prototype/README.md"},
+        {"kind": "repository", "ref": "spec/README.md"},
+        {"kind": "repository", "ref": "REVIEW_REQUEST.md"},
+        {"kind": "repository", "ref": "INDEPENDENT_IMPLEMENTATION.md"}
+      ]
     },
     {
       "id": "G3",
@@ -38,7 +54,10 @@
       "class": "external",
       "status": "BLOCKED",
       "criterion": "Production signing uses an audited constant-time library through the Signer seam and independent security review covers key lifecycle.",
-      "evidence": [{"kind": "repository", "ref": "THREAT_MODEL.md"}]
+      "evidence": [
+        {"kind": "repository", "ref": "THREAT_MODEL.md"},
+        {"kind": "repository", "ref": "docs/CRYPTOGRAPHY_QUALIFICATION.md"}
+      ]
     },
     {
       "id": "G4",
@@ -61,8 +80,13 @@
       "name": "Operational production gates",
       "class": "external",
       "status": "BLOCKED",
-      "criterion": "Security, observability, recovery, compatibility, performance, deployment, and rollback gates pass with current operational evidence.",
-      "evidence": [{"kind": "repository", "ref": "SECURITY.md"}]
+      "criterion": "All ten operational scopes pass from one independent report bound to exact commit and deployment, with declared thresholds and measured comparators.",
+      "evidence": [
+        {"kind": "repository", "ref": "docs/OPERATIONAL_READINESS.md"},
+        {"kind": "repository", "ref": "SECURITY.md"},
+        {"kind": "repository", "ref": "scripts/check_readiness.py"},
+        {"kind": "repository", "ref": "tests/test_readiness.py"}
+      ]
     }
   ]
 }

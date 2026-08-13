@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "review_target": {
+    "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+    "surface_digest": "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
+  },
+  "license": {
+    "specification_implementation": "irrevocable worldwide royalty-free commercial and non-commercial",
+    "required_attribution": [
+      "LLM Errata",
+      "Thomas Willner",
+      "https://github.com/thomaswillner/llm-errata"
+    ],
+    "reference_code": "personal-use only: prototype/, scripts/, tests/",
+    "case_by_case_permission_required": false
+  },
+  "surfaces": [
+    {
+      "id": "g4-inspeximus-current-target-reply",
+      "kind": "issue-comment",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5282207719",
+      "published": "2026-08-13",
+      "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+      "surface_digest": "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12",
+      "gates": ["G2", "G4"],
+      "roles": ["inspeximus-adapter-author"],
+      "mentions": ["DanceNitra"],
+      "supersedes": [
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280210050",
+        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5280225709"
+      ],
+      "evidence_boundary": "recruitment-only"
+    }
+  ]
+}

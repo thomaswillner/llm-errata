@@ -1,13 +1,13 @@
 PYTHON ?= python3
 
 .DEFAULT_GOAL := check
-.PHONY: check lint claim readiness test demo cli-demo links all help
+.PHONY: check lint claim readiness publication test demo cli-demo links all help
 
 help: ## Show the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-8s %s\n", $$1, $$2}'
 
-check: lint claim readiness test demo ## Everything that must pass before a change is complete
+check: lint claim readiness publication test demo ## Everything that must pass before a change is complete
 
 lint: ## Structure, encoding, Markdown, links, licence, release metadata
 	$(PYTHON) scripts/validate_repo.py
@@ -28,6 +28,9 @@ claim: ## Anchored guard on the bounded novelty claim and its invariants
 
 readiness: ## Validate production-readiness evidence without upgrading the verdict
 	$(PYTHON) scripts/check_readiness.py
+
+publication: ## Validate active public calls without upgrading readiness
+	$(PYTHON) scripts/check_publication.py
 
 test: ## Self-tests, including the negative cases each checker must reject
 	$(PYTHON) -m unittest discover -s tests -t .
@@ -52,6 +55,7 @@ cli-demo: ## Drive a full lifecycle through the CLI in a scratch workspace
 	 run export --root mem_02KP --artifact fact:venue --content "prefers quiet restaurants" >/dev/null; \
 	 run derive --artifact summary:dining --inputs fact:diet fact:venue --content "is vegetarian; prefers quiet restaurants" >/dev/null; \
 	 run publish --root mem_01HX --operation supersede --replacement "eats meat again" --negative vegetarian --positive "eats meat again" --preserve "quiet restaurants"; \
+	 run quarantine; \
 	 set +e; \
 	 run repair; status=$$?; \
 	 run audit; \

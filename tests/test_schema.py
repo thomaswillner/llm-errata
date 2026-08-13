@@ -18,8 +18,10 @@ import unittest
 from pathlib import Path
 
 from prototype import schema
+from prototype.adapters import Coverage
 from prototype.scenario import DIET, build_importer
 from prototype.signing import DemoSigner
+from prototype.errata import Erratum, FeedError, Operation, OwnerKeySchedule, RootRegistry, verify_feed
 from tests.test_regressions import supersede
 
 
@@ -127,7 +129,9 @@ class ConformanceVectors(unittest.TestCase):
             )
 
     def test_every_vector_file_is_in_the_manifest(self) -> None:
-        listed = {entry["file"] for entry in self.manifest["vectors"]}
+        listed = {entry["file"] for entry in self.manifest["vectors"]} | set(
+            self.manifest["stateful_vectors"]
+        )
         on_disk = {p.name for p in VECTORS.glob("*.json")} - {"manifest.json"}
         self.assertEqual(on_disk - listed, set(), "vectors not listed in the manifest")
 
@@ -159,6 +163,119 @@ class ConformanceVectors(unittest.TestCase):
             if not entry["valid"]
         }
         self.assertGreaterEqual(len(reasons), 4, reasons)
+
+
+class StatefulProtocolVectors(unittest.TestCase):
+    def setUp(self) -> None:
+        self.protocol = json.loads(
+            (VECTORS / "protocol-manifest.json").read_text(encoding="utf-8")
+        )
+
+    def _event(self, record: dict[str, object], signers: dict[str, DemoSigner]) -> Erratum:
+        operation = Operation(record["operation"])
+        postconditions = {"negative": "retired label", "preserve": "retained label"}
+        replacement = None
+        if operation is not Operation.ERASE:
+            replacement = "replacement label"
+            postconditions["positive"] = "replacement label"
+        event = Erratum(
+            erratum_id=record["erratum_id"],
+            sequence=record["sequence"],
+            target_root=record["target_root"],
+            operation=operation,
+            valid_from="2026-08-12T00:00:00Z",
+            replacement=replacement,
+            postconditions=postconditions,
+        )
+        return signers[record["signer"]].sign_erratum(event)
+
+    def test_feed_vectors_execute_named_stateful_rules(self) -> None:
+        for case in self.protocol["feed_cases"]:
+            with self.subTest(case=case["id"]):
+                signers = {
+                    key_id: DemoSigner(seed.encode(), key_id=key_id)
+                    for key_id, seed in case["keys"].items()
+                }
+                schedule = OwnerKeySchedule(tuple(
+                    (activation["sequence"], signers[activation["key_id"]].public)
+                    for activation in case["schedule"]
+                ))
+                events = [self._event(record, signers) for record in case["events"]]
+                if case["outcome"] == "accept":
+                    self.assertEqual(len(verify_feed(
+                        events, owner=schedule, roots=RootRegistry(case["roots"])
+                    )), len(events))
+                else:
+                    with self.assertRaisesRegex(FeedError, case["error_contains"]):
+                        verify_feed(
+                            events, owner=schedule, roots=RootRegistry(case["roots"])
+                        )
+
+    def test_split_view_vector_accepts_each_view_but_proves_no_global_consistency(self) -> None:
+        for case in self.protocol["split_view_cases"]:
+            with self.subTest(case=case["id"]):
+                signers = {
+                    key_id: DemoSigner(seed.encode(), key_id=key_id)
+                    for key_id, seed in case["keys"].items()
+                }
+                schedule = OwnerKeySchedule(tuple(
+                    (activation["sequence"], signers[activation["key_id"]].public)
+                    for activation in case["schedule"]
+                ))
+                accepted_views = [
+                    verify_feed(
+                        [self._event(record, signers) for record in view],
+                        owner=schedule,
+                        roots=RootRegistry(case["roots"]),
+                    )
+                    for view in case["views"]
+                ]
+                self.assertEqual([len(view) for view in accepted_views], [1, 1])
+                self.assertNotEqual(
+                    accepted_views[0][0].erratum_id,
+                    accepted_views[1][0].erratum_id,
+                )
+                self.assertEqual(
+                    case["outcome"],
+                    "accept-each-view-with-global-non-equivocation-unproven",
+                )
+
+    def test_confidentiality_vector_keeps_forbidden_value_out_of_evidence(self) -> None:
+        case = self.protocol["confidentiality_case"]
+        importer = build_importer(OWNER)
+        receipt = importer.repair(OWNER.sign_erratum(Erratum(
+            erratum_id="err_confidential_erase",
+            sequence=1,
+            target_root=case["target_root"],
+            operation=Operation.ERASE,
+            valid_from="2026-08-12T00:00:00Z",
+            postconditions={"negative": case["negative_probe"], "preserve": "quiet restaurants|moderate budget"},
+        )))
+        evidence = json.dumps(receipt.to_dict(), sort_keys=True)
+        self.assertNotIn(case["forbidden_value"], evidence)
+
+    def test_every_receipt_field_mutation_breaks_signature_binding(self) -> None:
+        fields = json.loads(
+            (VECTORS / "receipt-binding-mutations.json").read_text(encoding="utf-8")
+        )["fields"]
+        receipt = build_importer(OWNER).repair(supersede())
+        payload = receipt.to_dict()
+        for field in fields:
+            with self.subTest(field=field):
+                mutated = dict(payload)
+                mutated[field] = fields[field]
+                rebuilt = receipt.__class__(
+                    importer=mutated["importer"], erratum_id=mutated["erratum_id"],
+                    sequence=mutated["sequence"], target_root=mutated["target_root"],
+                    operation=mutated["operation"], pre_state_root=mutated["pre_state_root"],
+                    post_state_root=mutated["post_state_root"],
+                    stores={k: Coverage(v) for k, v in mutated["stores"].items()},
+                    dispositions=mutated["dispositions"], triad=mutated["triad"],
+                    aggregate=Coverage(mutated["aggregate"]),
+                    limitations=mutated["limitations"], history_retained=mutated["history_retained"],
+                    adapter_versions=mutated["adapter_versions"], signature=payload["signature"],
+                )
+                self.assertFalse(rebuilt.verify(OWNER.public))
 
 
 class TheProtoypeAgreesWithItsOwnSchema(unittest.TestCase):

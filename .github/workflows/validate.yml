@@ -23,10 +23,14 @@ jobs:
         python-version: ['3.11', '3.13']
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          # Conformance binds historical immutable normative commits. A shallow
+          # checkout cannot verify those Git objects and must not run the suite.
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0, Node 24
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -40,6 +44,9 @@ jobs:
 
       - name: Validate production-readiness evidence
         run: make readiness
+
+      - name: Validate active publication surfaces
+        run: make publication
 
       - name: Run self-tests, including the negative cases
         run: make test

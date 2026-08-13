@@ -1,7 +1,16 @@
 LLM Errata
 Copyright 2026 Thomas Rainer Willner. All rights reserved.
 
-Licensed for personal, non-commercial evaluation and study. See LICENSE.
+Independent commercial and non-commercial implementations of the specification
+are permitted under the attributed implementation grant in LICENSE. Reference
+code remains personal-use unless separately licensed.
+
+Required product credit:
+
+Implements the LLM Errata specification by Thomas Willner —
+https://github.com/thomaswillner/llm-errata
+
+The credit does not imply endorsement, sponsorship, certification, or audit.
 
 Version 0.2.0 and earlier were published under the Apache License 2.0. That
 grant is irrevocable for those releases and is not withdrawn by the current

@@ -83,6 +83,36 @@ ANCHORS: tuple[tuple[str, str, str], ...] = (
         "no green aggregate over unknown coverage",
     ),
     (
+        "IDEA.md",
+        "Signature validity authenticates the importer and receipt bytes; it does not establish that the reported coverage is truthful.",
+        "signature authenticity boundary",
+    ),
+    (
+        "IDEA.md",
+        "Coverage truthfulness requires the signed stores, aggregate, and limitations to match the declared required scope without upgrading missing or opaque evidence.",
+        "coverage truthfulness boundary",
+    ),
+    (
+        "IDEA.md",
+        "An empty enumeration is not evidence of complete lineage.",
+        "empty enumeration is not verified coverage",
+    ),
+    (
+        "IDEA.md",
+        "A durable checkpoint records adapter-supplied quarantine coverage; final repair cannot upgrade a worse checkpoint result.",
+        "checkpoint coverage cannot be fabricated or upgraded",
+    ),
+    (
+        "IDEA.md",
+        "The published adapter contract must expose every controller and repair operation without hidden reference-ledger dependencies.",
+        "adapter contract exposes the complete runtime surface",
+    ),
+    (
+        "IDEA.md",
+        "A receipt establishes the signed event accepted by one importer.",
+        "receipt is importer-view evidence",
+    ),
+    (
         "PRIOR_ART.md",
         "## What would invalidate the claim",
         "falsifier section",

@@ -31,11 +31,12 @@ non-green result cannot be mistaken for a bug in the aggregation.
 
 | Module | Responsibility |
 |---|---|
-| `errata.py` | The trust boundary. Rejects forgery, tampering, rollback, sequence gaps, equivocation, unknown targets, and operations that carry the wrong shape. |
+| `errata.py` | The importer-view trust boundary. Rejects forgery, tampering, rollback, sequence gaps, conflicts visible to that importer, unknown targets, and operations that carry the wrong shape. It cannot detect a different signed view delivered only to another importer. |
 | `lineage.py` | Exact lineage recorded at import and derivation time, not reconstructed afterwards. Supplies the known derivation closure and the inputs that survive a retirement. |
 | `adapters.py` | The three stores, plus the four coverage results. |
 | `strategies.py` | How a repair is carried out. One conforming strategy and three that are not, because a conformance suite where nothing can fail has not tested anything. |
 | `controller.py` | observe → quarantine → rebuild → test → attest, with a journal that makes the ordering observable. |
+| `checkpoints.py` | Canonical, atomically persisted proof binding CLI quarantine to erratum, state, adapters, and gated artifacts. |
 | `receipts.py` | Coverage-aware receipts and the aggregation rule. |
 | `scenario.py` | The synthetic fixture. |
 | `demo.py` | The narrated run. |
@@ -74,12 +75,79 @@ make cli-demo
 ```
 
 A full lifecycle without importing Python: `init`, `export`, `derive`,
-`publish`, `pull`, `plan`, `repair`, `test`, `attest`, `audit`, `verify`.
+`publish`, `pull`, `plan`, `quarantine`, `repair`, `test`, `attest`, `audit`,
+`verify`.
+
+`quarantine` authenticates exactly the next pending erratum, gates every
+enumerable descendant, records each adapter's own quarantine-phase coverage,
+records opaque or missing checkpoint evidence as `unknown`, and atomically
+writes `checkpoints/<sequence>-<erratum>.json`. Its canonical digest binds the
+erratum, target, inspectable pre-state root, adapter inventory, limitations,
+gated artifact set, and reported checkpoint coverage. `repair` re-authenticates and refuses missing, mutated,
+consumed, wrong-target, state-drifted, adapter-drifted, or ungated evidence.
+Consumption happens only after receipt and applied-state writeback, so an
+interrupted rebuild retains an unconsumed checkpoint for safe resume.
+
+Enumeration is necessary but not sufficient for verified coverage. An adapter
+must also expose `lineage_complete(root) -> True`, backed by a write-time or
+audited root-specific lineage authority. Missing or false evidence makes that
+required store `unknown`, even when enumeration returns an empty tuple and the
+adapter's own coverage method claims `verified`. This is an adapter attestation,
+not independent proof against a dishonest store.
+
+Checkpoint coverage and final repair coverage are different observations. The
+adapter supplies both through `quarantine_coverage(root)` and `coverage(root)`;
+the controller carries the worse result into the signed receipt, so a later
+success cannot erase an earlier partial or failed gate. Repair planning also
+uses adapter-owned `source_artifact(id)` and `repair_inputs(id)` rather than
+requiring independent store records to be copied into the reference ledger.
 
 Exit codes are part of the interface. `0` is success, `1` is a refusal or a
 failed check, and **`2` means the repair ran and the result is not verified**.
 `2` is not a lesser `1`: it is the case the whole proposal exists to make
 expressible, so it is a distinct code rather than a warning on stdout.
+
+### Offline semantic conformance
+
+Semantic probes are separate behavioral evidence, not a change to Phase 1
+receipts. Checked-in synthetic fixtures run without a provider, network, or API
+key:
+
+```bash
+python3 -m prototype.cli semantic-test \
+  --probes spec/semantic/probes.json \
+  --config spec/semantic/verifier-config.json \
+  --observations spec/semantic/observations.json
+```
+
+This exact invocation defaults to `verified-correction`. Pass `--case NAME` to
+run named cases. The fixtures demonstrate verified correction (`0`), failed
+supersession (`1`), and unknown erasure, provider error, missing response,
+duplicate response, configuration drift, and structurally parseable
+nonconforming output (`2`). Output is one canonical JSON semantic report.
+Malformed manifests exit `1` without a traceback; an unexpected structured
+verifier record is semantic uncertainty, not an argument-parser error. Fixture
+format and privacy constraints are documented in
+[spec/README.md](../spec/README.md#offline-semantic-probe-fixtures).
+
+The offline runner consumes `RecordedSemanticVerifier`; production adapters
+implement `SemanticVerifier` in `semantic.py`. They may evaluate confidential
+inputs ephemerally, but only the structured verdict, binding digest, timestamp,
+and response digest may enter an observation. Raw output and erased values are
+not persisted.
+
+### Adapter-conformance command
+
+`adapter-conformance` runs the checked-in provider-neutral adapter corpus
+without creating a workspace. The default reference binding drives the real
+`Importer` lifecycle through a proxy around the exact adapter instance. A
+third-party binding is supplied as `--binding module:factory`.
+
+The canonical JSON report separates the immutable normative predecessor target
+from the runtime commit being exercised, lists complete honest and mutation
+outcomes, records exact target-instance calls, and includes three executable
+validator attacks. Passing remains internal reference evidence and does not
+upgrade G2 or G4.
 
 Running it against a real SQLite store produces the result that matters:
 

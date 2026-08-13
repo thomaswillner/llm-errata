@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.3.0 |
+| Version | 0.4.0 |
 | Verdict | **NOT_PROD_READY** |
 | Ledger | `readiness/production-readiness.json` |
 
@@ -15,15 +15,15 @@ Build health means the repository's deterministic structure/metadata checks, bou
 | Gate | Criterion | Current status | Current evidence | Next evidence required |
 |---|---|---|---|---|
 | G1 | VERSION, SECURITY support policy, readiness matrix, and check documentation remain aligned; negative tests protect every machine-enforced binding. | `PASS` | `VERSION`, `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `PRODUCTION_READINESS.md`, readiness ledger, both checkers, and their focused tests. | Maintain document, ledger, matrix, checker, and test consistency with each release. |
-| G2 | Phase 2 item 6 is implemented and an independent reviewer evaluates the complete conformance surface. | `BLOCKED` | `ROADMAP.md` records Phase 2 scope; no qualifying independent review is recorded. | Dated independent external conformance-review result covering complete Phase 2 surface. |
-| G3 | Production signing uses an audited constant-time library through the Signer seam, with independent security review of key lifecycle. | `BLOCKED` | `THREAT_MODEL.md` records current security scope; no qualifying production cryptography evidence is recorded. | Dated independent security review and evidence of audited production signer, rotation, recovery, and delegation. |
-| G4 | Two independently authored adapters consume the same erratum and a third-party validator evaluates their receipts consistently. | `BLOCKED` | `ROADMAP.md` records this dependency; no independent implementations or validator result are recorded. | Dated evidence from two independent adapters and separately produced third-party validator result. |
+| G2 | Complete Phase 2 implementation, including provider-neutral semantic probes, and an independent reviewer evaluates the complete conformance surface. | `BLOCKED` | Phase 2 implementation includes conflict-disclosed remediation for split-view equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract completeness, plus schemas, semantic probes, adapter-level conformance, validator anti-vacuity controls, key rotation, invalid-target, confidentiality, and receipt binding; no qualifying independent review is recorded. | Dated independent external conformance-review result covering the exact complete Phase 2 surface after remediation. |
+| G3 | Production signing uses an audited constant-time library through the Signer seam, with independent security review of key lifecycle. | `BLOCKED` | `THREAT_MODEL.md` and `docs/CRYPTOGRAPHY_QUALIFICATION.md` record the internal candidate assessment. PyCA passed wire-compatibility checks but documents no external project audit; libsodium has audited lineage only for older versions. No production signer or qualifying independent lifecycle review exists. | Qualify exact current library, binding, build, and platforms; implement rotation, recovery, revocation, and delegation; obtain dated independent security review. |
+| G4 | Two independently authored adapters consume the same erratum and a third-party validator evaluates their receipts consistently. | `BLOCKED` | Inspeximus `v2.7.0` is one tagged externally authored adapter candidate with disclosed v2.6.1 reference-code contamination and a claimed clean-room rewrite. It targets historical commit `a477fe4f5c86730031b6285d9505778fb8eec060`; provenance, current-target behavior, a second candidate, and a third-party validator result remain unverified. | Rebind candidates to the current immutable target; obtain dated evidence from two independently authored adapters, including separate provenance review where needed, and a separately produced third-party validator result. |
 | G5 | One user-controlled synthetic root completes declared experiment across three independently operated memory systems. | `BLOCKED` | `ROADMAP.md` records interoperability experiment requirement; no approved systems or measured result are recorded. | Approved third-party systems, authorized synthetic-data experiment, and measured report. |
-| G6 | Security, observability, recovery, compatibility, performance, deployment, and rollback gates pass with current operational evidence. | `BLOCKED` | `SECURITY.md` records reporting scope; no qualifying production operations evidence is recorded. | Current operational evidence covering deployment, rollback, recovery, observability, privacy, compatibility, load, denial-of-service, and incident response. |
+| G6 | All ten operational scopes pass from one independent report bound to exact commit and deployment, with declared thresholds and measured comparators. | `BLOCKED` | No independent report binds an exact commit and deployment to passing measured comparators for all ten operational scopes. | One qualifying independent report with declared workload, platform, failure domain, observation window, numeric thresholds, raw artifacts, and passing measurements for every scope. |
 
 ## Approval boundaries
 
-- External review: obtain authorization before requesting, transmitting artifacts for, or recording an external review.
+- External review: obtain authorization before requesting, transmitting artifacts for, or recording an external review. [REVIEW_REQUEST.md](REVIEW_REQUEST.md) is a public request template, not external review evidence.
 - Third-party systems: obtain approval for each system, account, integration, and interaction before interoperability work.
 - Real data: synthetic data is required unless explicit approval names permitted real-data scope, handling, and retention.
 - Final verdict change: only an authorized maintainer may change the ledger verdict after every gate has qualifying evidence; implementation, local testing, and agent review alone cannot do so.

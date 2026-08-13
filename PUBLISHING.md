@@ -30,6 +30,7 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 13. Rename `.github/CODEOWNERS.example` to `.github/CODEOWNERS` and replace `@GITHUB_HANDLE` with the real account, so step 12 is enforced rather than remembered.
 14. Confirm the `validate` workflow has run green on `main` at least once, and make it a required status check for pull requests.
 15. Create the `prior-art`, `correction`, `conformance`, `implementation`, and `maintenance` labels used by the issue forms and Dependabot.
+16. Publish [REVIEW_REQUEST.md](REVIEW_REQUEST.md), [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md), and [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) only as calls for evidence. Record an external review, independent implementation, or system experiment in the readiness ledger only after its dated, independently produced result exists.
 
 ## Suggested first commit
 
@@ -67,3 +68,4 @@ The repository was published on 2026-08-07 at https://github.com/thomaswillner/l
 - update `RESEARCH.md`, `PRIOR_ART.md`, and `CHANGELOG.md` together when the bounded claim changes;
 - record unsuccessful implementation experiments, not only successes;
 - cut a new version whenever published semantics change.
+- keep [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) aligned with canonical repository URL, `NOT_PROD_READY` status, and external-evidence boundaries; a post, nomination, or invitation never upgrades readiness.

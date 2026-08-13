@@ -46,11 +46,17 @@ A conformance change should state:
 - the normative behavior using clear MUST, SHOULD, or MAY language;
 - observable inputs, outputs, and state transitions;
 - failure, timeout, replay, partial-coverage, and unobservable-store behavior;
+- empty enumeration with and without root-specific lineage-completeness evidence;
+- adapter-supplied quarantine-phase coverage separately from final repair coverage;
+- store-owned source mapping and repair inputs without hidden reference-ledger coupling;
+- same-importer conflicts separately from owner split views across importers;
 - security and privacy consequences;
 - positive, negative, and preservation tests;
 - backward-compatibility implications.
 
 Whenever possible, include machine-readable examples and deterministic tests. A receipt format must use the canonical terminal coverage results `verified`, `partial`, `unknown`, and `failed`. `Pending` is a lifecycle state, not a successful coverage result; stores outside the required scope are omitted.
+An adapter must not infer complete coverage from an empty enumeration. It needs
+explicit root-specific lineage-completeness evidence or must return `unknown`.
 
 ## Implementations
 
@@ -63,11 +69,33 @@ Implementation contributions should include:
 - dependency and license information;
 - evidence that unrelated memory is preserved during repair.
 
+An independently authored implementation may use the published specification,
+schemas, examples, and conformance vectors under the irrevocable implementation
+grant in [LICENSE](LICENSE). Product code must be authored independently rather
+than copied from `prototype/`, `scripts/`, or `tests/`, and every commercial or
+non-commercial product must preserve the required Thomas Willner and LLM Errata
+attribution.
+
 Never submit secrets, personal data, proprietary customer material, or confidential employer information.
 
 ## Issues and pull requests
 
-Run `make check` before opening a pull request; CI covers the same four validation components: repository structure and metadata, the bounded claim, readiness-evidence honesty, and checker self-tests. Readiness-check exit `0` validates structural honesty of the recorded evidence; it does **not** mean `PROD_READY`. If a citation was added or changed, run `make links` too, and record the pin and access date in [SOURCES.md](SOURCES.md).
+Run `make check` before opening a pull request; CI covers repository structure
+and metadata, the bounded claim, readiness-evidence honesty, active publication
+surfaces, and checker self-tests. Run `make publication` directly when changing
+an active public call. Readiness-check exit `0` validates structural honesty of
+the recorded evidence; it does **not** mean `PROD_READY`. If a citation was added
+or changed, run `make links` too, and record the pin and access date in
+[SOURCES.md](SOURCES.md).
+
+Public corrections use append-only supersession: retain the historical GitHub
+artifact, publish a replacement that names it as historical, and update
+`publication/active-surfaces.json`. Before posting a pinned blob URL, prove the
+path exists at the exact commit with `git cat-file -e <commit>:<path>`. After
+posting, perform read-after-write verification of rendered body, author, URL,
+and mentions. A call, mention, or acceptance message is recruitment evidence,
+not independent review, implementation, validator, system, or operational
+evidence.
 
 If a checker is wrong, fix it in its own pull request with a test that fails before the fix. Widening an anchor, deleting a test, or adding a quotation exception so that an unrelated change passes is not an acceptable fix.
 
@@ -81,7 +109,11 @@ Before opening a large pull request, open an issue describing the proposed chang
 
 By submitting a contribution, you grant the copyright holder a perpetual, worldwide, irrevocable, royalty-free licence to use, modify, and relicense it, and you confirm you have the right to submit the material. You retain your own copyright. See [LICENSE](LICENSE). Cite rather than copy third-party text unless its licence clearly permits inclusion.
 
-Note that this repository is licensed for personal use. Prior-art challenges, corrections, and design critique are welcome and need no permission. Implementing the specifications in `spec/` does require written permission, which is not unreasonably withheld for research and standards work.
+Reference code in this repository remains personal-use unless separately
+licensed. Prior-art challenges, corrections, and design critique need no
+permission. Clean-room specification implementations need no individual grant,
+but remain subject to attribution, notice-preservation, no-endorsement, and
+third-party licence conditions.
 
 ## Security findings
 

@@ -74,6 +74,13 @@ Every repair uses a three-way check—the **repair triad**:
 2. **Positive:** the replacement influenced the cases in which it should.
 3. **Preservation:** nearby facts that were not changed still worked.
 
+Within an inspectable adapter scope, preservation also requires bounded
+proposition multiplicity: repair must not increase active assertions of a
+preserved proposition unless the erratum requires another assertion. The
+adapter supplies stable provider-local proposition identity and count for the
+synthetic conformance fixture. Text similarity is not identity; an adapter
+that cannot expose this observation reports it as `unknown`.
+
 Erasure has no positive replacement, but still needs negative and preservation checks. The triad defeats two cheap tricks: adding a new fact while still retrieving the old one, and “fixing” the problem by wiping the whole profile.
 
 ## Three operations, three meanings
@@ -248,7 +255,31 @@ The search deliberately broadened, collided, narrowed, and repeated. These adjac
 | Cross-recipient lifecycle notification | [vCon Lifecycle using SCITT](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01), [SCITT architecture](https://datatracker.ietf.org/doc/rfc9943/), [IAB deletion framework](https://github.com/InteractiveAdvertisingBureau/Data-Subject-Rights/blob/main/Data%20Deletion%20Request%20Framework.md) | This is the strongest formal standards/control-plane collision. The individual vCon draft defines sent/received events, amendments, consent changes, deletion or expiry notifications, and recipient acknowledgments backed by SCITT inclusion receipts. Inclusion or acknowledgment does not establish repair of AI summaries, vectors, graphs, and behavior. |
 | Revocation and provenance updates | [W3C credential status and refresh](https://www.w3.org/TR/vc-data-model-2.0/#refreshing), [W3C Bitstring Status List](https://www.w3.org/TR/vc-bitstring-status-list/), [C2PA 2.4](https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html) | Exported objects can expose status, refresh, revocation, and signed update manifests. They do not impose AI-memory-specific descendant repair or the repair triad. |
 | Derived-data deletion | [Palantir US10956406B2](https://patents.google.com/patent/US10956406B2/en) and long-term-memory security research ([survey](https://arxiv.org/html/2604.16548v1)) | Rebuilding derived data after source deletion and testing for reappearance are not new. The candidate is the interoperable semantic conformance profile, not either primitive. |
-| **Remaining feature conjunction** | **No exact public implementation found in the reviewed sources required all four together** | **Post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and a signed, coverage-aware callback bound to the erratum and pre/post state.** |
+| **Remaining feature conjunction** | **No exact public implementation found in the reviewed sources required all four together** | **Post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and an authenticated, coverage-truthful callback bound to the erratum and pre/post state.** |
+
+The callback requirement contains two independent properties. **D1,
+authenticity:** a valid signature binds the importer to the event, pre/post
+state, stores, aggregate, and limitations. **D2, coverage truthfulness:** those
+signed coverage claims match the declared required scope and do not upgrade
+missing, opaque, skipped, or failed evidence.
+
+Signature validity authenticates the importer and receipt bytes; it does not establish that the reported coverage is truthful.
+
+Coverage truthfulness requires the signed stores, aggregate, and limitations to match the declared required scope without upgrading missing or opaque evidence.
+
+An empty enumeration is not evidence of complete lineage. A required adapter
+may report `verified` for an empty root scope only when it also establishes a
+root-specific write-time or audited lineage authority; otherwise the signed
+store result is `unknown` with a limitation.
+
+A durable checkpoint records adapter-supplied quarantine coverage; final repair cannot upgrade a worse checkpoint result.
+
+The published adapter contract must expose every controller and repair operation without hidden reference-ledger dependencies.
+
+A receipt establishes the signed event accepted by one importer. Importer-local
+sequence checks detect conflicts visible in that view, but cannot establish
+global owner non-equivocation across split views without an external witnessed
+or append-only log.
 
 The broad candidates were rejected: “a personal LLM wiki,” “portable memory,” “a memory makefile,” “verified forgetting,” “a temporal contradiction ledger,” and “self-correcting memory.” A signed post-export update feed was also rejected: EngramSpec already provides cross-runtime corrections and incremental diffs, while vCon Lifecycle/SCITT and downstream-deletion frameworks cover event and acknowledgment control planes. The surviving combination is still a synthesis of known mechanisms, so its strongest defensible claim is product and conformance design—not fundamental invention.
 

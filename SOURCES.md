@@ -48,7 +48,10 @@ the default branch and will move.
 
 | Source | Pin | Verified 2026-08-07 |
 |---|---|---|
-| [Inspeximus](https://github.com/DanceNitra/inspeximus) | `3ba90c47560a53d650b4be47b0146b3a9538dd69` (2026-08-06) | README confirms the keying limitation PRIOR_ART.md relies on: its own benchmark reports 4–8 of 60 non-declarative prose sentences keyed. **This commit post-dates the 2026-08-01 research cutoff** — the repository moved between cutoff and re-verification, which is precisely why this file exists |
+| [Inspeximus](https://github.com/DanceNitra/inspeximus) | `4c711f2982911841d86d7ac1989b0ffb866dc891` (review baseline, 2026-08-12); `v2.6.0` / `36611027a463a8e526e23baf2d6bb8d9797b67ac`; `v2.7.0` / `ccdb30de5a32896fafcb4ed18a7a6f228691e078` (2026-08-13) | Baseline confirms `retract_lineage`, `include_superseded`, `needs_rederivation`, and `rederive`. v2.6.0 makes known unresolved derivation holes `partially_audited` and reports `subject_reachable_records`. v2.7.0 adds a tagged LLM Errata adapter candidate and preserves explicit provenance disclosure: v2.6.1 copied reference structure and is disqualified; v2.7.0 claims a clean-room rewrite and reports adapter-contract defects reproduced locally here. Tags and source version are verified; GitHub Releases has no v2.6.0–v2.7.0 Release entries. The adapter targets historical LLM Errata commit `a477fe4f5c86730031b6285d9505778fb8eec060` and must rebind to the current immutable target. Candidate implementation and interested-party evidence only, not established independence, third-party validation, or G4 completion. |
+| [DanceNitra adapter-conformance candidate](https://github.com/DanceNitra/agora/tree/2ba1e299b3483b9038d03387345702427608b90b/contrib/llm-errata-adapter-conformance) | `2ba1e299b3483b9038d03387345702427608b90b` (2026-08-13), MIT | Rastislav Drahos reported five adapter behaviors, three validator anti-vacuity attacks, and a duplicate-preservation counterexample. Inspeximus is a G4 candidate and the source commit discloses Claude Opus 5 co-authorship, so this is interested-party input rather than independent evidence. LLM Errata independently authored its corpus and validator without copying or vendoring the source runner or fixtures. |
+| [jedisct1/ed25519.py](https://github.com/jedisct1/ed25519.py) | `67902d339ea47418a60fb7684255b81bc4f6d46e` (2026-08-13) | Maintainer-provided pure-Python Ed25519 comparison implementation. README claims RFC 8032 vectors, canonical/small-order rejection, batch verification, and optional randomized signing countermeasures. Repository supplies no detected licence file or independent audit/build qualification, so it is a comparison oracle only and does not satisfy G3. |
+| [Doyle, A Truth Maintenance System](https://dblp.org/rec/journals/ai/Doyle79.html) | Artificial Intelligence 12(3), 1979; DBLP `journals/ai/Doyle79` | Stable bibliographic record confirms title and publication. Cited by Inspeximus as prior retract-and-retain lineage. Included to make historical dependency-retraction collision explicit; LLM Errata claims no invention of this mechanism. |
 | [IAB Data Deletion Request Framework](https://github.com/InteractiveAdvertisingBureau/Data-Subject-Rights/blob/main/Data%20Deletion%20Request%20Framework.md) | `b9418f5394ca91193181a61c567ffbbdff79cdef` (2025-02-06) | Repository unchanged since well before the cutoff |
 | [Karpathy LLM Wiki idea file](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) | Gist, revision not pinned | Cited only as a presentation precedent, so drift carries no claim risk |
 
@@ -99,3 +102,48 @@ An archived copy of the Glean report exists at
 - When a source disappears, cite the archive snapshot and say so. If no snapshot
   exists, the correct action is to narrow the affected row, not to keep the
   citation.
+
+### GitHub Actions runtime maintenance
+
+These official releases were read on 2026-08-13 to remove GitHub's Node 20
+deprecation annotations. They are supply-chain maintenance evidence, not
+production-readiness evidence for LLM Errata.
+
+| Source | Pin | Verified 2026-08-13 |
+|---|---|---|
+| [actions/checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1) | commit `3d3c42e5aac5ba805825da76410c181273ba90b1` | Official release published 2026-07-20; `action.yml` declares `runs.using: node24`. |
+| [actions/setup-python v7.0.0](https://github.com/actions/setup-python/releases/tag/v7.0.0) | commit `5fda3b95a4ea91299a34e894583c3862153e4b97` | Official release published 2026-07-20; `action.yml` declares `runs.using: node24`. |
+
+## Operational-readiness grounding sources
+
+These official sources were read on 2026-08-12 to ground scope selection in
+[`docs/OPERATIONAL_READINESS.md`](docs/OPERATIONAL_READINESS.md). They do not
+certify LLM Errata, prove G6, or supply operator-specific numeric thresholds.
+
+| Source | Pin or version | Verified 2026-08-12 and project use |
+|---|---|---|
+| [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) | Final, April 2025 | Official title confirmed: *Incident Response Recommendations and Considerations for Cybersecurity Risk Management: A CSF 2.0 Community Profile*. Grounds incident preparation, detection, response, recovery, and learning scope. |
+| [NIST SP 800-218](https://csrc.nist.gov/pubs/sp/800/218/final) | SSDF Version 1.1, February 2022 | Official title confirmed: *Secure Software Development Framework (SSDF) Version 1.1: Recommendations for Mitigating the Risk of Software Vulnerabilities*. Grounds secure-development, dependency, provenance, and vulnerability-management scope. |
+| [SLSA specification](https://slsa.dev/spec/v1.2/) | Version 1.2 | Official versioned specification page describes supply-chain security levels. Grounds deployment artifact and build-provenance binding. |
+| [OpenTelemetry Signals](https://opentelemetry.io/docs/concepts/signals/) | Live official documentation | Official page defines supported telemetry categories. Grounds lifecycle metrics, logs, traces, and alert-observation coverage. |
+| [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) | 1.44.0 | Official version shown on 2026-08-12. Grounds stable metric, unit, attribute, and event naming; it does not define LLM Errata-specific thresholds. |
+| [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) | Live OWASP Cheat Sheet Series | Grounds security-event logging, sensitive-data exclusion, monitoring, and verification concerns. |
+
+## Production-cryptography candidate sources
+
+These sources were read on 2026-08-12 for the internal candidate assessment in
+[`docs/CRYPTOGRAPHY_QUALIFICATION.md`](docs/CRYPTOGRAPHY_QUALIFICATION.md).
+They are security-maintenance and compatibility evidence, not independent
+review of LLM Errata and not evidence that G3 passes.
+
+| Source | Pin or version | Verified 2026-08-12 |
+|---|---|---|
+| [PyCA Ed25519 API](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/) | live documentation; repository `main` observed at `95c04524ef533d6173e4c61d5781ea34bff0e768` | Raw 32-byte private/public key loading, 64-byte signatures, and one-shot verification are supported |
+| [PyCA security policy](https://cryptography.io/en/latest/security/) | live documentation | Most recent release and `main` receive security support; binary releases are refreshed for OpenSSL security updates |
+| [PyCA project documentation](https://cryptography.io/en/latest/) | live documentation | Explicitly says project code and documentation have not undergone an external audit |
+| [PyCA on PyPI](https://pypi.org/project/cryptography/50.0.0/) | 50.0.0 | Python requirement and Apache-2.0 OR BSD-3-Clause licence expression confirmed |
+| [OpenSSL Ed25519](https://docs.openssl.org/3.5/man7/EVP_SIGNATURE-ED25519/) | OpenSSL 3.5 documentation | One-shot RFC 8032 Ed25519 signing and verification plus raw key loading confirmed |
+| [libsodium signatures](https://doc.libsodium.org/public-key_cryptography/public-key_signatures) | live documentation; stable branch observed at `701aa826b97dc84a353d70a551d49dc26da539c5` | Seed keypair, detached signature, detached verification, exact single-part Ed25519 algorithm, and key sizes confirmed |
+| [libsodium 1.0.22](https://github.com/jedisct1/libsodium/releases/tag/1.0.22-RELEASE) | 1.0.22, 2026-04-09 | Current public point release at assessment time |
+| [Libsodium 1.0.12 and 1.0.13 Security Assessment](https://www.privateinternetaccess.com/blog/wp-content/uploads/2017/08/libsodium.pdf) | assessment of 1.0.12 and 1.0.13 | Third-party review included Ed25519 signatures and reported no major vulnerabilities in reviewed versions; it is not a current 1.0.22 audit |
+| [CVE-2025-69277](https://nvd.nist.gov/vuln/detail/CVE-2025-69277) | CVE-2025-69277 | Older libsodium revisions had an Ed25519 point-validation flaw; 1.0.22 post-dates the cited fix, without making vulnerability review unnecessary |
