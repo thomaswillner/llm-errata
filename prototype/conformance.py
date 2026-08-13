@@ -13,6 +13,7 @@ import signal
 import subprocess
 import sys
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -944,11 +945,12 @@ def _binding_source(
     }
 
 
+@contextmanager
 def load_binding_factory(
     value: str,
     binding_root: Path,
-) -> tuple[Callable[[], ReferenceConformanceBinding], dict[str, str]]:
-    """Admit tracked module bytes before bounded import executes them."""
+) -> Any:
+    """Keep an admitted package namespace isolated for the complete run."""
 
     try:
         module_name, object_name = value.split(":", 1)
@@ -1040,16 +1042,40 @@ def load_binding_factory(
     sys.meta_path.insert(0, finder)
 
     try:
-        module = _run_with_timeout(lambda: importlib.import_module(module_name))
-        factory = getattr(module, object_name)
-    except _BindingTimeout as error:
-        raise ConformanceInputError("binding import timed out") from error
-    except BaseException as error:
-        if isinstance(error, KeyboardInterrupt):
-            raise
-        raise ConformanceInputError(
-            f"binding import failed: {type(error).__name__}"
-        ) from error
+        try:
+            module = _run_with_timeout(lambda: importlib.import_module(module_name))
+            factory = getattr(module, object_name)
+        except _BindingTimeout as error:
+            raise ConformanceInputError("binding import timed out") from error
+        except BaseException as error:
+            if isinstance(error, KeyboardInterrupt):
+                raise
+            raise ConformanceInputError(
+                f"binding import failed: {type(error).__name__}"
+            ) from error
+        if not callable(factory):
+            raise ConformanceInputError("binding factory must be callable")
+        try:
+            loaded_path = Path(inspect.getsourcefile(factory) or "").resolve()
+        except (OSError, TypeError, ValueError) as error:
+            raise ConformanceInputError("binding factory has no admitted source") from error
+        if loaded_path != admitted_path:
+            raise ConformanceInputError("binding factory source differs from admitted module")
+
+        yield factory, source
+
+        post_commit, post_tree = _runtime_identity(root)
+        if post_commit != commit or post_tree != tree:
+            raise ConformanceInputError("binding repository identity changed during execution")
+        dependency_digest = hashlib.sha256()
+        for fullname, (dependency_path, payload) in sorted(executed_sources.items()):
+            dependency_digest.update(fullname.encode("utf-8"))
+            dependency_digest.update(b"\0")
+            dependency_digest.update(dependency_path.encode("utf-8"))
+            dependency_digest.update(b"\0")
+            dependency_digest.update(hashlib.sha256(payload).digest())
+            dependency_digest.update(b"\0")
+        source["dependency_manifest_sha256"] = dependency_digest.hexdigest()
     finally:
         if finder in sys.meta_path:
             sys.meta_path.remove(finder)
@@ -1057,27 +1083,6 @@ def load_binding_factory(
             if name == top_package or name.startswith(namespace_prefix):
                 sys.modules.pop(name, None)
         sys.modules.update(saved_modules)
-    if not callable(factory):
-        raise ConformanceInputError("binding factory must be callable")
-    try:
-        loaded_path = Path(inspect.getsourcefile(factory) or "").resolve()
-    except (OSError, TypeError, ValueError) as error:
-        raise ConformanceInputError("binding factory has no admitted source") from error
-    if loaded_path != admitted_path:
-        raise ConformanceInputError("binding factory source differs from admitted module")
-    post_commit, post_tree = _runtime_identity(root)
-    if post_commit != commit or post_tree != tree:
-        raise ConformanceInputError("binding repository identity changed during import")
-    dependency_digest = hashlib.sha256()
-    for fullname, (dependency_path, payload) in sorted(executed_sources.items()):
-        dependency_digest.update(fullname.encode("utf-8"))
-        dependency_digest.update(b"\0")
-        dependency_digest.update(dependency_path.encode("utf-8"))
-        dependency_digest.update(b"\0")
-        dependency_digest.update(hashlib.sha256(payload).digest())
-        dependency_digest.update(b"\0")
-    source["dependency_manifest_sha256"] = dependency_digest.hexdigest()
-    return factory, source
 
 
 class _BindingTimeout(Exception):

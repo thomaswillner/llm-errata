@@ -67,14 +67,22 @@ def cmd_adapter_conformance(ws: Workspace, args: argparse.Namespace) -> int:
             binding_root = args.binding_root
         else:
             binding_root = args.binding_root or args.source_root
-            factory, source = load_binding_factory(args.binding, binding_root)
-        report = validate_adapter_conformance(
-            args.corpus,
-            args.source_root,
-            factory,
-            binding_root=binding_root,
-            binding_source=source,
-        )
+            with load_binding_factory(args.binding, binding_root) as (factory, source):
+                report = validate_adapter_conformance(
+                    args.corpus,
+                    args.source_root,
+                    factory,
+                    binding_root=binding_root,
+                    binding_source=source,
+                )
+        if args.binding is None:
+            report = validate_adapter_conformance(
+                args.corpus,
+                args.source_root,
+                factory,
+                binding_root=binding_root,
+                binding_source=source,
+            )
     except ConformanceInputError as error:
         print(f"invalid conformance evidence: {error}", file=sys.stderr)
         return EXIT_INCONCLUSIVE
