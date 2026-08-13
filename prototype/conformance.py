@@ -29,6 +29,11 @@ class TracingAdapter:
     def calls(self) -> tuple[str, ...]:
         return tuple(object.__getattribute__(self, "_calls"))
 
+    def reset_calls(self) -> None:
+        """Start a new trace window around controller-issued lifecycle calls."""
+
+        object.__getattribute__(self, "_calls").clear()
+
     def __getattr__(self, name: str) -> Any:
         value = getattr(self.target, name)
         if not callable(value):
@@ -64,7 +69,7 @@ def compare_complete_outcome(
                     child = f"{path}.{key}" if path else key
                     failures.append(f"{child}: unexpected")
             return
-        if want != got:
+        if type(want) is not type(got) or want != got:
             failures.append(f"{path}: expected {want!r}, got {got!r}")
 
     compare(expected, observed, "")
@@ -131,6 +136,7 @@ class AdapterCorpus:
     validator_controls: tuple[dict[str, str], ...]
     status: str
     evidence_boundary: str
+    sha256: str
 
 
 @dataclass(frozen=True)
@@ -191,6 +197,7 @@ class ConformanceReport:
     binding: str
     normative_commit: str
     normative_surface_digest: str
+    corpus_sha256: str
     runtime_commit: str | None
     runtime_tree: str
     binding_source: dict[str, str]
@@ -214,6 +221,7 @@ class ConformanceReport:
                 "commit": self.normative_commit,
                 "surface_digest": self.normative_surface_digest,
             },
+            "corpus_sha256": self.corpus_sha256,
             "runtime_commit": self.runtime_commit,
             "runtime_tree": self.runtime_tree,
             "binding_source": dict(sorted(self.binding_source.items())),
@@ -356,9 +364,16 @@ def _validate_outcome(value: object, operation: str, label: str) -> dict[str, An
     return outcome
 
 
-def load_corpus(path: Path, source_root: Path) -> AdapterCorpus:
+def load_corpus(
+    path: Path, source_root: Path, *, require_canonical_path: bool = False
+) -> AdapterCorpus:
+    if require_canonical_path and path.resolve() != (
+        source_root / "spec" / "adapter-conformance.json"
+    ).resolve():
+        raise ConformanceInputError("corpus is not the canonical checked-in corpus")
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        corpus_bytes = path.read_bytes()
+        payload = json.loads(corpus_bytes.decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ConformanceInputError("corpus is not readable canonical JSON") from error
     root = _exact(payload, ROOT_KEYS, "corpus")
@@ -392,6 +407,12 @@ def load_corpus(path: Path, source_root: Path) -> AdapterCorpus:
             raise ConformanceInputError(f"{case_id} operation is invalid")
         normative = _exact(case["normative"], NORMATIVE_KEYS, f"{case_id} normative")
         commit = _nonempty(normative["commit"], f"{case_id} normative commit")
+        try:
+            _git(source_root, "merge-base", "--is-ancestor", commit, "HEAD")
+        except ConformanceInputError as error:
+            raise ConformanceInputError(
+                f"{case_id} normative commit is not reachable from runtime history"
+            ) from error
         relative = _nonempty(normative["path"], f"{case_id} normative path")
         quote = _nonempty(normative["quote"], f"{case_id} normative quotation")
         source = _git(source_root, "show", f"{commit}:{relative}").decode("utf-8")
@@ -429,6 +450,7 @@ def load_corpus(path: Path, source_root: Path) -> AdapterCorpus:
         validator_controls=tuple(controls),
         status=_nonempty(root["status"], "status"),
         evidence_boundary=_nonempty(root["evidence_boundary"], "evidence boundary"),
+        sha256=hashlib.sha256(corpus_bytes).hexdigest(),
     )
 
 
@@ -748,9 +770,12 @@ def _run_case(
     if mutate:
         binding.apply_mutation(case, importer, adapter, context)
     erratum = binding.erratum(case, context)
+    adapter.reset_calls()
     checkpoint = importer.quarantine(erratum)
     receipt = importer.repair_quarantined(erratum, checkpoint)
-    return binding.observe(case, importer, adapter, context, checkpoint, receipt), adapter.calls
+    calls = adapter.calls
+    observed = binding.observe(case, importer, adapter, context, checkpoint, receipt)
+    return observed, calls
 
 
 def _anti_vacuity_receipt(
@@ -766,7 +791,7 @@ def _anti_vacuity_receipt(
 def _anti_vacuity_feed(
     corpus: AdapterCorpus, feed_verifier: Callable[..., list[object]]
 ) -> str:
-    from prototype.errata import Erratum, Operation, RootRegistry
+    from prototype.errata import Erratum, FeedError, Operation, RootRegistry
     from prototype.signing import Ed25519Signer
 
     mutation = next(
@@ -791,9 +816,15 @@ def _anti_vacuity_feed(
     )
     try:
         feed_verifier([event], owner=owner.public, roots=RootRegistry({"fact:diet"}))
-    except Exception as error:
-        message = str(error)
-        return mutation["required_failure"] if "gap" in message else ""
+    except FeedError as error:
+        expected = (
+            "anti-vacuity-gap: gap at sequence 2, expected 1. "
+            "A missing erratum may be the one that retired the state this importer "
+            "is about to serve."
+        )
+        return mutation["required_failure"] if str(error) == expected else ""
+    except Exception:
+        return ""
     return ""
 
 
@@ -879,24 +910,34 @@ def _runtime_identity(root: Path) -> tuple[str, str]:
 
 
 def _binding_source(
-    source_root: Path, binding_factory: Callable[[], ReferenceConformanceBinding]
+    binding_factory: Callable[[], ReferenceConformanceBinding],
+    binding_root: Path | None,
 ) -> dict[str, str]:
     try:
         file_path = Path(inspect.getsourcefile(binding_factory) or "").resolve()
-        relative = file_path.relative_to(source_root.resolve()).as_posix()
+        root = binding_root.resolve() if binding_root is not None else Path(
+            _git(file_path.parent, "rev-parse", "--show-toplevel").decode().strip()
+        ).resolve()
+        relative = file_path.relative_to(root).as_posix()
         payload = file_path.read_bytes()
-    except (OSError, ValueError) as error:
+    except (OSError, TypeError, ValueError) as error:
         raise ConformanceInputError(
-            "binding source is not inside the declared source root"
+            "binding source is not inside a clean Git repository"
         ) from error
     if relative.startswith(".git/"):
         raise ConformanceInputError("binding source is not executable repository source")
     tracked = set(
-        _git(source_root, "ls-files", "--cached").decode("utf-8").splitlines()
+        _git(root, "ls-files", "--cached").decode("utf-8").splitlines()
     )
     if relative not in tracked:
         raise ConformanceInputError("binding source is not tracked by the runtime tree")
-    return {"path": relative, "sha256": hashlib.sha256(payload).hexdigest()}
+    commit, tree = _runtime_identity(root)
+    return {
+        "commit": commit,
+        "tree": tree,
+        "path": relative,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
 
 
 class _BindingTimeout(Exception):
@@ -926,10 +967,11 @@ def validate_adapter_conformance(
     corpus_path: Path,
     source_root: Path,
     binding_factory: Callable[[], ReferenceConformanceBinding],
+    binding_root: Path | None = None,
 ) -> ConformanceReport:
     runtime_commit, runtime_tree = _runtime_identity(source_root)
-    corpus = load_corpus(corpus_path, source_root)
-    binding_source = _binding_source(source_root, binding_factory)
+    corpus = load_corpus(corpus_path, source_root, require_canonical_path=True)
+    binding_source = _binding_source(binding_factory, binding_root)
     try:
         binding = _run_with_timeout(binding_factory)
     except _BindingTimeout as error:
@@ -1001,6 +1043,7 @@ def validate_adapter_conformance(
         binding=binding_name,
         normative_commit=corpus.normative_target.commit,
         normative_surface_digest=corpus.normative_target.surface_digest,
+        corpus_sha256=corpus.sha256,
         runtime_commit=runtime_commit,
         runtime_tree=runtime_tree,
         binding_source=binding_source,

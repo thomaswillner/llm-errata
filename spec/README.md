@@ -41,6 +41,11 @@ python3 -m prototype.cli adapter-conformance \
   --source-root .
 ```
 
+For an independently implemented binding in another checkout, add
+`--binding module:factory --binding-root /path/to/its/clean/git/checkout`.
+Reports bind the LLM Errata runtime commit/tree, exact corpus SHA-256, and the
+binding repository commit/tree plus tracked source path and SHA-256 separately.
+
 Exit `0` means the supplied binding and validator controls passed this
 internal corpus. Exit `1` means a behavioral or mutation control failed. Exit
 `2` means source, corpus, binding, or execution evidence is invalid or

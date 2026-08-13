@@ -188,6 +188,7 @@ def g2_surface_files(root: Path = ROOT) -> tuple[str, ...]:
         tuple(sorted((root / "prototype").glob("*.py"))),
         (root / "prototype" / "README.md",),
         (root / "spec" / "README.md",),
+        (root / "spec" / "adapter-conformance.json",),
         tuple(sorted((root / "spec").glob("*.schema.json"))),
         tuple(sorted((root / "spec" / "vectors").glob("*.json"))),
         tuple(sorted((root / "spec" / "semantic").glob("*.json"))),
@@ -222,8 +223,20 @@ def g2_surface_digest(root: Path = ROOT) -> str:
 def g2_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
     if not reviewed_commit_exists(commit, root):
         raise OSError("reviewed commit is unavailable")
+    listed = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", commit],
+        cwd=root,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    if listed.returncode != 0:
+        raise OSError("reviewed commit tree is unavailable")
+    commit_files = set(listed.stdout.splitlines())
     entries = []
     for relative in g2_surface_files(root):
+        if relative == "spec/adapter-conformance.json" and relative not in commit_files:
+            continue
         result = subprocess.run(
             ["git", "show", f"{commit}:{relative}"], cwd=root, capture_output=True, check=False
         )

@@ -89,6 +89,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
         files = set(g2_surface_files())
         self.assertIn("prototype/checkpoints.py", files)
         self.assertIn("tests/test_checkpoints.py", files)
+        self.assertIn("spec/adapter-conformance.json", files)
 
     def test_g6_complete_measured_report_is_commit_and_deployment_bound(self) -> None:
         with repo_copy() as source, tempfile.TemporaryDirectory() as temp:

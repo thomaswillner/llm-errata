@@ -59,6 +59,20 @@ class CorpusValidation(unittest.TestCase):
         with self.assertRaisesRegex(ConformanceInputError, "surface digest"):
             load_corpus(path, ROOT)
 
+    def test_noncanonical_corpus_path_is_refused_for_execution(self) -> None:
+        path = self.changed_corpus(lambda value: None)
+        with self.assertRaisesRegex(ConformanceInputError, "canonical checked-in"):
+            load_corpus(path, ROOT, require_canonical_path=True)
+
+    def test_normative_source_must_be_reachable_from_runtime_history(self) -> None:
+        path = self.changed_corpus(
+            lambda value: value["cases"][0]["normative"].__setitem__(
+                "commit", "f" * 40
+            )
+        )
+        with self.assertRaisesRegex(ConformanceInputError, "reachable"):
+            load_corpus(path, ROOT)
+
     def test_new_current_surface_files_do_not_change_historical_manifest(self) -> None:
         corpus = load_corpus(CORPUS, ROOT)
         self.assertEqual(
@@ -139,6 +153,20 @@ class TargetTracing(unittest.TestCase):
         self.assertEqual(traced.name, "target")
         self.assertEqual(traced.calls, ())
 
+    def test_trace_window_can_exclude_fixture_and_observation_calls(self) -> None:
+        class Adapter:
+            def coverage(self, root: str) -> str:
+                return root
+
+        traced = TracingAdapter(Adapter())
+        traced.coverage("fixture")
+        traced.reset_calls()
+        traced.coverage("controller")
+        calls = traced.calls
+        traced.coverage("observation")
+        self.assertEqual(calls, ("coverage",))
+        self.assertEqual(traced.calls, ("coverage", "coverage"))
+
 
 class CompleteComparison(unittest.TestCase):
     def outcome(self) -> dict[str, object]:
@@ -188,6 +216,17 @@ class CompleteComparison(unittest.TestCase):
         failures = compare_complete_outcome(expected, observed)
         self.assertIn("receipt.names_store: missing", failures)
         self.assertIn("store.unexpected: unexpected", failures)
+
+    def test_json_scalar_types_must_match_exactly(self) -> None:
+        for wrong in (1, 1.0):
+            with self.subTest(wrong=wrong):
+                expected = self.outcome()
+                observed = self.outcome()
+                observed["receipt"]["names_store"] = wrong
+                self.assertIn(
+                    f"receipt.names_store: expected True, got {wrong!r}",
+                    compare_complete_outcome(expected, observed),
+                )
 
 
 class PropositionMultiplicity(unittest.TestCase):
@@ -292,6 +331,39 @@ class RuntimeSourceIdentity(unittest.TestCase):
         self.assertEqual(report.runtime_tree, tree)
         self.assertEqual(report.binding_source["path"], "prototype/conformance.py")
         self.assertRegex(report.binding_source["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(report.binding_source["commit"], commit)
+        self.assertEqual(report.binding_source["tree"], tree)
+        self.assertRegex(report.corpus_sha256, r"^[0-9a-f]{64}$")
+
+    def test_external_binding_can_be_bound_to_its_own_clean_repository(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-") as directory:
+            binding_root = Path(directory)
+            source = binding_root / "binding.py"
+            source.write_text("def factory():\n    return None\n", encoding="utf-8")
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "binding.py"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=binding_root, check=True)
+            namespace: dict[str, object] = {}
+            exec(compile(source.read_text(), str(source), "exec"), namespace)
+            factory = namespace["factory"]
+            factory.__module__ = "binding"
+            with patch("prototype.conformance.inspect.getsourcefile", return_value=str(source)):
+                from prototype.conformance import _binding_source
+
+                identity = _binding_source(factory, binding_root)
+            self.assertEqual(identity["path"], "binding.py")
+            self.assertRegex(identity["commit"], r"^[0-9a-f]{40}$")
+
+    def test_sourceless_binding_factory_is_invalid_evidence(self) -> None:
+        from prototype.conformance import _binding_source
+
+        with self.assertRaisesRegex(ConformanceInputError, "clean Git repository"):
+            _binding_source(dict, None)
 
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
@@ -363,6 +435,17 @@ class AntiVacuity(unittest.TestCase):
         corpus = load_corpus(CORPUS, ROOT)
         controls = run_validator_anti_vacuity_controls(
             corpus, ROOT, feed_verifier=lambda errata, **kwargs: list(errata),
+        )
+        self.assertFalse(controls[1].passed)
+
+    def test_unrelated_gap_exception_cannot_satisfy_feed_control(self) -> None:
+        corpus = load_corpus(CORPUS, ROOT)
+
+        def crash(*args, **kwargs):
+            raise RuntimeError("unrelated gap in logging")
+
+        controls = run_validator_anti_vacuity_controls(
+            corpus, ROOT, feed_verifier=crash,
         )
         self.assertFalse(controls[1].passed)
 

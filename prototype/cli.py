@@ -77,7 +77,10 @@ def cmd_adapter_conformance(ws: Workspace, args: argparse.Namespace) -> int:
 
     try:
         report = validate_adapter_conformance(
-            args.corpus, args.source_root, _binding_factory(args.binding)
+            args.corpus,
+            args.source_root,
+            _binding_factory(args.binding),
+            binding_root=args.binding_root,
         )
     except ConformanceInputError as error:
         print(f"invalid conformance evidence: {error}", file=sys.stderr)
@@ -476,6 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     adapter_conformance.add_argument("--corpus", required=True, type=Path)
     adapter_conformance.add_argument("--source-root", required=True, type=Path)
+    adapter_conformance.add_argument("--binding-root", type=Path)
     adapter_conformance.add_argument("--binding")
     return parser
 

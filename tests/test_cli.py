@@ -90,6 +90,7 @@ class AdapterConformanceCommand(CliCase):
         self.assertTrue(payload["passed"])
         self.assertEqual(len(payload["cases"]), 5)
         self.assertEqual(len(payload["validator_controls"]), 3)
+        self.assertRegex(payload["corpus_sha256"], r"^[0-9a-f]{64}$")
         self.assertIn("not G2 or G4 evidence", payload["evidence_boundary"])
         self.assertEqual(result.stdout.strip(), json.dumps(
             payload, sort_keys=True, separators=(",", ":")
@@ -111,6 +112,12 @@ class AdapterConformanceCommand(CliCase):
         )
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
         self.assertIn("invalid conformance evidence", result.stderr)
+
+    def test_sourceless_binding_factory_exits_two_without_traceback(self) -> None:
+        result = self.run_conformance("--binding", "builtins:dict")
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
 
 
 class WorkspaceLifecycle(CliCase):
