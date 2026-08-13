@@ -240,6 +240,15 @@ class ReceiptsAreVerifiable(CliCase):
         self.quarantine_and_repair()
         self.assertEqual(self.run_cli("verify").returncode, EXIT_OK)
 
+    def test_empty_receipt_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "empty.json"
+        path.write_text("{}", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt is vacuous", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_a_tampered_aggregate_is_caught(self) -> None:
         self.seed()
         self.publish_supersession()

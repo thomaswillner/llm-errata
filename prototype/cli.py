@@ -37,7 +37,7 @@ from prototype.conformance import (
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_feed
 from prototype.lineage import LineageLedger
-from prototype.receipts import Receipt
+from prototype.receipts import Receipt, receipt_acceptance_errors
 from prototype.schema import load as load_schema, validate as validate_schema
 from prototype.semantic import (
     RecordedSemanticVerifier,
@@ -358,10 +358,13 @@ def cmd_verify(ws: Workspace, args: argparse.Namespace) -> int:
         return EXIT_REFUSED
 
     key = ws.importer_verification_key()
-    schema = load_schema("receipt")
     bad = 0
     for name, payload in receipts:
-        errors = validate_schema(payload, schema)
+        errors = receipt_acceptance_errors(payload)
+        if errors:
+            bad += 1
+            print(f"  {name}: signature=not-checked schema={errors[0]} -> BAD")
+            continue
         signature = payload.get("signature")
         rebuilt = Receipt(
             importer=payload["importer"],

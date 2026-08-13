@@ -271,7 +271,9 @@ class AdapterCases(unittest.TestCase):
                 return "slow-metadata"
 
         with patch("prototype.conformance.BINDING_TIMEOUT_SECONDS", 0.01):
-            with self.assertRaisesRegex(ConformanceInputError, "timed out"):
+            with self.assertRaisesRegex(
+                ConformanceInputError, "binding metadata timed out"
+            ):
                 validate_adapter_conformance(CORPUS, ROOT, SlowMetadataBinding)
 
 
@@ -353,7 +355,7 @@ class AntiVacuity(unittest.TestCase):
 
     def test_permissive_production_receipt_schema_makes_control_fail(self) -> None:
         corpus = load_corpus(CORPUS, ROOT)
-        with patch("prototype.receipts.validate_schema", return_value=[]):
+        with patch("prototype.receipts.receipt_acceptance_errors", return_value=()):
             controls = run_validator_anti_vacuity_controls(corpus, ROOT)
         self.assertFalse(controls[0].passed)
 

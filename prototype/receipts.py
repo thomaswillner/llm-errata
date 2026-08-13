@@ -20,7 +20,16 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Mapping, Sequence
 
 from prototype.adapters import Coverage
+from prototype.schema import load as load_schema, validate as validate_schema
 from prototype.signing import VerificationKey
+
+
+def receipt_acceptance_errors(value: object) -> tuple[str, ...]:
+    """Return production receipt-acceptance errors, including non-vacuity."""
+
+    if not isinstance(value, dict) or not value:
+        return ("receipt is vacuous",)
+    return tuple(validate_schema(value, load_schema("receipt")))
 
 
 def aggregate_coverage(

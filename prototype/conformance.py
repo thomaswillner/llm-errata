@@ -753,17 +753,6 @@ def _run_case(
     return binding.observe(case, importer, adapter, context, checkpoint, receipt), adapter.calls
 
 
-def _receipt_errors(value: object) -> tuple[str, ...]:
-    """Exercise the production receipt schema plus non-vacuity acceptance rule."""
-
-    from prototype.schema import load as load_schema, validate as validate_schema
-
-    if not isinstance(value, dict) or not value:
-        return ("receipt is vacuous",)
-    errors = tuple(validate_schema(value, load_schema("receipt")))
-    return errors
-
-
 def _anti_vacuity_receipt(
     corpus: AdapterCorpus, receipt_validator: Callable[[object], tuple[str, ...]]
 ) -> str:
@@ -852,19 +841,21 @@ def run_validator_anti_vacuity_controls(
     corpus: AdapterCorpus,
     source_root: Path,
     *,
-    receipt_validator: Callable[[object], tuple[str, ...]] = _receipt_errors,
+    receipt_validator: Callable[[object], tuple[str, ...]] | None = None,
     feed_verifier: Callable[..., list[object]] | None = None,
     semantic_runner_factory: Callable[[], object] | None = None,
 ) -> tuple[ControlResult, ...]:
     """Install declared flattering mutations against actual acceptance seams."""
 
     from prototype.errata import verify_feed
+    from prototype.receipts import receipt_acceptance_errors
     from prototype.semantic import SemanticProbeRunner
 
+    receipt = receipt_validator or receipt_acceptance_errors
     feed = feed_verifier or verify_feed
     semantic = semantic_runner_factory or SemanticProbeRunner
     failures = (
-        _anti_vacuity_receipt(corpus, receipt_validator),
+        _anti_vacuity_receipt(corpus, receipt),
         _anti_vacuity_feed(corpus, feed),
         _anti_vacuity_semantic(corpus, source_root, semantic),
     )
@@ -949,6 +940,18 @@ def validate_adapter_conformance(
         raise ConformanceInputError(
             f"binding construction failed: {type(error).__name__}"
         ) from error
+    try:
+        binding_name = _run_with_timeout(lambda: binding.name)
+    except _BindingTimeout as error:
+        raise ConformanceInputError("binding metadata timed out") from error
+    except ConformanceInputError:
+        raise
+    except Exception as error:
+        raise ConformanceInputError(
+            f"binding metadata failed: {type(error).__name__}"
+        ) from error
+    if not isinstance(binding_name, str) or not binding_name.strip():
+        raise ConformanceInputError("binding metadata name must be non-empty")
     results = []
     for case in corpus.cases:
         try:
@@ -995,7 +998,7 @@ def validate_adapter_conformance(
             )
         )
     return ConformanceReport(
-        binding=binding.name,
+        binding=binding_name,
         normative_commit=corpus.normative_target.commit,
         normative_surface_digest=corpus.normative_target.surface_digest,
         runtime_commit=runtime_commit,
