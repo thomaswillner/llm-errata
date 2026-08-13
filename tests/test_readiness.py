@@ -99,6 +99,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 ("git", "init"),
                 ("git", "config", "user.email", "tests@example.invalid"),
                 ("git", "config", "user.name", "Readiness tests"),
+                ("git", "config", "gc.auto", "0"),
                 ("git", "add", "."),
                 ("git", "commit", "-m", "operational baseline"),
             ):
@@ -119,6 +120,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 ("git", "init"),
                 ("git", "config", "user.email", "tests@example.invalid"),
                 ("git", "config", "user.name", "Readiness tests"),
+                ("git", "config", "gc.auto", "0"),
                 ("git", "add", "."),
                 ("git", "commit", "-m", "operational baseline"),
             ):
@@ -140,6 +142,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 ("git", "init"),
                 ("git", "config", "user.email", "tests@example.invalid"),
                 ("git", "config", "user.name", "Readiness tests"),
+                ("git", "config", "gc.auto", "0"),
                 ("git", "add", "."),
                 ("git", "commit", "-m", "operational baseline"),
             ):
@@ -247,6 +250,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 ("git", "init"),
                 ("git", "config", "user.email", "tests@example.invalid"),
                 ("git", "config", "user.name", "Readiness tests"),
+                ("git", "config", "gc.auto", "0"),
                 ("git", "add", "."),
                 ("git", "commit", "-m", "surface baseline"),
             ):
@@ -275,6 +279,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
                 ("git", "init"),
                 ("git", "config", "user.email", "tests@example.invalid"),
                 ("git", "config", "user.name", "Readiness tests"),
+                ("git", "config", "gc.auto", "0"),
                 ("git", "add", "."),
                 ("git", "commit", "-m", "surface baseline"),
             ):
