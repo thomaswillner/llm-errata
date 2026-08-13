@@ -15,6 +15,59 @@ class ConformanceInputError(ValueError):
     """Corpus or source evidence cannot support a conformance run."""
 
 
+class TracingAdapter:
+    """Proxy that records calls made through one exact adapter instance."""
+
+    def __init__(self, target: object) -> None:
+        object.__setattr__(self, "target", target)
+        object.__setattr__(self, "_calls", [])
+
+    @property
+    def calls(self) -> tuple[str, ...]:
+        return tuple(object.__getattribute__(self, "_calls"))
+
+    def __getattr__(self, name: str) -> Any:
+        value = getattr(self.target, name)
+        if not callable(value):
+            return value
+
+        def traced(*args: Any, **kwargs: Any) -> Any:
+            object.__getattribute__(self, "_calls").append(name)
+            return value(*args, **kwargs)
+
+        return traced
+
+
+def compare_complete_outcome(
+    expected: dict[str, Any], observed: dict[str, Any]
+) -> tuple[str, ...]:
+    """Return every exact structural/value difference between two outcomes."""
+
+    failures: list[str] = []
+
+    def compare(want: object, got: object, path: str) -> None:
+        if isinstance(want, dict):
+            if not isinstance(got, dict):
+                failures.append(f"{path}: expected object, got {type(got).__name__}")
+                return
+            for key in want:
+                child = f"{path}.{key}" if path else key
+                if key not in got:
+                    failures.append(f"{child}: missing")
+                else:
+                    compare(want[key], got[key], child)
+            for key in got:
+                if key not in want:
+                    child = f"{path}.{key}" if path else key
+                    failures.append(f"{child}: unexpected")
+            return
+        if want != got:
+            failures.append(f"{path}: expected {want!r}, got {got!r}")
+
+    compare(expected, observed, "")
+    return tuple(failures)
+
+
 @dataclass(frozen=True)
 class NormativeTarget:
     commit: str

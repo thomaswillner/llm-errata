@@ -11,7 +11,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from prototype.conformance import ConformanceInputError, load_corpus
+from prototype.conformance import (
+    ConformanceInputError,
+    TracingAdapter,
+    compare_complete_outcome,
+    load_corpus,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +80,84 @@ class CorpusValidation(unittest.TestCase):
         with self.assertRaisesRegex(ConformanceInputError, "provenance"):
             load_corpus(path, ROOT)
 
+
+class TargetTracing(unittest.TestCase):
+    def test_only_calls_through_wrapped_target_are_recorded(self) -> None:
+        class Adapter:
+            name = "target"
+
+            def coverage(self, root: str) -> str:
+                return root
+
+        adapter = Adapter()
+        traced = TracingAdapter(adapter)
+
+        def coverage(root: str) -> str:
+            return root
+
+        coverage("unrelated")
+        self.assertEqual(traced.calls, ())
+        self.assertEqual(traced.coverage("root"), "root")
+        self.assertEqual(traced.calls, ("coverage",))
+        self.assertIs(traced.target, adapter)
+
+    def test_attribute_reads_do_not_count_as_method_calls(self) -> None:
+        class Adapter:
+            name = "target"
+
+        traced = TracingAdapter(Adapter())
+        self.assertEqual(traced.name, "target")
+        self.assertEqual(traced.calls, ())
+
+
+class CompleteComparison(unittest.TestCase):
+    def outcome(self) -> dict[str, object]:
+        return {
+            "checkpoint": "verified",
+            "aggregate": "verified",
+            "triad": {
+                "negative": "pass",
+                "positive": "pass",
+                "preserve": "pass",
+            },
+            "store": {
+                "multiplicity": "known",
+                "erased_absent": None,
+                "preserved_present": True,
+                "unrelated_present": True,
+            },
+            "receipt": {
+                "names_store": True,
+                "non_trivial": True,
+                "forbidden_absent": None,
+            },
+        }
+
+    def test_exact_outcome_passes(self) -> None:
+        value = self.outcome()
+        self.assertEqual(compare_complete_outcome(value, value), ())
+
+    def test_extra_aggregate_and_triad_failures_are_rejected(self) -> None:
+        expected = self.outcome()
+        observed = self.outcome()
+        observed["aggregate"] = "failed"
+        observed["triad"] = {
+            "negative": "pass",
+            "positive": "fail",
+            "preserve": "pass",
+        }
+        failures = compare_complete_outcome(expected, observed)
+        self.assertIn("aggregate: expected 'verified', got 'failed'", failures)
+        self.assertIn("triad.positive: expected 'pass', got 'fail'", failures)
+
+    def test_missing_or_extra_fields_are_rejected(self) -> None:
+        expected = self.outcome()
+        observed = self.outcome()
+        del observed["receipt"]["names_store"]
+        observed["store"]["unexpected"] = True
+        failures = compare_complete_outcome(expected, observed)
+        self.assertIn("receipt.names_store: missing", failures)
+        self.assertIn("store.unexpected: unexpected", failures)
 
 if __name__ == "__main__":
     unittest.main()
