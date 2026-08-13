@@ -17,6 +17,21 @@ from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, r
 SCRIPT = "validate_repo.py"
 
 
+class Release040Metadata(unittest.TestCase):
+    def test_version_citation_maturity_security_and_changelog_align(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual((root / "VERSION").read_text().strip(), "0.4.0")
+        citation = (root / "CITATION.cff").read_text(encoding="utf-8")
+        self.assertIn("version: 0.4.0", citation)
+        self.assertIn("date-released: 2026-08-13", citation)
+        self.assertIn("Version 0.4.0", (root / "README.md").read_text())
+        self.assertIn("| 0.4.x | Yes |", (root / "SECURITY.md").read_text())
+        changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [0.4.0]", changelog)
+        self.assertIn("Rastislav Drahos", changelog)
+        self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
+
+
 class ValidatorPasses(unittest.TestCase):
     def test_unmodified_repository_passes(self) -> None:
         with repo_copy() as root:
@@ -383,10 +398,13 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
 
     def test_earlier_security_versions_cannot_be_supported(self) -> None:
         def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            row = f"| {major}.{int(minor) - 1}.x and earlier |"
             rewrite(
                 root / "SECURITY.md",
-                "| 0.2.x and earlier | No |",
-                "| 0.2.x and earlier | Yes |",
+                f"{row} No |",
+                f"{row} Yes |",
             )
 
         result = check_after(SCRIPT, mutate)

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "project_version": "0.3.0",
+  "project_version": "0.4.0",
   "verdict": "NOT_PROD_READY",
-  "last_reviewed": "2026-08-12",
+  "last_reviewed": "2026-08-13",
   "gates": [
     {
       "id": "G1",
@@ -39,6 +39,9 @@
         {"kind": "repository", "ref": "spec/semantic/observations.json"},
         {"kind": "repository", "ref": "spec/vectors/protocol-manifest.json"},
         {"kind": "repository", "ref": "spec/vectors/receipt-binding-mutations.json"},
+        {"kind": "repository", "ref": "spec/adapter-conformance.json"},
+        {"kind": "repository", "ref": "prototype/conformance.py"},
+        {"kind": "repository", "ref": "tests/test_conformance.py"},
         {"kind": "repository", "ref": "prototype/README.md"},
         {"kind": "repository", "ref": "spec/README.md"},
         {"kind": "repository", "ref": "REVIEW_REQUEST.md"},

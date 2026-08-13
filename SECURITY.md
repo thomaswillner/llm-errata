@@ -8,8 +8,8 @@ Until a later policy states otherwise, only the latest versioned release is elig
 
 | Version | Supported |
 |---|---|
-| 0.3.x | Yes |
-| 0.2.x and earlier | No |
+| 0.4.x | Yes |
+| 0.3.x and earlier | No |
 | Unreleased development revisions | No |
 
 ## Reporting a vulnerability

@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from scripts.check_readiness import (
+    G2_MATRIX_CURRENT_EVIDENCE,
     G6_SCOPE,
     g2_surface_digest,
     g2_surface_digest_at_commit,
@@ -34,6 +35,32 @@ from tests.support import (
 
 
 SCRIPT = "check_readiness.py"
+
+
+class Release040ReadinessBoundary(unittest.TestCase):
+    def test_release_updates_version_without_upgrading_external_gates(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        payload = json.loads(
+            (root / "readiness" / "production-readiness.json").read_text()
+        )
+        self.assertEqual(payload["project_version"], "0.4.0")
+        self.assertEqual(payload["verdict"], "NOT_PROD_READY")
+        self.assertEqual(
+            {gate["id"]: gate["status"] for gate in payload["gates"]},
+            {
+                "G1": "PASS",
+                "G2": "BLOCKED",
+                "G3": "BLOCKED",
+                "G4": "BLOCKED",
+                "G5": "BLOCKED",
+                "G6": "BLOCKED",
+            },
+        )
+        g2 = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+        refs = {item.get("ref") for item in g2["evidence"]}
+        self.assertIn("prototype/conformance.py", refs)
+        self.assertIn("spec/adapter-conformance.json", refs)
+        self.assertIn("tests/test_conformance.py", refs)
 
 
 class ReadinessCheckerPasses(unittest.TestCase):
@@ -277,12 +304,13 @@ class ReadinessCheckerPasses(unittest.TestCase):
 
     def test_consistently_formatted_canonical_matrix_cells_are_accepted(self) -> None:
         def mutate(root):
+            version = (root / "VERSION").read_text(encoding="utf-8").strip()
             path = root / "PRODUCTION_READINESS.md"
             lines = path.read_text(encoding="utf-8").splitlines()
             formatted = []
             for line in lines:
                 if line.startswith("| Version |"):
-                    formatted.append("| **Version** | `**0.3.0**` |")
+                    formatted.append(f"| **Version** | `**{version}**` |")
                 elif line.startswith("| Verdict |"):
                     formatted.append("| `Verdict` | __**NOT_PROD_READY**__ |")
                 elif line.startswith("| G"):
@@ -364,9 +392,10 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
 
     def test_matrix_project_version_contradiction_is_rejected(self) -> None:
         def mutate(root):
+            version = (root / "VERSION").read_text(encoding="utf-8").strip()
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "| Version | 0.3.0 |",
+                f"| Version | {version} |",
                 "| Version | 9.9.9 |",
             )
 
@@ -435,7 +464,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Phase 2 implementation includes conflict-disclosed remediation for split-view equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract completeness, plus schemas, semantic probes, key rotation, invalid-target, confidentiality, and receipt binding; no qualifying independent review is recorded.",
+                G2_MATRIX_CURRENT_EVIDENCE,
                 "local tests prove readiness.",
             )
 
@@ -501,7 +530,8 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
 
     def test_missing_matrix_project_version_is_rejected(self) -> None:
         def mutate(root):
-            rewrite(root / "PRODUCTION_READINESS.md", "| Version | 0.3.0 |\n", "")
+            version = (root / "VERSION").read_text(encoding="utf-8").strip()
+            rewrite(root / "PRODUCTION_READINESS.md", f"| Version | {version} |\n", "")
 
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "matrix project version")

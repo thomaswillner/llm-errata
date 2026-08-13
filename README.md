@@ -13,7 +13,7 @@
 | Field | Value |
 |---|---|
 | Author | Thomas Rainer Willner |
-| Version | 0.3.0 |
+| Version | 0.4.0 |
 | Status | Public concept proposal / Request for Comment |
 | Published | 2026-08-07 |
 | Research reviewed through | 2026-08-01 |
@@ -179,7 +179,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.3.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface include conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, and mutation coverage for every signed receipt field. G2 remains `BLOCKED`: the reviewer disclosed a commercial conflict and did not cover the full required conformance scope. G4 also remains `BLOCKED`: one tagged external adapter candidate exists, but its clean-room provenance and behavior are not third-party validated and no separate validator result exists.
+Version 0.4.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface include conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, mutation coverage for every signed receipt field, and independently authored adapter-level cases with target-instance tracing, complete outcomes, bounded proposition multiplicity, exact semantic mutations, and executable validator anti-vacuity controls. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 

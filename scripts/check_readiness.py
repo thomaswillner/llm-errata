@@ -43,6 +43,7 @@ G2_REQUIRED_TESTS = (
     "tests/test_adapters.py",
     "tests/test_checkpoints.py",
     "tests/test_cli.py",
+    "tests/test_conformance.py",
     "tests/test_controller.py",
     "tests/test_ed25519.py",
     "tests/test_errata_feed.py",
@@ -93,8 +94,9 @@ COMPARATORS = {
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Phase 2 implementation includes conflict-disclosed remediation for split-view "
     "equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract "
-    "completeness, plus schemas, semantic probes, key rotation, invalid-target, confidentiality, "
-    "and receipt binding; no qualifying independent review is recorded."
+    "completeness, plus schemas, semantic probes, adapter-level conformance, validator "
+    "anti-vacuity controls, key rotation, invalid-target, confidentiality, and receipt binding; "
+    "no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
     "Dated independent external conformance-review result covering the exact complete Phase 2 surface after remediation."
