@@ -14,6 +14,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from prototype.conformance import ReferenceConformanceBinding
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
@@ -21,6 +23,13 @@ SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+class ExplodingConformanceBinding(ReferenceConformanceBinding):
+    name = "exploding-test-binding"
+
+    def apply_mutation(self, case, importer, adapter, context) -> None:
+        raise RuntimeError("deliberate mutation failure")
 
 
 class CliCase(unittest.TestCase):
@@ -62,6 +71,44 @@ class CliCase(unittest.TestCase):
         quarantine = self.run_cli("quarantine")
         self.assertEqual(quarantine.returncode, EXIT_OK, quarantine.stdout + quarantine.stderr)
         return self.run_cli("repair")
+
+
+class AdapterConformanceCommand(CliCase):
+    def run_conformance(self, *extra: str) -> subprocess.CompletedProcess[str]:
+        return self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(REPO_ROOT),
+            *extra,
+        )
+
+    def test_reference_binding_emits_canonical_passing_report(self) -> None:
+        result = self.run_conformance()
+        self.assertEqual(result.returncode, EXIT_OK, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["passed"])
+        self.assertEqual(len(payload["cases"]), 5)
+        self.assertEqual(len(payload["validator_controls"]), 3)
+        self.assertIn("not G2 or G4 evidence", payload["evidence_boundary"])
+        self.assertEqual(result.stdout.strip(), json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ))
+
+    def test_failed_mutation_control_exits_one(self) -> None:
+        result = self.run_conformance(
+            "--binding", "tests.test_cli:ExplodingConformanceBinding"
+        )
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertFalse(json.loads(result.stdout)["passed"])
+
+    def test_invalid_source_evidence_exits_two(self) -> None:
+        result = self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(self.cwd),
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("invalid conformance evidence", result.stderr)
 
 
 class WorkspaceLifecycle(CliCase):

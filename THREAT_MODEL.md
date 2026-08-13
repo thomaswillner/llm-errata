@@ -29,6 +29,7 @@ mitigation or an admitted limit.
 | Erasure smuggling content back | An erasure carrying a replacement is refused | `errata._check_shape` |
 | Signature malleability | Non-canonical scalars (`S >= L`) rejected, so a receipt cannot be altered and still verify | `ed25519.verify` |
 | Repair that destroys retained memory | Preservation probe | `controller._run_triad` |
+| Repair that duplicates retained propositions | Stable synthetic proposition identity/count; exact mutation control | `conformance.validate_adapter_conformance` |
 | Repair that adds the new value and keeps serving the old | Negative probe | `controller._run_triad` |
 | Half-repaired state being served | Quarantine completes before any rebuild; an interrupted repair leaves state gated | `controller.repair` |
 | Stale export undoing a repair | A re-import at or below the applied sequence is refused | `controller.reimport` |
@@ -53,6 +54,12 @@ The signature identifies who to disbelieve, which is the whole of what it
 offers. Mitigations are outside the contract: owner-issued spot probes, an
 independent verifier, or a transparency log that makes a false claim durable
 and attributable.
+
+**A lying conformance binding.** Target-instance tracing proves the controller
+called the supplied adapter, and exact mutations prove the case can reject a
+named flattering behavior. Neither proves the adapter truthfully exposed all
+substrate state or proposition multiplicity. A third producer remains required
+to validate independent implementations and the validator.
 
 **A store whose substrate contradicts its API.**
 [Ghost Vectors](https://arxiv.org/abs/2606.18497v1) demonstrates that

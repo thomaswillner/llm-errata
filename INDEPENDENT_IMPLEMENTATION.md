@@ -60,6 +60,14 @@ the adapter cannot retire one input while preserving the others without an
 additional decomposition or rebuild contract; it must report that limit rather
 than fabricate complete repair.
 
+Run the adapter corpus against an isolated synthetic store with
+`errata adapter-conformance --binding module:factory`. The binding must expose
+stable provider-local proposition identities and active counts for that
+fixture. A store unable to observe multiplicity reports `unknown`; text
+normalization or embedding similarity cannot substitute for identity. A pass
+is candidate internal evidence only and still requires a separate producer to
+validate both implementations and the validator.
+
 ## Independence and evidence
 
 An implementation report must name its authors, repository and commit, supported

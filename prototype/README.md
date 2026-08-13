@@ -136,6 +136,19 @@ inputs ephemerally, but only the structured verdict, binding digest, timestamp,
 and response digest may enter an observation. Raw output and erased values are
 not persisted.
 
+### Adapter-conformance command
+
+`adapter-conformance` runs the checked-in provider-neutral adapter corpus
+without creating a workspace. The default reference binding drives the real
+`Importer` lifecycle through a proxy around the exact adapter instance. A
+third-party binding is supplied as `--binding module:factory`.
+
+The canonical JSON report separates the immutable normative predecessor target
+from the runtime commit being exercised, lists complete honest and mutation
+outcomes, records exact target-instance calls, and includes three executable
+validator attacks. Passing remains internal reference evidence and does not
+upgrade G2 or G4.
+
 Running it against a real SQLite store produces the result that matters:
 
 ```text

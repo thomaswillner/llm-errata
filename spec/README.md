@@ -14,6 +14,45 @@ than this one can be built and checked against the same contract.
 | `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |
 | `vectors/protocol-manifest.json` | Executable key-rotation, concurrency, invalid-target, and confidentiality cases that JSON Schema cannot express. |
 | `vectors/receipt-binding-mutations.json` | Valid-domain mutations proving every signed receipt field is bound. |
+| `adapter-conformance.json` | Five provider-neutral adapter cases and three executable validator anti-vacuity controls. |
+
+## Adapter conformance
+
+`adapter-conformance.json` adds the store-facing half of conformance. Every
+case binds an immutable normative source and exact quotation, declares the
+complete expected checkpoint, aggregate, triad, store, and receipt outcome,
+requires calls through the exact adapter instance, and names one flattering
+mutation with its exact counter-result. An exception is not evidence that a
+mutation was caught.
+
+Preservation includes bounded proposition multiplicity. Within an inspectable
+synthetic conformance scope, an adapter supplies stable provider-local
+proposition identities and active assertion counts. Repair must not increase
+the count of a preserved proposition unless the erratum requires another
+assertion. Text normalization and embedding similarity are not proposition
+identity. An adapter unable to expose identity/count for the isolated fixture
+reports that observation as `unknown`; it cannot receive a cardinality pass.
+
+Run:
+
+```bash
+python3 -m prototype.cli adapter-conformance \
+  --corpus spec/adapter-conformance.json \
+  --source-root .
+```
+
+Exit `0` means the supplied binding and validator controls passed this
+internal corpus. Exit `1` means a behavioral or mutation control failed. Exit
+`2` means source, corpus, binding, or execution evidence is invalid or
+inconclusive. No result is G2 or G4 evidence by itself.
+
+Rastislav Drahos/DanceNitra reported the adapter-coverage gap,
+duplicate-preservation counterexample, candidate behaviors, and anti-vacuity
+attacks in the MIT-licensed artifact at
+`DanceNitra/agora@2ba1e299b3483b9038d03387345702427608b90b`. Inspeximus is a
+G4 candidate, so this is interested-party input. The LLM Errata corpus and
+validator are independently authored; the external runner and fixtures are
+not copied or vendored.
 
 Receipt conformance evaluates two independent properties. D1 authenticity
 verifies the importer and every signable byte. D2 coverage truthfulness checks

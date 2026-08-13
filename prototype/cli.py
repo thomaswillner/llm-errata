@@ -21,6 +21,7 @@ distinct code rather than a warning on stdout.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -28,6 +29,11 @@ from pathlib import Path
 
 from prototype.adapters import Coverage, OpaqueAdapter
 from prototype.checkpoints import CheckpointError
+from prototype.conformance import (
+    ConformanceInputError,
+    ReferenceConformanceBinding,
+    validate_adapter_conformance,
+)
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_feed
 from prototype.lineage import LineageLedger
@@ -49,6 +55,35 @@ from prototype.workspace import Workspace
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+def _binding_factory(value: str | None):
+    if value is None:
+        return ReferenceConformanceBinding
+    try:
+        module_name, object_name = value.split(":", 1)
+        factory = getattr(importlib.import_module(module_name), object_name)
+    except (AttributeError, ImportError, ValueError) as error:
+        raise ConformanceInputError(
+            "binding must be an importable module:factory"
+        ) from error
+    if not callable(factory):
+        raise ConformanceInputError("binding factory must be callable")
+    return factory
+
+
+def cmd_adapter_conformance(ws: Workspace, args: argparse.Namespace) -> int:
+    """Run provider-neutral adapter cases and validator self-controls."""
+
+    try:
+        report = validate_adapter_conformance(
+            args.corpus, args.source_root, _binding_factory(args.binding)
+        )
+    except ConformanceInputError as error:
+        print(f"invalid conformance evidence: {error}", file=sys.stderr)
+        return EXIT_INCONCLUSIVE
+    print(report.canonical_json())
+    return EXIT_OK if report.passed else EXIT_REFUSED
 
 
 def _load_json(path: Path, *, label: str) -> object:
@@ -368,6 +403,7 @@ COMMANDS = {
     "audit": cmd_audit,
     "verify": cmd_verify,
     "semantic-test": cmd_semantic_test,
+    "adapter-conformance": cmd_adapter_conformance,
 }
 
 
@@ -426,13 +462,21 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_test.add_argument("--config", required=True, type=Path)
     semantic_test.add_argument("--observations", required=True, type=Path)
     semantic_test.add_argument("--case", default="verified-correction")
+
+    adapter_conformance = sub.add_parser(
+        "adapter-conformance",
+        help="run adapter cases and validator anti-vacuity controls",
+    )
+    adapter_conformance.add_argument("--corpus", required=True, type=Path)
+    adapter_conformance.add_argument("--source-root", required=True, type=Path)
+    adapter_conformance.add_argument("--binding")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     ws = Workspace(args.workspace)
-    if args.command not in {"init", "semantic-test"} and not ws.exists():
+    if args.command not in {"init", "semantic-test", "adapter-conformance"} and not ws.exists():
         print(
             f"no workspace at {args.workspace}; run `errata init` first",
             file=sys.stderr,

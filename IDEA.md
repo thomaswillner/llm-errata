@@ -74,6 +74,13 @@ Every repair uses a three-way check—the **repair triad**:
 2. **Positive:** the replacement influenced the cases in which it should.
 3. **Preservation:** nearby facts that were not changed still worked.
 
+Within an inspectable adapter scope, preservation also requires bounded
+proposition multiplicity: repair must not increase active assertions of a
+preserved proposition unless the erratum requires another assertion. The
+adapter supplies stable provider-local proposition identity and count for the
+synthetic conformance fixture. Text similarity is not identity; an adapter
+that cannot expose this observation reports it as `unknown`.
+
 Erasure has no positive replacement, but still needs negative and preservation checks. The triad defeats two cheap tricks: adding a new fact while still retrieving the old one, and “fixing” the problem by wiping the whole profile.
 
 ## Three operations, three meanings
