@@ -8,7 +8,7 @@ readiness gate. Last verified: 2026-08-13.
 | Surface | Public artifact | Status |
 |---|---|---|
 | Draft implementation and review surface | [PR #8](https://github.com/thomaswillner/llm-errata/pull/8) | Open draft, targeting `agent/prod-readiness`. |
-| Independent review request | [Issue #4](https://github.com/thomaswillner/llm-errata/issues/4) and its [exact review target](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269378077) | Open call for conformance, novelty, security, and distributed-systems review. |
+| Independent review request | [Issue #4](https://github.com/thomaswillner/llm-errata/issues/4) and its [corrected targeted review request](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5274367774) | Open call against corrected immutable target. Portable Agent Memory and libsodium maintainers were asked for distinct, bounded review or referral roles. Invitation only; G2 and G3 remain `BLOCKED`. |
 | Targeted independent-review recruitment | [Inspeximus maintainer invitation](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269444341) | Invitation to challenge the stated collision boundary; it is not external evidence. |
 | Interested-party prior-art feedback | [Inspeximus maintainer response](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5271988057) | Conflict-disclosed preliminary feedback. Source verification confirmed `retract_lineage` as a stronger local quarantine/rebuild collision and narrowed the coverage comparison. The disclosed dogfood ratio was not independently reproduced. Maintainer offered a future scoped review, but explicitly does not meet G2 independence alone. |
 | Targeted adapter recruitment | [Remnic invitation](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269523953) | Invitation to become a future independently authored adapter after Phase 2 completion; it is not technical evidence. |
@@ -29,13 +29,18 @@ readiness gate. Last verified: 2026-08-13.
 | Interested-party review follow-up | [Inspeximus maintainer reply](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5272476094) | Acknowledges the source-grounded correction and points to the final review target. Conflict disclosure remains controlling; a future review from this maintainer cannot satisfy G2 alone. |
 | Stale-target finding | [Inspeximus maintainer correction](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5273206921) | Correctly found that the prior frozen commit predated the accepted prior-art corrections. This is interested-party feedback, not independent G2 evidence; the finding required a new immutable target. |
 | Corrected maintainer reply | [Human reply and re-frozen target](https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5273960394) | Acknowledges the publication defect, publishes corrected commit and digest, answers the licence question, and preserves the conflict boundary. DanceNitra's offered review remains interested-party evidence and requires a separate disinterested reviewer. |
+| Corrected adapter and validator recruitment | [Issue #5 targeted follow-up](https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5274369945) | Supersedes obsolete target and permission language; asks the Remnic maintainer about one clean-room adapter and the ai-memory-mcp maintainer about the separate validator role. No acceptance or implementation evidence is recorded. |
+| Corrected operated-system recruitment | [Issue #6 targeted follow-up](https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5274371747) | Supersedes obsolete target; asks Mem0 and Cognee maintainers for exact-version operator nominations or impracticality findings. No experiment or account action is authorized. |
+| Corrected PR checkpoint | [PR #8 correction](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5274373337) | Marks prior PR comments' target and digest historical, publishes corrected immutable target and routes readers to the three current evidence calls. No user mention was added. |
+| Corrected Discussion announcement | [Discussion #9 follow-up](https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17995307) | Publishes corrected target, current implementation grant, and current external-evidence calls without mentioning additional users. Publication only; readiness remains unchanged. |
 | Phase 2 completion announcement | [Discussion #9 completion update](https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17993648) | Announces internal completion and routes falsifiers to Issues #4, #5, #6, and #10. Publication only; it records no external acceptance or readiness-gate change. |
 | Six-step readiness checkpoint | [PR #8 checkpoint](https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272526975) | Audits every approved production-readiness step against exact internal and external evidence. Records `NOT_PROD_READY`, the external blockers, PR #3 status, validation, and publication boundaries without claiming certification. |
 
-One targeted invitation now has the interested-party response recorded above;
-it is not an acceptance of an independent reviewer role and does not satisfy
-G2. No adapter, validator, operated-system approval, or CODEOWNER volunteer has
-accepted.
+One targeted invitation has the interested-party response recorded above; it
+is not an acceptance of an independent reviewer role and does not satisfy G2.
+The corrected follow-ups use six role-specific mentions across three issues and
+no mentions in PR #8 or Discussion #9. No response to those new follow-ups,
+adapter, validator, operated-system approval, or CODEOWNER volunteer is recorded.
 
 The current complete conformance review target is source commit
 [`08b95263c9ed700c43aea0b285696956cc23e878`](https://github.com/thomaswillner/llm-errata/commit/08b95263c9ed700c43aea0b285696956cc23e878)
