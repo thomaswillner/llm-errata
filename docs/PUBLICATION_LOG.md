@@ -19,7 +19,7 @@ independent specification implementations remain permitted under the
 attributed implementation grant; Reference Code remains separately restricted.
 
 This log records publication and outreach evidence. It does not upgrade a
-readiness gate. Last verified: 2026-08-14.
+readiness gate. Last verified: 2026-08-14 local / 2026-08-13 UTC.
 
 ## GitHub public calls
 

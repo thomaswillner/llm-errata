@@ -38,7 +38,7 @@
       "id": "g4-inspeximus-v040-target-reply",
       "kind": "issue-comment",
       "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5287579823",
-      "published": "2026-08-14",
+      "published": "2026-08-13",
       "commit": "ad36ed5e209a53aacab17751b5a183ca8a1aac1f",
       "surface_digest": "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d",
       "gates": ["G2", "G4"],

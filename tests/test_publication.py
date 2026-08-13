@@ -146,6 +146,14 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
             "surface fields",
         )
 
+    def test_future_utc_publication_date_is_rejected(self) -> None:
+        self._assert_manifest_mutation_is_rejected(
+            lambda payload: payload["surfaces"][0].__setitem__(
+                "published", "2999-01-01"
+            ),
+            "surface fields",
+        )
+
     def test_invalid_url_is_rejected(self) -> None:
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["surfaces"][0].__setitem__(
