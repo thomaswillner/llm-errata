@@ -10,6 +10,11 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Upgraded both GitHub Actions workflows to immutable `actions/checkout`
+  v7.0.1 and `actions/setup-python` v7.0.0 commit pins. Both action releases use
+  Node 24, removing GitHub's Node 20 deprecation path without changing the
+  Python 3.11/3.13 validation matrix or local Node runtime. Repository lint and
+  negative tests now reject missing, mutable, or downgraded action references.
 - Granted irrevocable, worldwide, royalty-free rights for independently
   authored commercial and non-commercial implementations of the specification,
   conditioned on accessible product attribution to LLM Errata and Thomas

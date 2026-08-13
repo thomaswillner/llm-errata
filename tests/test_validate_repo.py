@@ -441,5 +441,36 @@ class PublicationGuardIntegration(unittest.TestCase):
         self.assertIn("run: make publication", workflow)
 
 
+class GitHubActionsRuntimeGuard(unittest.TestCase):
+    def test_workflows_pin_node24_action_releases(self) -> None:
+        workflow_dir = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows"
+        )
+        workflows = "\n".join(
+            path.read_text(encoding="utf-8") for path in sorted(workflow_dir.glob("*.yml"))
+        )
+        self.assertNotIn("actions/checkout@v4", workflows)
+        self.assertNotIn("actions/setup-python@v5", workflows)
+        self.assertIn("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", workflows)
+        self.assertIn("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97", workflows)
+
+    def test_validator_rejects_deprecated_action_major(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / ".github" / "workflows" / "links.yml"
+            text = path.read_text(encoding="utf-8")
+            path.write_text(
+                text.replace(
+                    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                    "actions/checkout@v4",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions Node 24 pins", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

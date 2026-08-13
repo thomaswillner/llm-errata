@@ -62,6 +62,7 @@ REQUIRED_FILES = (
     "tests/test_validate_repo.py",
     "tests/test_claim_guard.py",
     "tests/test_publication.py",
+    ".github/workflows/links.yml",
     ".github/workflows/validate.yml",
     "prototype/README.md",
     "prototype/controller.py",
@@ -108,6 +109,16 @@ CANONICAL_LINKS = {
     ),
     "W3C PROV-DM": "https://www.w3.org/TR/prov-dm/",
 }
+
+GITHUB_ACTION_PINS = {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+}
+
+GITHUB_WORKFLOWS = (
+    ".github/workflows/links.yml",
+    ".github/workflows/validate.yml",
+)
 
 LOCAL_PATH_PATTERNS = (
     (
@@ -353,6 +364,34 @@ def check_local_links(reporter: Reporter) -> None:
         not violations,
         "all repository-relative Markdown links resolve",
         "Repair broken or escaping links at: " + preview,
+    )
+
+
+def check_github_actions_runtime(reporter: Reporter) -> None:
+    """Require reviewed immutable pins for GitHub's Node 24 action runtime."""
+
+    violations: list[str] = []
+    for workflow_name in GITHUB_WORKFLOWS:
+        path = ROOT / workflow_name
+        if not path.is_file():
+            violations.append(f"{workflow_name}: missing")
+            continue
+        text = read_utf8(path)
+        for action, expected_sha in GITHUB_ACTION_PINS.items():
+            refs = re.findall(
+                rf"(?m)^\s*uses:\s*{re.escape(action)}@([^\s#]+)", text
+            )
+            if refs != [expected_sha]:
+                observed = ", ".join(refs) if refs else "missing"
+                violations.append(
+                    f"{workflow_name}: {action} expected {expected_sha}, got {observed}"
+                )
+
+    reporter.check(
+        "GitHub Actions Node 24 pins",
+        not violations,
+        "validate and links workflows pin reviewed checkout v7.0.1 and setup-python v7.0.0 commits",
+        "Restore immutable Node 24 action pins. " + "; ".join(violations),
     )
 
 
@@ -659,6 +698,7 @@ def main() -> int:
     check_trailing_whitespace(reporter)
     check_local_paths(reporter)
     check_local_links(reporter)
+    check_github_actions_runtime(reporter)
     check_publication_metadata(reporter)
     check_g2_independent_review_gate(reporter)
     check_document_version_alignment(reporter, repository_version)

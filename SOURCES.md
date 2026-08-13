@@ -101,6 +101,17 @@ An archived copy of the Glean report exists at
   exists, the correct action is to narrow the affected row, not to keep the
   citation.
 
+### GitHub Actions runtime maintenance
+
+These official releases were read on 2026-08-13 to remove GitHub's Node 20
+deprecation annotations. They are supply-chain maintenance evidence, not
+production-readiness evidence for LLM Errata.
+
+| Source | Pin | Verified 2026-08-13 |
+|---|---|---|
+| [actions/checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1) | commit `3d3c42e5aac5ba805825da76410c181273ba90b1` | Official release published 2026-07-20; `action.yml` declares `runs.using: node24`. |
+| [actions/setup-python v7.0.0](https://github.com/actions/setup-python/releases/tag/v7.0.0) | commit `5fda3b95a4ea91299a34e894583c3862153e4b97` | Official release published 2026-07-20; `action.yml` declares `runs.using: node24`. |
+
 ## Operational-readiness grounding sources
 
 These official sources were read on 2026-08-12 to ground scope selection in
