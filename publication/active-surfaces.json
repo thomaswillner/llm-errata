@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "review_target": {
-    "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-    "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14"
+    "commit": "a477fe4f5c86730031b6285d9505778fb8eec060",
+    "surface_digest": "a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3"
   },
   "license": {
     "specification_implementation": "irrevocable worldwide royalty-free commercial and non-commercial",
@@ -16,87 +16,36 @@
   },
   "surfaces": [
     {
-      "id": "g2-g3-targeted-review",
+      "id": "g4-inspeximus-adapter-call",
       "kind": "issue-comment",
-      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5274367774",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280210050",
       "published": "2026-08-13",
-      "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-      "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
-      "gates": ["G2", "G3"],
-      "roles": ["protocol-reviewer", "cryptography-reviewer-or-referrer"],
-      "mentions": ["santhoshravindran7", "jedisct1"],
-      "supersedes": [
-        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269378077",
-        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269524323",
-        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5269850937",
-        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5272345570"
-      ],
-      "evidence_boundary": "recruitment-only"
-    },
-    {
-      "id": "g4-targeted-implementation",
-      "kind": "issue-comment",
-      "url": "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5274369945",
-      "published": "2026-08-13",
-      "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-      "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
+      "commit": "a477fe4f5c86730031b6285d9505778fb8eec060",
+      "surface_digest": "a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3",
       "gates": ["G4"],
-      "roles": ["adapter-author", "validator-author"],
-      "mentions": ["joshuaswarren", "alphaonedev"],
+      "roles": ["inspeximus-adapter-author"],
+      "mentions": ["DanceNitra"],
       "supersedes": [
-        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269378246",
-        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269523953",
-        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5269524142",
-        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5272475120"
+        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5274369945"
       ],
       "evidence_boundary": "recruitment-only"
     },
     {
-      "id": "g5-targeted-systems",
-      "kind": "issue-comment",
-      "url": "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5274371747",
-      "published": "2026-08-13",
-      "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-      "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
-      "gates": ["G5"],
-      "roles": ["mem0-system-operator", "cognee-system-operator"],
-      "mentions": ["kartik-mem0", "Vasilije1990"],
-      "supersedes": [
-        "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269378440",
-        "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269537990",
-        "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5269538156",
-        "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5272475614"
-      ],
-      "evidence_boundary": "recruitment-only"
-    },
-    {
-      "id": "pr8-correction",
+      "id": "pr8-feedback-remediation",
       "kind": "pull-request-comment",
-      "url": "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5274373337",
+      "url": "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5280225709",
       "published": "2026-08-13",
-      "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-      "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
+      "commit": "a477fe4f5c86730031b6285d9505778fb8eec060",
+      "surface_digest": "a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3",
       "gates": ["G2", "G3", "G4", "G5", "G6"],
       "roles": [],
       "mentions": [],
       "supersedes": [
-        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272345782",
-        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5272526975"
-      ],
-      "evidence_boundary": "publication-only"
-    },
-    {
-      "id": "discussion9-correction",
-      "kind": "discussion-comment",
-      "url": "https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17995307",
-      "published": "2026-08-13",
-      "commit": "08b95263c9ed700c43aea0b285696956cc23e878",
-      "surface_digest": "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
-      "gates": ["G2", "G3", "G4", "G5", "G6"],
-      "roles": [],
-      "mentions": [],
-      "supersedes": [
-        "https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17993648"
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5274367774",
+        "https://github.com/thomaswillner/llm-errata/issues/5#issuecomment-5274369945",
+        "https://github.com/thomaswillner/llm-errata/issues/6#issuecomment-5274371747",
+        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5274373337",
+        "https://github.com/thomaswillner/llm-errata/discussions/9#discussioncomment-17995307"
       ],
       "evidence_boundary": "publication-only"
     }

@@ -37,7 +37,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
     def test_stale_commit_is_rejected(self) -> None:
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["review_target"].__setitem__(
-                "commit", "50e895fbfec544b16c94caa07bf2d1f4049a42e2"
+                "commit", "08b95263c9ed700c43aea0b285696956cc23e878"
             ),
             "review target",
         )
@@ -46,7 +46,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["review_target"].__setitem__(
                 "surface_digest",
-                "9547aec8328b601489dda067c6e62f287229b2b24a413dac2c9e7be98e429804",
+                "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14",
             ),
             "review target",
         )
@@ -96,13 +96,17 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
 
     def test_duplicate_evidence_role_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][1]["roles"][0] = payload["surfaces"][0]["roles"][0]
+            payload["surfaces"][1]["roles"] = [
+                payload["surfaces"][0]["roles"][0]
+            ]
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique evidence roles")
 
     def test_duplicate_mention_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][1]["mentions"][0] = payload["surfaces"][0]["mentions"][0]
+            payload["surfaces"][1]["mentions"] = [
+                payload["surfaces"][0]["mentions"][0]
+            ]
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique GitHub mentions")
 

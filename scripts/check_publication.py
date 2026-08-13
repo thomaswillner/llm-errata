@@ -14,49 +14,25 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "publication" / "active-surfaces.json"
 
-CANONICAL_COMMIT = "08b95263c9ed700c43aea0b285696956cc23e878"
+CANONICAL_COMMIT = "a477fe4f5c86730031b6285d9505778fb8eec060"
 CANONICAL_DIGEST = (
-    "03abc492319b875a7d528e0e8de05714bc5a7219b42031fc7c3f42cff1f0bf14"
+    "a6908d21a3fbfc71c11da85ff72634a3917205a06d0ec6c5e3f949756c04e3a3"
 )
 REPOSITORY_URL = "https://github.com/thomaswillner/llm-errata"
 ALLOWED_GATES = {"G2", "G3", "G4", "G5", "G6"}
 REQUIRED_ATTRIBUTION = {"LLM Errata", "Thomas Willner", REPOSITORY_URL}
 REQUIRED_SURFACES = {
-    "g2-g3-targeted-review": {
+    "g4-inspeximus-adapter-call": {
         "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5274367774",
-        "gates": ["G2", "G3"],
-        "roles": ["protocol-reviewer", "cryptography-reviewer-or-referrer"],
-        "mentions": ["santhoshravindran7", "jedisct1"],
-        "evidence_boundary": "recruitment-only",
-    },
-    "g4-targeted-implementation": {
-        "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/5#issuecomment-5274369945",
+        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5280210050",
         "gates": ["G4"],
-        "roles": ["adapter-author", "validator-author"],
-        "mentions": ["joshuaswarren", "alphaonedev"],
+        "roles": ["inspeximus-adapter-author"],
+        "mentions": ["DanceNitra"],
         "evidence_boundary": "recruitment-only",
     },
-    "g5-targeted-systems": {
-        "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/6#issuecomment-5274371747",
-        "gates": ["G5"],
-        "roles": ["mem0-system-operator", "cognee-system-operator"],
-        "mentions": ["kartik-mem0", "Vasilije1990"],
-        "evidence_boundary": "recruitment-only",
-    },
-    "pr8-correction": {
+    "pr8-feedback-remediation": {
         "kind": "pull-request-comment",
-        "url": f"{REPOSITORY_URL}/pull/8#issuecomment-5274373337",
-        "gates": ["G2", "G3", "G4", "G5", "G6"],
-        "roles": [],
-        "mentions": [],
-        "evidence_boundary": "publication-only",
-    },
-    "discussion9-correction": {
-        "kind": "discussion-comment",
-        "url": f"{REPOSITORY_URL}/discussions/9#discussioncomment-17995307",
+        "url": f"{REPOSITORY_URL}/pull/8#issuecomment-5280225709",
         "gates": ["G2", "G3", "G4", "G5", "G6"],
         "roles": [],
         "mentions": [],
