@@ -396,9 +396,17 @@ def check_github_actions_runtime(reporter: Reporter) -> None:
 
     validate_workflow = ROOT / ".github" / "workflows" / "validate.yml"
     validate_text = read_utf8(validate_workflow) if validate_workflow.is_file() else ""
+    checkout_step = re.search(
+        rf"(?ms)^\s{{6}}- name: Check out the repository\s*$\n"
+        rf"^\s{{8}}uses: actions/checkout@{GITHUB_ACTION_PINS['actions/checkout']}[^\n]*$\n"
+        rf"^\s{{8}}with:\s*$\n"
+        rf"(?:(?:^\s{{10}}#.*$\n)*)"
+        rf"^\s{{10}}fetch-depth:\s*0\s*$",
+        validate_text,
+    )
     reporter.check(
         "GitHub Actions source history",
-        validate_text.count("fetch-depth: 0") == 1,
+        checkout_step is not None,
         "validation checkout fetches immutable Git history required by conformance",
         "Set actions/checkout fetch-depth to 0 in validate.yml so historical "
         "normative commits are available to fail-closed conformance checks.",

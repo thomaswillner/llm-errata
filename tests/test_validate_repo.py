@@ -510,6 +510,18 @@ class GitHubActionsRuntimeGuard(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("GitHub Actions source history", result.stdout)
 
+    def test_history_guard_ignores_comment_camouflage(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / ".github" / "workflows" / "validate.yml"
+            text = path.read_text(encoding="utf-8")
+            text = text.replace("fetch-depth: 0", "fetch-depth: 1", 1)
+            text += "\n# legacy requirement text: fetch-depth: 0\n"
+            path.write_text(text, encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions source history", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
