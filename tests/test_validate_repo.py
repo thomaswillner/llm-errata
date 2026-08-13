@@ -17,6 +17,27 @@ from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, r
 SCRIPT = "validate_repo.py"
 
 
+class Release040Metadata(unittest.TestCase):
+    def test_version_citation_maturity_security_and_changelog_align(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual((root / "VERSION").read_text().strip(), "0.4.0")
+        citation = (root / "CITATION.cff").read_text(encoding="utf-8")
+        self.assertIn("version: 0.4.0", citation)
+        self.assertIn("date-released: 2026-08-13", citation)
+        self.assertIn("Version 0.4.0", (root / "README.md").read_text())
+        self.assertIn(
+            "| 0.4.x | Yes, after `v0.4.0` is published |",
+            (root / "SECURITY.md").read_text(),
+        )
+        changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [0.4.0]", changelog)
+        self.assertIn("Rastislav Drahos", changelog)
+        self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
+        security = (root / "SECURITY.md").read_text(encoding="utf-8")
+        self.assertIn("beginning with the immutable `v0.4.0` release", security)
+        self.assertIn("until `v0.4.0` is published", security)
+
+
 class ValidatorPasses(unittest.TestCase):
     def test_unmodified_repository_passes(self) -> None:
         with repo_copy() as root:
@@ -364,7 +385,8 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            rewrite(root / "SECURITY.md", f"| {major}.{minor}.x | Yes |", "| 0.0.x | Yes |")
+            expected = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
+            rewrite(root / "SECURITY.md", expected, "| 0.0.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
@@ -374,7 +396,7 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            supported = f"| {major}.{minor}.x | Yes |"
+            supported = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
             rewrite(root / "SECURITY.md", supported, supported + "\n| 0.2.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
@@ -383,10 +405,13 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
 
     def test_earlier_security_versions_cannot_be_supported(self) -> None:
         def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            row = f"| {major}.{int(minor) - 2}.x and earlier |"
             rewrite(
                 root / "SECURITY.md",
-                "| 0.2.x and earlier | No |",
-                "| 0.2.x and earlier | Yes |",
+                f"{row} No |",
+                f"{row} Yes |",
             )
 
         result = check_after(SCRIPT, mutate)
@@ -454,6 +479,12 @@ class GitHubActionsRuntimeGuard(unittest.TestCase):
         self.assertIn("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", workflows)
         self.assertIn("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97", workflows)
 
+    def test_validate_workflow_fetches_immutable_history_for_conformance(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows" / "validate.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("fetch-depth: 0", workflow)
+
     def test_validator_rejects_deprecated_action_major(self) -> None:
         def mutate(root: Path) -> None:
             path = root / ".github" / "workflows" / "links.yml"
@@ -470,6 +501,26 @@ class GitHubActionsRuntimeGuard(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("GitHub Actions Node 24 pins", result.stdout)
+
+    def test_validator_rejects_shallow_validate_checkout(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(root / ".github" / "workflows" / "validate.yml", "fetch-depth: 0", "fetch-depth: 1")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions source history", result.stdout)
+
+    def test_history_guard_ignores_comment_camouflage(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / ".github" / "workflows" / "validate.yml"
+            text = path.read_text(encoding="utf-8")
+            text = text.replace("fetch-depth: 0", "fetch-depth: 1", 1)
+            text += "\n# legacy requirement text: fetch-depth: 0\n"
+            path.write_text(text, encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions source history", result.stdout)
 
 
 if __name__ == "__main__":

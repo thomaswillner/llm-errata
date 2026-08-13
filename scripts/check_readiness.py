@@ -43,6 +43,7 @@ G2_REQUIRED_TESTS = (
     "tests/test_adapters.py",
     "tests/test_checkpoints.py",
     "tests/test_cli.py",
+    "tests/test_conformance.py",
     "tests/test_controller.py",
     "tests/test_ed25519.py",
     "tests/test_errata_feed.py",
@@ -93,8 +94,9 @@ COMPARATORS = {
 G2_MATRIX_CURRENT_EVIDENCE = (
     "Phase 2 implementation includes conflict-disclosed remediation for split-view "
     "equivocation, unsupported empty enumeration, checkpoint coverage, and adapter-contract "
-    "completeness, plus schemas, semantic probes, key rotation, invalid-target, confidentiality, "
-    "and receipt binding; no qualifying independent review is recorded."
+    "completeness, plus schemas, semantic probes, adapter-level conformance, validator "
+    "anti-vacuity controls, key rotation, invalid-target, confidentiality, and receipt binding; "
+    "no qualifying independent review is recorded."
 )
 G2_MATRIX_NEXT_EVIDENCE = (
     "Dated independent external conformance-review result covering the exact complete Phase 2 surface after remediation."
@@ -186,6 +188,7 @@ def g2_surface_files(root: Path = ROOT) -> tuple[str, ...]:
         tuple(sorted((root / "prototype").glob("*.py"))),
         (root / "prototype" / "README.md",),
         (root / "spec" / "README.md",),
+        (root / "spec" / "adapter-conformance.json",),
         tuple(sorted((root / "spec").glob("*.schema.json"))),
         tuple(sorted((root / "spec" / "vectors").glob("*.json"))),
         tuple(sorted((root / "spec" / "semantic").glob("*.json"))),
@@ -220,8 +223,20 @@ def g2_surface_digest(root: Path = ROOT) -> str:
 def g2_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
     if not reviewed_commit_exists(commit, root):
         raise OSError("reviewed commit is unavailable")
+    listed = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", commit],
+        cwd=root,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    if listed.returncode != 0:
+        raise OSError("reviewed commit tree is unavailable")
+    commit_files = set(listed.stdout.splitlines())
     entries = []
     for relative in g2_surface_files(root):
+        if relative == "spec/adapter-conformance.json" and relative not in commit_files:
+            continue
         result = subprocess.run(
             ["git", "show", f"{commit}:{relative}"], cwd=root, capture_output=True, check=False
         )

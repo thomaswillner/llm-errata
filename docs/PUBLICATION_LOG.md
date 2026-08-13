@@ -1,5 +1,23 @@
 # Publication log
 
+## 2026-08-13 — adapter-conformance feedback incorporated for 0.4.0
+
+Rastislav Drahos/DanceNitra published an MIT-licensed candidate fixture at
+`DanceNitra/agora@2ba1e299b3483b9038d03387345702427608b90b`. Review reproduced
+the reported 5/5 result and found false-pass paths in exception handling,
+global name tracing, source binding, citation validation, declarative-only
+anti-vacuity cases, and partial expected outcomes. LLM Errata independently
+implemented the accepted behaviors with exact target-instance tracing,
+complete outcomes, bounded proposition multiplicity, exact mutation results,
+and executable validator attacks. The external runner and fixture were not
+copied or vendored.
+
+This is internal remediation from interested-party feedback. It does not
+satisfy G2 or G4. Repository ownership and licence terms are unchanged:
+Thomas Rainer Willner retains copyright in repository-authored files;
+independent specification implementations remain permitted under the
+attributed implementation grant; Reference Code remains separately restricted.
+
 This log records publication and outreach evidence. It does not upgrade a
 readiness gate. Last verified: 2026-08-13.
 

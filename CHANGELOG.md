@@ -6,7 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.3.0...HEAD)
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.4.0...HEAD)
+
+## [0.4.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.0) - 2026-08-13
+
+### Added — adapter conformance and validator hardening
+
+- Added five provider-neutral adapter cases with complete checkpoint,
+  aggregate, triad, store, and receipt outcomes. Calls are traced through the
+  exact target adapter instance rather than matched globally by function name.
+- Added bounded proposition-multiplicity preservation. Synthetic conformance
+  bindings expose stable provider-local proposition identity and active count;
+  an unobservable count is `unknown`, not a pass.
+- Added exact semantic mutation controls. A mutation must complete and produce
+  its declared counter-result; an exception or different failure cannot earn
+  credit.
+- Added three executable validator attacks covering empty receipts, incomplete
+  no-op feed acceptance, and constant-`unknown` semantic aggregation.
+- Added `errata adapter-conformance`, canonical JSON reporting, and distinct
+  pass, failed-control, and invalid-evidence exit codes.
+
+Rastislav Drahos/DanceNitra materially advanced this release by reporting the
+adapter-coverage gap, a real duplicate-preservation defect, candidate adapter
+behaviors, and the three anti-vacuity attacks. The immutable MIT-licensed source
+artifact is
+`DanceNitra/agora@2ba1e299b3483b9038d03387345702427608b90b`; Inspeximus is a G4
+candidate and the source commit discloses Claude Opus 5 co-authorship, so the
+input remains interested-party evidence. LLM Errata independently authored its
+corpus and validator without copying or vendoring that runner or fixture.
+
+### Status and ownership
+
+- Repository files authored here remain copyright Thomas Rainer Willner.
+  Contributor credit and MIT permission do not transfer copyright.
+- Existing licence terms are unchanged: independent commercial and
+  non-commercial specification implementations are permitted under the
+  attributed implementation grant; Reference Code remains restricted.
+- Verdict remains `NOT_PROD_READY`. G2 through G6 remain blocked by their
+  existing external evidence requirements.
 
 ### Added — production-readiness evidence
 

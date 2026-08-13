@@ -127,6 +127,12 @@ Only after the file-backed proof passes:
 4. Define the complete adapter interface for enumeration, root-specific lineage-completeness evidence, quarantine and quarantine-phase coverage, store-owned repair inputs, retirement, reconstruction, recall probes, final dispositions, and coverage reporting. Empty enumeration or missing phase evidence is `unknown`; final success cannot overwrite a worse durable checkpoint.
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
 6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
+7. Publish adapter-level conformance with exact target-instance call controls,
+   complete outcomes, bounded proposition multiplicity, exact semantic
+   mutations, and executable validator anti-vacuity attacks. **Implemented
+   internally:** [`prototype/conformance.py`](prototype/conformance.py),
+   [`spec/adapter-conformance.json`](spec/adapter-conformance.json), and
+   `errata adapter-conformance`. Passing is internal evidence, not G2 or G4.
 
 The CLI quarantine checkpoint is also implemented internally. `errata quarantine`
 authenticates exactly the next pending erratum, gates enumerable descendants,

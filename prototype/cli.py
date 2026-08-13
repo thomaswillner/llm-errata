@@ -28,10 +28,16 @@ from pathlib import Path
 
 from prototype.adapters import Coverage, OpaqueAdapter
 from prototype.checkpoints import CheckpointError
+from prototype.conformance import (
+    ConformanceInputError,
+    ReferenceConformanceBinding,
+    load_binding_factory,
+    validate_adapter_conformance,
+)
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_feed
 from prototype.lineage import LineageLedger
-from prototype.receipts import Receipt
+from prototype.receipts import Receipt, receipt_acceptance_errors
 from prototype.schema import load as load_schema, validate as validate_schema
 from prototype.semantic import (
     RecordedSemanticVerifier,
@@ -43,12 +49,45 @@ from prototype.semantic import (
 )
 from prototype.signing import Ed25519Signer
 from prototype.sqlite_store import SqliteAdapter
-from prototype.workspace import Workspace
+from prototype.workspace import ReceiptReadError, Workspace
 
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+def cmd_adapter_conformance(ws: Workspace, args: argparse.Namespace) -> int:
+    """Run provider-neutral adapter cases and validator self-controls."""
+
+    try:
+        if args.binding is None:
+            factory = ReferenceConformanceBinding
+            source = None
+            binding_root = args.binding_root
+        else:
+            binding_root = args.binding_root or args.source_root
+            with load_binding_factory(args.binding, binding_root) as (factory, source):
+                report = validate_adapter_conformance(
+                    args.corpus,
+                    args.source_root,
+                    factory,
+                    binding_root=binding_root,
+                    binding_source=source,
+                )
+        if args.binding is None:
+            report = validate_adapter_conformance(
+                args.corpus,
+                args.source_root,
+                factory,
+                binding_root=binding_root,
+                binding_source=source,
+            )
+    except ConformanceInputError as error:
+        print(f"invalid conformance evidence: {error}", file=sys.stderr)
+        return EXIT_INCONCLUSIVE
+    print(report.canonical_json())
+    return EXIT_OK if report.passed else EXIT_REFUSED
 
 
 def _load_json(path: Path, *, label: str) -> object:
@@ -317,16 +356,23 @@ def cmd_audit(ws: Workspace, args: argparse.Namespace) -> int:
 def cmd_verify(ws: Workspace, args: argparse.Namespace) -> int:
     """Check every receipt against the published key and the published schema."""
 
-    receipts = ws.all_receipts()
+    try:
+        receipts = ws.all_receipts()
+    except ReceiptReadError as error:
+        print(f"  {error} -> BAD")
+        return EXIT_REFUSED
     if not receipts:
         print("no receipts to verify", file=sys.stderr)
         return EXIT_REFUSED
 
     key = ws.importer_verification_key()
-    schema = load_schema("receipt")
     bad = 0
     for name, payload in receipts:
-        errors = validate_schema(payload, schema)
+        errors = receipt_acceptance_errors(payload)
+        if errors:
+            bad += 1
+            print(f"  {name}: signature=not-checked schema={errors[0]} -> BAD")
+            continue
         signature = payload.get("signature")
         rebuilt = Receipt(
             importer=payload["importer"],
@@ -368,6 +414,7 @@ COMMANDS = {
     "audit": cmd_audit,
     "verify": cmd_verify,
     "semantic-test": cmd_semantic_test,
+    "adapter-conformance": cmd_adapter_conformance,
 }
 
 
@@ -426,13 +473,22 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_test.add_argument("--config", required=True, type=Path)
     semantic_test.add_argument("--observations", required=True, type=Path)
     semantic_test.add_argument("--case", default="verified-correction")
+
+    adapter_conformance = sub.add_parser(
+        "adapter-conformance",
+        help="run adapter cases and validator anti-vacuity controls",
+    )
+    adapter_conformance.add_argument("--corpus", required=True, type=Path)
+    adapter_conformance.add_argument("--source-root", required=True, type=Path)
+    adapter_conformance.add_argument("--binding-root", type=Path)
+    adapter_conformance.add_argument("--binding")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     ws = Workspace(args.workspace)
-    if args.command not in {"init", "semantic-test"} and not ws.exists():
+    if args.command not in {"init", "semantic-test", "adapter-conformance"} and not ws.exists():
         print(
             f"no workspace at {args.workspace}; run `errata init` first",
             file=sys.stderr,

@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: "Willner"
     given-names: "Thomas Rainer"
-version: 0.3.0
-date-released: 2026-08-07
+version: 0.4.0
+date-released: 2026-08-13
 license: LicenseRef-LLM-Errata-Personal-Use
 license-url: "https://github.com/thomaswillner/llm-errata/blob/main/LICENSE"
 abstract: >-
@@ -21,4 +21,3 @@ keywords:
   - provenance
   - conformance
   - verifiable repair
-

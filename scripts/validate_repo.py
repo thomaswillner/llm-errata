@@ -394,6 +394,24 @@ def check_github_actions_runtime(reporter: Reporter) -> None:
         "Restore immutable Node 24 action pins. " + "; ".join(violations),
     )
 
+    validate_workflow = ROOT / ".github" / "workflows" / "validate.yml"
+    validate_text = read_utf8(validate_workflow) if validate_workflow.is_file() else ""
+    checkout_step = re.search(
+        rf"(?ms)^\s{{6}}- name: Check out the repository\s*$\n"
+        rf"^\s{{8}}uses: actions/checkout@{GITHUB_ACTION_PINS['actions/checkout']}[^\n]*$\n"
+        rf"^\s{{8}}with:\s*$\n"
+        rf"(?:(?:^\s{{10}}#.*$\n)*)"
+        rf"^\s{{10}}fetch-depth:\s*0\s*$",
+        validate_text,
+    )
+    reporter.check(
+        "GitHub Actions source history",
+        checkout_step is not None,
+        "validation checkout fetches immutable Git history required by conformance",
+        "Set actions/checkout fetch-depth to 0 in validate.yml so historical "
+        "normative commits are available to fail-closed conformance checks.",
+    )
+
 
 def check_publication_metadata(reporter: Reporter) -> None:
     readme_path = ROOT / "README.md"
@@ -593,23 +611,29 @@ def check_document_version_alignment(
             cells = [cell.strip() for cell in row.split("|")]
             if len(cells) == 4 and cells[0] == cells[-1] == "":
                 supported_rows.append((cells[1], cells[2]))
-    supported_yes = [
-        version
-        for version, status in supported_rows
-        if status == "Yes"
-    ]
     previous_minor = int(minor) - 1
-    required_unsupported_rows = {
+    released_rows = {
+        (f"{major}.{minor}.x", "Yes"),
         (f"{major}.{previous_minor}.x and earlier", "No"),
         ("Unreleased development revisions", "No"),
     }
+    prepared_rows = {
+        (f"{major}.{minor}.x", f"Yes, after `v{repository_version}` is published"),
+        (
+            f"{major}.{previous_minor}.x",
+            f"Yes, until `v{repository_version}` is published",
+        ),
+        (f"{major}.{previous_minor - 1}.x and earlier", "No"),
+        ("Unreleased development revisions", "No"),
+    }
+    supported_set = frozenset(supported_rows)
     reporter.check(
         "SECURITY supported version",
-        supported_yes == [f"{major}.{minor}.x"]
-        and required_unsupported_rows.issubset(set(supported_rows)),
-        f"SECURITY.md supports {major}.{minor}.x",
-        "Keep exactly one Yes row for VERSION major.minor.x and No rows for "
-        "the prior-version family and unreleased revisions.",
+        supported_set in {frozenset(released_rows), frozenset(prepared_rows)}
+        and len(supported_rows) == len(supported_set),
+        f"SECURITY.md is either release-prepared for or supports {major}.{minor}.x",
+        "Use exactly the conditional pre-release transition rows or the final "
+        "released VERSION row plus prior/unreleased No rows.",
     )
 
 

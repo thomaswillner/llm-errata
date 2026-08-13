@@ -14,6 +14,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from prototype.conformance import ReferenceConformanceBinding
+from prototype.receipts import receipt_acceptance_errors
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
@@ -21,6 +24,13 @@ SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+class ExplodingConformanceBinding(ReferenceConformanceBinding):
+    name = "exploding-test-binding"
+
+    def apply_mutation(self, case, importer, adapter, context) -> None:
+        raise RuntimeError("deliberate mutation failure")
 
 
 class CliCase(unittest.TestCase):
@@ -31,14 +41,19 @@ class CliCase(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_cli(
+        self, *args: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        pythonpath = str(REPO_ROOT)
+        if extra_pythonpath is not None:
+            pythonpath = f"{extra_pythonpath}:{pythonpath}"
         return subprocess.run(
             [sys.executable, "-m", "prototype.cli", "--workspace", ".errata", *args],
             cwd=self.cwd,
             capture_output=True,
             text=True,
             check=False,
-            env={"PYTHONPATH": str(REPO_ROOT), "PATH": "/usr/bin:/bin"},
+            env={"PYTHONPATH": pythonpath, "PATH": "/usr/bin:/bin"},
         )
 
     def seed(self) -> None:
@@ -62,6 +77,77 @@ class CliCase(unittest.TestCase):
         quarantine = self.run_cli("quarantine")
         self.assertEqual(quarantine.returncode, EXIT_OK, quarantine.stdout + quarantine.stderr)
         return self.run_cli("repair")
+
+
+class AdapterConformanceCommand(CliCase):
+    def run_conformance(
+        self, *extra: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        return self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(REPO_ROOT),
+            *extra,
+            extra_pythonpath=extra_pythonpath,
+        )
+
+    def test_reference_binding_emits_canonical_passing_report(self) -> None:
+        result = self.run_conformance()
+        self.assertEqual(result.returncode, EXIT_OK, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["passed"])
+        self.assertEqual(len(payload["cases"]), 5)
+        self.assertEqual(len(payload["validator_controls"]), 3)
+        self.assertRegex(payload["corpus_sha256"], r"^[0-9a-f]{64}$")
+        self.assertIn("not G2 or G4 evidence", payload["evidence_boundary"])
+        self.assertEqual(result.stdout.strip(), json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ))
+
+    def test_binding_execution_fault_exits_two(self) -> None:
+        result = self.run_conformance(
+            "--binding", "tests.test_cli:ExplodingConformanceBinding"
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("invalid conformance evidence", result.stderr)
+
+    def test_invalid_source_evidence_exits_two(self) -> None:
+        result = self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(self.cwd),
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("invalid conformance evidence", result.stderr)
+
+    def test_sourceless_binding_factory_exits_two_without_traceback(self) -> None:
+        result = self.run_conformance("--binding", "builtins:dict")
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_crashing_binding_import_exits_two_without_traceback(self) -> None:
+        binding_root = self.cwd / "binding"
+        binding_root.mkdir()
+        (binding_root / "broken.py").write_text(
+            'raise RuntimeError("top-level failure")\n', encoding="utf-8"
+        )
+        for command in (
+            ("git", "init", "-q"),
+            ("git", "config", "user.email", "tests@example.invalid"),
+            ("git", "config", "user.name", "CLI Tests"),
+            ("git", "add", "broken.py"),
+            ("git", "commit", "-q", "-m", "binding"),
+        ):
+            subprocess.run(command, cwd=binding_root, check=True)
+        result = self.run_conformance(
+            "--binding", "broken:factory", "--binding-root", str(binding_root),
+            extra_pythonpath=binding_root,
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("binding import failed: RuntimeError", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
 
 class WorkspaceLifecycle(CliCase):
@@ -182,11 +268,32 @@ class RepairReportsHonestly(CliCase):
 
 
 class ReceiptsAreVerifiable(CliCase):
+    def test_empty_receipt_is_rejected_by_shared_acceptance_seam(self) -> None:
+        self.assertIn("receipt is vacuous", receipt_acceptance_errors({}))
+
     def test_a_genuine_receipt_verifies(self) -> None:
         self.seed()
         self.publish_supersession()
         self.quarantine_and_repair()
         self.assertEqual(self.run_cli("verify").returncode, EXIT_OK)
+
+    def test_empty_receipt_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "empty.json"
+        path.write_text("{}", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt is vacuous", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_malformed_receipt_json_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "malformed.json"
+        path.write_text("{not json", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt JSON is unreadable", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_a_tampered_aggregate_is_caught(self) -> None:
         self.seed()
