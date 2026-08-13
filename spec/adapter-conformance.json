@@ -150,7 +150,7 @@
         "exact_counter_result": {
           "checkpoint": "verified",
           "aggregate": "failed",
-          "triad": {"negative": "pass", "positive": "pass", "preserve": "fail"},
+          "triad": {"negative": "pass", "positive": "fail", "preserve": "fail"},
           "store": {"multiplicity": "known", "erased_absent": null, "preserved_present": false, "unrelated_present": false},
           "receipt": {"names_store": true, "non_trivial": true, "forbidden_absent": null}
         }

@@ -13,9 +13,12 @@ from pathlib import Path
 
 from prototype.conformance import (
     ConformanceInputError,
+    ReferenceConformanceBinding,
     TracingAdapter,
     compare_complete_outcome,
     load_corpus,
+    run_validator_anti_vacuity_controls,
+    validate_adapter_conformance,
 )
 
 
@@ -158,6 +161,60 @@ class CompleteComparison(unittest.TestCase):
         failures = compare_complete_outcome(expected, observed)
         self.assertIn("receipt.names_store: missing", failures)
         self.assertIn("store.unexpected: unexpected", failures)
+
+
+class AdapterCases(unittest.TestCase):
+    def test_reference_binding_passes_five_cases_and_exact_mutations(self) -> None:
+        report = validate_adapter_conformance(
+            CORPUS, ROOT, ReferenceConformanceBinding
+        )
+        self.assertTrue(report.passed, report.canonical_json())
+        self.assertEqual(len(report.cases), 5)
+        for result in report.cases:
+            self.assertTrue(result.expectation_met, result.failures)
+            self.assertTrue(result.positive_control_passed, result.missing_calls)
+            self.assertTrue(result.mutation_control_passed, result.mutation_failures)
+
+    def test_mutation_exception_is_failed_control_not_success(self) -> None:
+        class ExplodingBinding(ReferenceConformanceBinding):
+            name = "exploding"
+
+            def apply_mutation(self, case, importer, adapter, context) -> None:
+                raise RuntimeError("mutation setup broke")
+
+        report = validate_adapter_conformance(CORPUS, ROOT, ExplodingBinding)
+        self.assertFalse(report.passed)
+        self.assertTrue(
+            all(not result.mutation_control_passed for result in report.cases)
+        )
+        self.assertTrue(
+            all(
+                any("unexpected RuntimeError" in item for item in result.mutation_failures)
+                for result in report.cases
+            )
+        )
+
+
+class AntiVacuity(unittest.TestCase):
+    def test_all_declared_validator_attacks_are_rejected(self) -> None:
+        controls = run_validator_anti_vacuity_controls()
+        self.assertEqual(
+            [item.control_id for item in controls],
+            [
+                "empty-receipt-must-fail",
+                "no-op-feed-verification-must-fail",
+                "constant-unknown-aggregator-must-fail",
+            ],
+        )
+        self.assertTrue(all(item.passed for item in controls), controls)
+        self.assertEqual(
+            [item.observed_failure for item in controls],
+            [
+                "receipt is vacuous",
+                "accepted feed is incomplete",
+                "semantic verdict diversity is missing",
+            ],
+        )
 
 if __name__ == "__main__":
     unittest.main()
