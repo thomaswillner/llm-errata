@@ -587,16 +587,16 @@ class ReferenceConformanceAdapter:
         return result
 
     def proposition_observations(self) -> tuple[PropositionObservation, ...]:
-        counts: dict[str, int] = {}
-        for identities in self._active_propositions.values():
-            for proposition_id in identities:
-                counts[proposition_id] = counts.get(proposition_id, 0) + 1
         labels = {
             "fixture:diet": "diet",
             "fixture:quiet": "quiet",
             "fixture:budget": "budget",
             "fixture:pet": "pet",
         }
+        counts = {proposition_id: 0 for proposition_id in labels}
+        for identities in self._active_propositions.values():
+            for proposition_id in identities:
+                counts[proposition_id] = counts.get(proposition_id, 0) + 1
         return tuple(
             PropositionObservation(proposition_id, labels[proposition_id], count)
             for proposition_id, count in sorted(counts.items())
