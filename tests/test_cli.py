@@ -41,14 +41,19 @@ class CliCase(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_cli(
+        self, *args: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        pythonpath = str(REPO_ROOT)
+        if extra_pythonpath is not None:
+            pythonpath = f"{extra_pythonpath}:{pythonpath}"
         return subprocess.run(
             [sys.executable, "-m", "prototype.cli", "--workspace", ".errata", *args],
             cwd=self.cwd,
             capture_output=True,
             text=True,
             check=False,
-            env={"PYTHONPATH": str(REPO_ROOT), "PATH": "/usr/bin:/bin"},
+            env={"PYTHONPATH": pythonpath, "PATH": "/usr/bin:/bin"},
         )
 
     def seed(self) -> None:
@@ -75,12 +80,15 @@ class CliCase(unittest.TestCase):
 
 
 class AdapterConformanceCommand(CliCase):
-    def run_conformance(self, *extra: str) -> subprocess.CompletedProcess[str]:
+    def run_conformance(
+        self, *extra: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return self.run_cli(
             "adapter-conformance",
             "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
             "--source-root", str(REPO_ROOT),
             *extra,
+            extra_pythonpath=extra_pythonpath,
         )
 
     def test_reference_binding_emits_canonical_passing_report(self) -> None:
@@ -117,6 +125,28 @@ class AdapterConformanceCommand(CliCase):
         result = self.run_conformance("--binding", "builtins:dict")
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
         self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_crashing_binding_import_exits_two_without_traceback(self) -> None:
+        binding_root = self.cwd / "binding"
+        binding_root.mkdir()
+        (binding_root / "broken.py").write_text(
+            'raise RuntimeError("top-level failure")\n', encoding="utf-8"
+        )
+        for command in (
+            ("git", "init", "-q"),
+            ("git", "config", "user.email", "tests@example.invalid"),
+            ("git", "config", "user.name", "CLI Tests"),
+            ("git", "add", "broken.py"),
+            ("git", "commit", "-q", "-m", "binding"),
+        ):
+            subprocess.run(command, cwd=binding_root, check=True)
+        result = self.run_conformance(
+            "--binding", "broken:factory", "--binding-root", str(binding_root),
+            extra_pythonpath=binding_root,
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("binding import failed: RuntimeError", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
 

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import inspect
 import json
 import re
 import signal
 import subprocess
+import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -940,6 +942,85 @@ def _binding_source(
     }
 
 
+def load_binding_factory(
+    value: str,
+    binding_root: Path,
+) -> tuple[Callable[[], ReferenceConformanceBinding], dict[str, str]]:
+    """Admit tracked module bytes before bounded import executes them."""
+
+    try:
+        module_name, object_name = value.split(":", 1)
+    except ValueError as error:
+        raise ConformanceInputError(
+            "binding must be an importable module:factory"
+        ) from error
+    identifier = re.compile(r"^[A-Za-z_]\w*$")
+    parts = module_name.split(".")
+    if not parts or not all(identifier.fullmatch(part) for part in parts) or not identifier.fullmatch(
+        object_name
+    ):
+        raise ConformanceInputError("binding must be an importable module:factory")
+
+    root = binding_root.resolve()
+    module_path = root.joinpath(*parts).with_suffix(".py")
+    package_path = root.joinpath(*parts, "__init__.py")
+    candidates = [path for path in (module_path, package_path) if path.is_file()]
+    if len(candidates) != 1:
+        raise ConformanceInputError("binding module must resolve to one repository file")
+    admitted_path = candidates[0].resolve()
+    relative = admitted_path.relative_to(root).as_posix()
+    tracked = set(_git(root, "ls-files", "--cached").decode("utf-8").splitlines())
+    if relative not in tracked:
+        raise ConformanceInputError("binding source is not tracked by the runtime tree")
+    commit, tree = _runtime_identity(root)
+    source = {
+        "commit": commit,
+        "tree": tree,
+        "path": relative,
+        "sha256": hashlib.sha256(admitted_path.read_bytes()).hexdigest(),
+    }
+
+    try:
+        search_locations = [str(admitted_path.parent)] if admitted_path.name == "__init__.py" else None
+        spec = importlib.util.spec_from_file_location(
+            module_name, admitted_path, submodule_search_locations=search_locations
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("binding module loader is unavailable")
+        module = importlib.util.module_from_spec(spec)
+        prior_module = sys.modules.get(module_name)
+        sys.modules[module_name] = module
+
+        def execute_import() -> None:
+            spec.loader.exec_module(module)
+
+        _run_with_timeout(execute_import)
+        factory = getattr(module, object_name)
+    except _BindingTimeout as error:
+        raise ConformanceInputError("binding import timed out") from error
+    except BaseException as error:
+        if isinstance(error, KeyboardInterrupt):
+            raise
+        raise ConformanceInputError(
+            f"binding import failed: {type(error).__name__}"
+        ) from error
+    finally:
+        if "prior_module" in locals():
+            if prior_module is None:
+                sys.modules.pop(module_name, None)
+            else:
+                sys.modules[module_name] = prior_module
+    if not callable(factory):
+        raise ConformanceInputError("binding factory must be callable")
+    try:
+        loaded_path = Path(inspect.getsourcefile(factory) or "").resolve()
+    except (OSError, TypeError, ValueError) as error:
+        raise ConformanceInputError("binding factory has no admitted source") from error
+    if loaded_path != admitted_path:
+        raise ConformanceInputError("binding factory source differs from admitted module")
+    return factory, source
+
+
 class _BindingTimeout(Exception):
     pass
 
@@ -968,10 +1049,11 @@ def validate_adapter_conformance(
     source_root: Path,
     binding_factory: Callable[[], ReferenceConformanceBinding],
     binding_root: Path | None = None,
+    binding_source: dict[str, str] | None = None,
 ) -> ConformanceReport:
     runtime_commit, runtime_tree = _runtime_identity(source_root)
     corpus = load_corpus(corpus_path, source_root, require_canonical_path=True)
-    binding_source = _binding_source(binding_factory, binding_root)
+    source_identity = binding_source or _binding_source(binding_factory, binding_root)
     try:
         binding = _run_with_timeout(binding_factory)
     except _BindingTimeout as error:
@@ -1046,7 +1128,7 @@ def validate_adapter_conformance(
         corpus_sha256=corpus.sha256,
         runtime_commit=runtime_commit,
         runtime_tree=runtime_tree,
-        binding_source=binding_source,
+        binding_source=source_identity,
         cases=tuple(results),
         validator_controls=run_validator_anti_vacuity_controls(corpus, source_root),
         provenance=corpus.provenance,

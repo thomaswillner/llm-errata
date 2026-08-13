@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -23,6 +24,7 @@ from prototype.conformance import (
     compare_complete_outcome,
     compare_proposition_multiplicity,
     load_corpus,
+    load_binding_factory,
     run_validator_anti_vacuity_controls,
     validate_adapter_conformance,
 )
@@ -364,6 +366,45 @@ class RuntimeSourceIdentity(unittest.TestCase):
 
         with self.assertRaisesRegex(ConformanceInputError, "clean Git repository"):
             _binding_source(dict, None)
+
+    def test_binding_import_runtime_error_is_invalid_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-import-") as directory:
+            root = Path(directory)
+            (root / "broken.py").write_text(
+                'raise RuntimeError("top-level failure")\n', encoding="utf-8"
+            )
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "broken.py"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            with patch("sys.path", [str(root), *sys.path]):
+                with self.assertRaisesRegex(ConformanceInputError, "RuntimeError"):
+                    load_binding_factory("broken:factory", root)
+
+    def test_binding_import_has_a_hard_timeout(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-import-") as directory:
+            root = Path(directory)
+            (root / "slow.py").write_text(
+                "import time\ntime.sleep(0.1)\ndef factory():\n    return None\n",
+                encoding="utf-8",
+            )
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "slow.py"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            with patch("sys.path", [str(root), *sys.path]), patch(
+                "prototype.conformance.BINDING_TIMEOUT_SECONDS", 0.01
+            ):
+                with self.assertRaisesRegex(ConformanceInputError, "import timed out"):
+                    load_binding_factory("slow:factory", root)
 
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
