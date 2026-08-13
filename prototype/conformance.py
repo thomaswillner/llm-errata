@@ -973,26 +973,32 @@ def load_binding_factory(
     if relative not in tracked:
         raise ConformanceInputError("binding source is not tracked by the runtime tree")
     commit, tree = _runtime_identity(root)
+    admitted_bytes = admitted_path.read_bytes()
     source = {
         "commit": commit,
         "tree": tree,
         "path": relative,
-        "sha256": hashlib.sha256(admitted_path.read_bytes()).hexdigest(),
+        "sha256": hashlib.sha256(admitted_bytes).hexdigest(),
     }
 
     try:
         search_locations = [str(admitted_path.parent)] if admitted_path.name == "__init__.py" else None
-        spec = importlib.util.spec_from_file_location(
-            module_name, admitted_path, submodule_search_locations=search_locations
+        spec = importlib.util.spec_from_loader(
+            module_name, loader=None, origin=str(admitted_path),
+            is_package=search_locations is not None,
         )
-        if spec is None or spec.loader is None:
-            raise ImportError("binding module loader is unavailable")
+        if spec is None:
+            raise ImportError("binding module specification is unavailable")
+        if search_locations is not None:
+            spec.submodule_search_locations = search_locations
         module = importlib.util.module_from_spec(spec)
+        module.__file__ = str(admitted_path)
         prior_module = sys.modules.get(module_name)
         sys.modules[module_name] = module
 
         def execute_import() -> None:
-            spec.loader.exec_module(module)
+            code = compile(admitted_bytes, str(admitted_path), "exec")
+            exec(code, module.__dict__)
 
         _run_with_timeout(execute_import)
         factory = getattr(module, object_name)
@@ -1018,6 +1024,9 @@ def load_binding_factory(
         raise ConformanceInputError("binding factory has no admitted source") from error
     if loaded_path != admitted_path:
         raise ConformanceInputError("binding factory source differs from admitted module")
+    post_commit, post_tree = _runtime_identity(root)
+    if post_commit != commit or post_tree != tree:
+        raise ConformanceInputError("binding repository identity changed during import")
     return factory, source
 
 

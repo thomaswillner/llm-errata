@@ -406,6 +406,35 @@ class RuntimeSourceIdentity(unittest.TestCase):
                 with self.assertRaisesRegex(ConformanceInputError, "import timed out"):
                     load_binding_factory("slow:factory", root)
 
+    def test_binding_executes_the_admitted_bytes_not_a_reopened_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="errata-binding-import-") as directory:
+            root = Path(directory)
+            source = root / "stable.py"
+            source.write_text(
+                'def factory():\n    return "ADMITTED"\n', encoding="utf-8"
+            )
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Conformance Tests"),
+                ("git", "add", "stable.py"),
+                ("git", "commit", "-q", "-m", "binding"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            original_read = Path.read_bytes
+
+            def substitute_after_read(path: Path) -> bytes:
+                payload = original_read(path)
+                if path.resolve() == source.resolve():
+                    source.write_text(
+                        'def factory():\n    return "SUBSTITUTED"\n', encoding="utf-8"
+                    )
+                return payload
+
+            with patch("pathlib.Path.read_bytes", substitute_after_read):
+                with self.assertRaisesRegex(ConformanceInputError, "dirty"):
+                    load_binding_factory("stable:factory", root)
+
     def test_dirty_runtime_tree_is_refused_before_binding_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="errata-dirty-source-") as directory:
             source_root = Path(directory)
