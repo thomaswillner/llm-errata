@@ -49,7 +49,7 @@ from prototype.semantic import (
 )
 from prototype.signing import Ed25519Signer
 from prototype.sqlite_store import SqliteAdapter
-from prototype.workspace import Workspace
+from prototype.workspace import ReceiptReadError, Workspace
 
 
 EXIT_OK = 0
@@ -352,7 +352,11 @@ def cmd_audit(ws: Workspace, args: argparse.Namespace) -> int:
 def cmd_verify(ws: Workspace, args: argparse.Namespace) -> int:
     """Check every receipt against the published key and the published schema."""
 
-    receipts = ws.all_receipts()
+    try:
+        receipts = ws.all_receipts()
+    except ReceiptReadError as error:
+        print(f"  {error} -> BAD")
+        return EXIT_REFUSED
     if not receipts:
         print("no receipts to verify", file=sys.stderr)
         return EXIT_REFUSED

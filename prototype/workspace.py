@@ -25,6 +25,10 @@ from prototype.receipts import Receipt
 from prototype.signing import Ed25519Signer, VerificationKey
 
 
+class ReceiptReadError(ValueError):
+    """A persisted receipt cannot be parsed as JSON evidence."""
+
+
 class Workspace:
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
@@ -238,10 +242,16 @@ class Workspace:
     def all_receipts(self) -> list[tuple[str, dict[str, Any]]]:
         if not self.receipts_dir.is_dir():
             return []
-        return [
-            (p.name, json.loads(p.read_text(encoding="utf-8")))
-            for p in sorted(self.receipts_dir.glob("*.json"))
-        ]
+        receipts = []
+        for path in sorted(self.receipts_dir.glob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ReceiptReadError(
+                    f"{path.name}: receipt JSON is unreadable"
+                ) from error
+            receipts.append((path.name, payload))
+        return receipts
 
     def latest_receipt(self) -> dict[str, Any] | None:
         receipts = self.all_receipts()
