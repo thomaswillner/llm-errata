@@ -39,11 +39,15 @@ reference implementation. It does not change the project verdict from
   and anti-vacuity findings. It must identify the immutable source commit,
   MIT licence, interested-party conflict, and disclosed Claude Opus 5
   co-authorship.
-- Existing LLM Errata licence terms remain unchanged. Any product or
-  commercial implementation remains subject to repository terms, including
-  accessible credit to LLM Errata and Thomas Willner and any required written
-  grant. Technical adoption, contributor credit, or release publication does
-  not imply endorsement, partnership, certification, or commercial permission.
+- Existing LLM Errata licence terms remain unchanged. Independent commercial
+  and non-commercial implementations of the Specification Materials are
+  already permitted by the repository's irrevocable, royalty-free
+  implementation grant, subject to accessible credit to LLM Errata and Thomas
+  Willner and the no-false-endorsement condition. Commercial use, copying,
+  redistribution, hosting, or adaptation of Reference Code still requires
+  separate written permission unless another licence expressly applies.
+  Technical adoption, contributor credit, or release publication does not
+  imply endorsement, partnership, certification, or transfer of copyright.
 
 ## Normative preservation rule
 
