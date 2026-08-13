@@ -93,6 +93,16 @@ ANCHORS: tuple[tuple[str, str, str], ...] = (
         "coverage truthfulness boundary",
     ),
     (
+        "IDEA.md",
+        "An empty enumeration is not evidence of complete lineage.",
+        "empty enumeration is not verified coverage",
+    ),
+    (
+        "IDEA.md",
+        "A receipt establishes the signed event accepted by one importer.",
+        "receipt is importer-view evidence",
+    ),
+    (
         "PRIOR_ART.md",
         "## What would invalidate the claim",
         "falsifier section",

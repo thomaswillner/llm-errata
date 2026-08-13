@@ -33,7 +33,7 @@ No individual mechanism is claimed as new.
 | [EngramSpec](https://engramspec.org/) | **Yes/Partial:** live correction endpoint and pull-based incremental diffs with tombstones; no webhook/push model in v0.1 | No requirement found for quarantine and repair of importer-local summaries, vectors, graphs, or caches | No requirement found | No repair callback found | **Strongest AI-memory transport collision.** It substantially eliminates “portable corrections” as the novel idea, but not importer-local repair conformance. |
 | [vCon Lifecycle using SCITT](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) with [SCITT RFC 9943](https://datatracker.ietf.org/doc/rfc9943/) | **Yes:** lifecycle events and acknowledgments across recipients | No AI-memory descendant-repair requirement; workflow implementation is left to applications | No | **Partial:** acknowledgments and SCITT inclusion receipts, not a semantic-repair coverage receipt | **Strongest formal control-plane collision.** It proves that cross-recipient lifecycle events and transparent receipts are not new. |
 | [Shomei](https://shomei.ai/how-it-works/) ([API](https://shomei.ai/docs/http-api/), [governance](https://shomei.ai/docs/governance-and-receipts/)) | **Partial:** governed correction/update inside the Shomei boundary; no reviewed persistent post-export importer subscription/callback obligation | **Yes locally:** derived lineage, erasure cascades, and explicit external-delete-pending states | **Partial:** bounded governance evidence, but no reviewed mandatory negative + positive + preservation profile for each importer | **Partial:** signed, bounded governance receipts, but not the complete cross-importer callback | **Strongest governed-memory product collision.** It establishes local lineage, lifecycle, honest coverage, and receipts. |
-| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Yes locally, within declared lineage:** `retract_lineage` demotes a root and its recorded descendants from default recall, retains them as superseded with `needs_rederivation`, and `rederive` can rebuild against the correction | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence plus an `erasure_audit` coverage ratio, but incomplete declared lineage above zero is not itself a failing result and there is no cross-importer callback | **Strongest open-source local correction collision.** It substantially implements quarantine-then-rebuild inside one store. Its documented limit remains recorded lineage and its own boundary, not prior independent importers. |
+| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Yes locally, within declared lineage:** `retract_lineage` demotes a root and its recorded descendants from default recall, retains them as superseded with `needs_rederivation`, and `rederive` can rebuild against the correction | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence; current `erasure_audit` demotes known unresolved derivation holes but still cannot prove subject-specific completeness after a correct content-free cascade, and there is no cross-importer callback | **Strongest open-source local correction collision.** It substantially implements quarantine-then-rebuild inside one store. Its documented limit remains recorded lineage and its own boundary, not prior independent importers. |
 | [MemoRepair](https://arxiv.org/abs/2605.07242v1) | No cross-system delivery | **Yes, as an explicit contract:** descendants withdrawn before repair, republication restricted to validated predecessor-closed successors; invalidated-memory exposure cut from 69.8–94.3% to 0% *given complete influence provenance* | **Partial:** validated republication, no preservation test | No | **Strongest requirement-B collision found.** It independently arrives at quarantine-before-repair. Added 2026-08-07; post-dates the original cutoff. |
 | [Governed Evolving Memory](https://arxiv.org/abs/2605.26252v1) | No | **Partial:** formal correctness conditions for dependency consistency and provenance preservation | No | No | Argues record-level stores cannot satisfy those conditions. |
 | [Always-On Agents / AOEP-v0](https://arxiv.org/abs/2606.30306v1) | No | Governance obligations scored, not implemented | **Partial:** a deterministic evaluation contract scoring state mutation and recovery rather than answer quality | No | **Closest conformance-protocol collision.** |
@@ -93,14 +93,26 @@ the corrected root. That is a stronger requirement-B collision than the
 previous comparison to `forget_subject` and should be treated as local
 quarantine-then-rebuild, not merely deletion.
 
-The same pinned documentation describes `erasure_audit()` returning
-`coverage{records, with_declared_lineage, undeclared_derived, declared_ratio}`.
-Its tests force `unaudited` when declared lineage is zero, but a nonzero
-incomplete ratio can still return `no_declared_residue`. LLM Errata's required-
-store aggregation is therefore stricter: unresolved required coverage cannot
-become aggregate success. The Inspeximus maintainer additionally disclosed a
-0.0000 declared-lineage ratio in its dogfood store; this repository records that
-as interested-party testimony, not independently reproduced code evidence.
+The earlier pinned documentation described `erasure_audit()` returning
+`coverage{records, with_declared_lineage, undeclared_derived, declared_ratio}`
+and allowed a nonzero incomplete ratio to return `no_declared_residue`. The
+maintainer accepted that finding and changed commit
+[`36611027a463a8e526e23baf2d6bb8d9797b67ac`](https://github.com/DanceNitra/inspeximus/commit/36611027a463a8e526e23baf2d6bb8d9797b67ac): known unresolved derivation holes
+now return `partially_audited`, and the audit reports
+`subject_reachable_records`. The maintainer also found that zero subject reach
+cannot gate success because a correct content-free cascade can erase the same
+evidence needed to distinguish “nothing was declared” from “everything was
+erased.” That residual limit is material.
+
+The same conflict-disclosed review found a mirror defect in LLM Errata: an
+adapter could enumerate an empty set without proving root-specific lineage
+completeness and still receive `verified`. The earlier sentence claiming this
+repository's aggregation was categorically stricter was therefore false. The
+reference controller now maps that unsupported empty walk to `unknown`, while
+preserving the four public coverage results. Both projects still trust their
+own adapter or store instrumentation and neither result is independent
+certification. The maintainer's 0.0000 dogfood ratio remains interested-party
+testimony, not independently reproduced evidence.
 
 These mechanisms apply to explicitly keyed or successfully extractor-keyed
 assertions and recorded lineage. The documented scope is one store, not every

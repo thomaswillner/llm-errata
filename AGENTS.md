@@ -111,6 +111,10 @@ Never convert missing lineage, inaccessible stores, skipped tests, timeouts, or 
   mentions, publication, maintainer work, and CI cannot upgrade G2 through G6.
 - Run `make publication` whenever an active surface, frozen target, evidence
   role, mention, supersession URL, or implementation-licence posture changes.
+- Targeted outreach must begin with a plain-language description of the user
+  problem and exact bounded question. Do not send a specialist only an internal
+  gate label, digest, or repository jargon and expect them to infer why the
+  request matters.
 
 ## Implementation and test expectations
 

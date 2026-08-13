@@ -126,6 +126,14 @@ class FeedRejectsForgeryAndReplay(unittest.TestCase):
             verify_feed([first, equivocation], owner=OWNER.public, roots=ROOTS)
         self.assertIn("conflict", str(raised.exception))
 
+    def test_same_id_with_different_signed_content_is_also_a_conflict(self) -> None:
+        first = OWNER.sign_erratum(erratum(1, erratum_id="err_same"))
+        second = OWNER.sign_erratum(
+            erratum(1, erratum_id="err_same", replacement="different state")
+        )
+        with self.assertRaisesRegex(FeedError, "conflict"):
+            verify_feed([first, second], owner=OWNER.public, roots=ROOTS)
+
 
 class FeedRejectsAmbiguousOrIllFormedTargets(unittest.TestCase):
     def test_an_unregistered_target_root_is_rejected(self) -> None:

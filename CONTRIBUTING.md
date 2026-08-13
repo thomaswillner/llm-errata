@@ -46,11 +46,15 @@ A conformance change should state:
 - the normative behavior using clear MUST, SHOULD, or MAY language;
 - observable inputs, outputs, and state transitions;
 - failure, timeout, replay, partial-coverage, and unobservable-store behavior;
+- empty enumeration with and without root-specific lineage-completeness evidence;
+- same-importer conflicts separately from owner split views across importers;
 - security and privacy consequences;
 - positive, negative, and preservation tests;
 - backward-compatibility implications.
 
 Whenever possible, include machine-readable examples and deterministic tests. A receipt format must use the canonical terminal coverage results `verified`, `partial`, `unknown`, and `failed`. `Pending` is a lifecycle state, not a successful coverage result; stores outside the required scope are omitted.
+An adapter must not infer complete coverage from an empty enumeration. It needs
+explicit root-specific lineage-completeness evidence or must return `unknown`.
 
 ## Implementations
 

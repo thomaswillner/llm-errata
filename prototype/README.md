@@ -31,7 +31,7 @@ non-green result cannot be mistaken for a bug in the aggregation.
 
 | Module | Responsibility |
 |---|---|
-| `errata.py` | The trust boundary. Rejects forgery, tampering, rollback, sequence gaps, equivocation, unknown targets, and operations that carry the wrong shape. |
+| `errata.py` | The importer-view trust boundary. Rejects forgery, tampering, rollback, sequence gaps, conflicts visible to that importer, unknown targets, and operations that carry the wrong shape. It cannot detect a different signed view delivered only to another importer. |
 | `lineage.py` | Exact lineage recorded at import and derivation time, not reconstructed afterwards. Supplies the known derivation closure and the inputs that survive a retirement. |
 | `adapters.py` | The three stores, plus the four coverage results. |
 | `strategies.py` | How a repair is carried out. One conforming strategy and three that are not, because a conformance suite where nothing can fail has not tested anything. |
@@ -86,6 +86,13 @@ and gated artifact set. `repair` re-authenticates and refuses missing, mutated,
 consumed, wrong-target, state-drifted, adapter-drifted, or ungated evidence.
 Consumption happens only after receipt and applied-state writeback, so an
 interrupted rebuild retains an unconsumed checkpoint for safe resume.
+
+Enumeration is necessary but not sufficient for verified coverage. An adapter
+must also expose `lineage_complete(root) -> True`, backed by a write-time or
+audited root-specific lineage authority. Missing or false evidence makes that
+required store `unknown`, even when enumeration returns an empty tuple and the
+adapter's own coverage method claims `verified`. This is an adapter attestation,
+not independent proof against a dishonest store.
 
 Exit codes are part of the interface. `0` is success, `1` is a refusal or a
 failed check, and **`2` means the repair ran and the result is not verified**.

@@ -15,6 +15,12 @@ verifies the importer and every signable byte. D2 coverage truthfulness checks
 that signed stores, aggregate, and limitations match the declared required
 scope. A correctly signed receipt that overstates coverage passes D1 and fails
 D2; signature validity never upgrades missing or opaque evidence.
+
+The reference adapter contract treats an empty enumeration without explicit
+root-specific lineage-completeness evidence as `unknown`. Receipts also carry a
+signed limitation that importer-local sequencing cannot establish global owner
+non-equivocation across split views. The wire coverage vocabulary remains the
+four terminal results `verified`, `partial`, `unknown`, and `failed`.
 | `semantic/probes.json` | Named, strict semantic-probe sets for offline conformance. |
 | `semantic/verifier-config.json` | Exact synthetic verifier configuration, whose canonical digest binds every observation. |
 | `semantic/observations.json` | Named recorded-observation sets for the matching probe cases. |

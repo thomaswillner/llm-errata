@@ -83,6 +83,19 @@ The assessment makes libsodium the stronger audited-lineage candidate. It does
 not justify describing 1.0.22 or an application binding as independently
 audited without reviewing changes since 1.0.13 and the exact production build.
 
+### Maintainer-provided pure-Python comparison
+
+In response to the review request, libsodium maintainer Frank Denis pointed to
+[`jedisct1/ed25519.py`](https://github.com/jedisct1/ed25519.py) at commit
+`67902d339ea47418a60fb7684255b81bc4f6d46e`. Its documentation describes RFC
+8032 vectors, canonical and small-order refusal, batch verification, and
+optional randomized signing countermeasures. This is relevant design and
+compatibility evidence, but it does not change the production decision: it is
+still pure Python, no independent audit or exact-build side-channel review was
+found, and no repository licence file was detected. It may be used as a
+comparison oracle after its licensing status is clarified; it is not the G3
+production backend.
+
 ## Required production design
 
 A qualifying implementation must preserve these contracts:

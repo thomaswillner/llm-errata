@@ -211,6 +211,35 @@ class StatefulProtocolVectors(unittest.TestCase):
                             events, owner=schedule, roots=RootRegistry(case["roots"])
                         )
 
+    def test_split_view_vector_accepts_each_view_but_proves_no_global_consistency(self) -> None:
+        for case in self.protocol["split_view_cases"]:
+            with self.subTest(case=case["id"]):
+                signers = {
+                    key_id: DemoSigner(seed.encode(), key_id=key_id)
+                    for key_id, seed in case["keys"].items()
+                }
+                schedule = OwnerKeySchedule(tuple(
+                    (activation["sequence"], signers[activation["key_id"]].public)
+                    for activation in case["schedule"]
+                ))
+                accepted_views = [
+                    verify_feed(
+                        [self._event(record, signers) for record in view],
+                        owner=schedule,
+                        roots=RootRegistry(case["roots"]),
+                    )
+                    for view in case["views"]
+                ]
+                self.assertEqual([len(view) for view in accepted_views], [1, 1])
+                self.assertNotEqual(
+                    accepted_views[0][0].erratum_id,
+                    accepted_views[1][0].erratum_id,
+                )
+                self.assertEqual(
+                    case["outcome"],
+                    "accept-each-view-with-global-non-equivocation-unproven",
+                )
+
     def test_confidentiality_vector_keeps_forbidden_value_out_of_evidence(self) -> None:
         case = self.protocol["confidentiality_case"]
         importer = build_importer(OWNER)

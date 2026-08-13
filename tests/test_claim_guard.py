@@ -105,6 +105,30 @@ class ClaimGuardRejectsInvariantLoss(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("coverage truthfulness boundary", result.stdout)
 
+    def test_empty_enumeration_cannot_become_complete_lineage(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "An empty enumeration is not evidence of complete lineage.",
+                "An empty enumeration proves complete lineage.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("empty enumeration", result.stdout)
+
+    def test_receipt_cannot_claim_global_feed_consistency(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "A receipt establishes the signed event accepted by one importer.",
+                "A receipt establishes the globally consistent owner feed.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("importer-view evidence", result.stdout)
+
     def test_inverted_loop_order_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             path = root / "IDEA.md"

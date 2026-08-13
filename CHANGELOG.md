@@ -10,6 +10,14 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ### Added — production-readiness evidence
 
+- Corrected two conflict-disclosed external findings. Importers now remember
+  same-view sequence conflicts across separate observe calls, while receipts
+  explicitly disclaim global non-equivocation across split views. Required
+  adapters must establish root-specific lineage completeness before an empty
+  enumeration can receive `verified`; unsupported empty walks become `unknown`
+  with a signed limitation. The earlier categorical comparison claiming LLM
+  Errata was stricter than Inspeximus is withdrawn and replaced with the
+  verified limits and remediations in both projects.
 - Upgraded both GitHub Actions workflows to immutable `actions/checkout`
   v7.0.1 and `actions/setup-python` v7.0.0 commit pins. Both action releases use
   Node 24, removing GitHub's Node 20 deprecation path without changing the

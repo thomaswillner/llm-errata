@@ -21,6 +21,7 @@ import math
 import re
 from dataclasses import dataclass
 from enum import Enum
+from typing import Protocol
 
 from prototype.lineage import LineageLedger
 
@@ -61,6 +62,28 @@ class HistoricalHit:
     valid_until: str
 
 
+class StoreAdapter(Protocol):
+    """Minimum fail-closed contract for one required retrieval store."""
+
+    name: str
+    required: bool
+
+    def enumerate(self, root: str) -> tuple[str, ...]: ...
+
+    def lineage_complete(self, root: str) -> bool:
+        """Whether enumeration is complete under a root-specific authority."""
+
+        ...
+
+    def quarantine(self, artifact_ids: tuple[str, ...]) -> None: ...
+
+    def is_quarantined(self, artifact_id: str) -> bool: ...
+
+    def coverage(self, root: str) -> Coverage: ...
+
+    def dispositions(self, root: str) -> dict[str, str]: ...
+
+
 class MarkdownAdapter:
     """A file-backed store with exact lineage."""
 
@@ -81,6 +104,15 @@ class MarkdownAdapter:
                 for item in self._ledger.descendants(root)
                 if self._ledger.store_of(item) == self.name
             )
+        )
+
+    def lineage_complete(self, root: str) -> bool:
+        """The write-time ledger is this adapter's enumeration authority."""
+
+        return root in self._ledger.roots_seen() and all(
+            artifact.artifact_id in self._ledger.descendants(root)
+            for artifact in self._ledger.artifacts()
+            if artifact.store == self.name and artifact.root == root
         )
 
     def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
@@ -228,6 +260,18 @@ class VectorAdapter:
             )
         )
 
+    def lineage_complete(self, root: str) -> bool:
+        """Every indexed entry records its source in ``_source_of`` at write time."""
+
+        return (
+            root in self._ledger.roots_seen()
+            and set(self._text).issubset(self._source_of)
+            and all(
+                source in self._ledger.artifact_ids()
+                for source in self._source_of.values()
+            )
+        )
+
     def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
         self._quarantined.update(artifact_ids)
 
@@ -324,6 +368,9 @@ class OpaqueAdapter:
     def acknowledge(self, root: str) -> bool:
         self._acknowledged.add(root)
         return True
+
+    def lineage_complete(self, root: str) -> bool:
+        return False
 
     def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
         return None

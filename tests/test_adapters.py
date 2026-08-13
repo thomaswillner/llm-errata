@@ -32,6 +32,9 @@ def ledger_with_a_mixed_summary() -> LineageLedger:
     ledger.register_import(ROOT, "fact:diet", store="markdown", content="is vegetarian")
     ledger.register_import(QUIET, "fact:venue", store="markdown", content="prefers quiet restaurants")
     ledger.register_import(BUDGET, "fact:budget", store="markdown", content="moderate budget")
+    ledger.register_import(
+        "mem_09ZZ", "fact:pet", store="markdown", content="has a cat"
+    )
     ledger.register_derivation(
         "summary:dining",
         store="markdown",
@@ -63,9 +66,6 @@ class LineageTracksTheDerivationClosure(unittest.TestCase):
 
     def test_an_unrelated_artifact_is_not_a_descendant(self) -> None:
         ledger = ledger_with_a_mixed_summary()
-        ledger.register_import(
-            "mem_09ZZ", "fact:pet", store="markdown", content="has a cat"
-        )
         self.assertNotIn("fact:pet", ledger.descendants(ROOT))
 
     def test_still_valid_inputs_exclude_the_retired_root(self) -> None:
@@ -91,8 +91,9 @@ class MarkdownAdapterExposesExactLineage(unittest.TestCase):
 
     def test_quarantine_does_not_touch_unrelated_artifacts(self) -> None:
         self.adapter.quarantine(("fact:diet", "summary:dining"))
-        self.assertEqual(
-            [item.artifact_id for item in self.adapter.recall("cat")], []
+        self.assertIn(
+            "fact:pet",
+            [item.artifact_id for item in self.adapter.recall("cat")],
         )
         self.assertIn(
             "fact:budget",
@@ -142,6 +143,15 @@ class VectorAdapterRebuildsAffectedEntries(unittest.TestCase):
 
     def test_it_enumerates_entries_by_derivation_metadata(self) -> None:
         self.assertEqual(self.adapter.enumerate(ROOT), ("vec:diet", "vec:dining"))
+
+    def test_lineage_completeness_survives_intentional_retirement(self) -> None:
+        self.assertTrue(self.adapter.lineage_complete(ROOT))
+        self.adapter.retire("vec:diet")
+        self.assertTrue(self.adapter.lineage_complete(ROOT))
+
+    def test_live_entry_without_source_metadata_breaks_completeness(self) -> None:
+        self.adapter._text["vec:orphan"] = "untracked live entry"
+        self.assertFalse(self.adapter.lineage_complete(ROOT))
 
     def test_quarantined_entries_stop_being_retrieved(self) -> None:
         self.assertTrue(self.adapter.recall("vegetarian"))

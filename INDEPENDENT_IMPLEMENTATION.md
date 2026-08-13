@@ -25,12 +25,22 @@ different operations; quarantine affected state before repair; run negative,
 positive, and preservation checks; and report `partial`, `unknown`, or `failed`
 without converting missing evidence into success.
 
+An adapter must state how it establishes root-specific lineage completeness.
+Returning an empty artifact list is not enough. If the implementation cannot
+show that its enumeration authority was complete for the root, it must report
+`unknown` and bind the limitation into its receipt.
+
 ## Independence and evidence
 
 An implementation report must name its authors, repository and commit, supported
 specification version, dependencies, test commands, unsupported behavior, and
 licence. Shared conformance vectors are expected. Shared reference-adapter code
 disqualifies the implementation as independent evidence.
+
+One producer may supply an adapter and benchmark results, but that producer
+cannot also occupy the separately authored third-party validator role for its
+own implementation. Commercial interest and other conflicts must be disclosed;
+they do not erase technical evidence, but they control how it can satisfy G4.
 
 No per-implementer permission is required for an independently authored
 commercial or non-commercial implementation of the specification. The

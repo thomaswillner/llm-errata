@@ -104,7 +104,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** internally complete, externally unreviewed. `spec/` carries schemas, static vectors, executable stateful vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. `OwnerKeySchedule` binds every event to the key active at its sequence. Stateful vectors execute valid rotation, rotated-key reuse, concurrent sequence conflict, invalid targets, content-free erasure evidence, and mutation of every signed receipt field. This internal work does not complete G2: a dated independent external conformance review of the exact complete Phase 2 surface remains required.
+**Status:** implemented with external findings remediated; qualifying review still incomplete. `spec/` carries schemas, static vectors, executable stateful vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. `OwnerKeySchedule` binds every event to the key active at its sequence. Stateful vectors execute valid rotation, rotated-key reuse, same-view sequence conflict, invalid targets, content-free erasure evidence, and mutation of every signed receipt field. Conflict-disclosed external review found that split views were overstated and an empty enumeration could receive `verified` without lineage-completeness evidence; both findings now have fail-closed tests and corrected claims. This work does not complete G2: the reviewer disclosed a commercial conflict and did not cover the full required scope, so a dated qualifying independent review remains required.
 
 Only after the file-backed proof passes:
 
@@ -124,7 +124,7 @@ Only after the file-backed proof passes:
    errata audit
    ```
 
-4. Define an adapter interface for enumeration, quarantine, reconstruction, verification, and coverage reporting.
+4. Define an adapter interface for enumeration, root-specific lineage-completeness evidence, quarantine, reconstruction, verification, and coverage reporting. Empty enumeration without that evidence is `unknown`.
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
 6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
 
@@ -192,7 +192,7 @@ Every phase must account for:
 
 - issuer authorization and delegated authority;
 - key rotation, recovery, and compromise;
-- feed rollback and equivocation;
+- feed rollback, same-view conflicts, and split-view equivocation requiring an external witness or transparency mechanism;
 - poisoned or instruction-bearing payloads;
 - denial of service through excessive repair events;
 - privacy leakage through identifiers, polling, registrations, and receipts;

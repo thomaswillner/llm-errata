@@ -27,6 +27,42 @@ from prototype.strategies import (
 OWNER = DemoSigner(b"owner-secret")
 
 
+class SilentLineageAdapter:
+    """Enumerable but supplies no evidence that its empty walk is complete."""
+
+    name = "silent_store"
+    required = True
+
+    def enumerate(self, root: str) -> tuple[str, ...]:
+        return ()
+
+    def quarantine(self, artifact_ids: tuple[str, ...]) -> None:
+        return None
+
+    def is_quarantined(self, artifact_id: str) -> bool:
+        return False
+
+    def coverage(self, root: str) -> Coverage:
+        return Coverage.VERIFIED
+
+    def dispositions(self, root: str) -> dict[str, str]:
+        return {}
+
+
+class AuditedEmptyAdapter(SilentLineageAdapter):
+    name = "audited_empty_store"
+
+    def lineage_complete(self, root: str) -> bool:
+        return True
+
+
+class SilentFailingAdapter(SilentLineageAdapter):
+    name = "silent_failing_store"
+
+    def coverage(self, root: str) -> Coverage:
+        return Coverage.FAILED
+
+
 def supersede(sequence: int = 1) -> Erratum:
     return OWNER.sign_erratum(
         Erratum(
@@ -315,6 +351,67 @@ class ReceiptsBindStateAndReportCoverageHonestly(unittest.TestCase):
             any("prompt_cache" in item for item in receipt.limitations),
             receipt.limitations,
         )
+
+    def test_empty_enumeration_without_lineage_audit_cannot_verify(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        importer.adapters.append(SilentLineageAdapter())
+        receipt = importer.repair(supersede())
+        self.assertEqual(receipt.stores["silent_store"], Coverage.UNKNOWN)
+        self.assertNotEqual(receipt.aggregate, Coverage.VERIFIED)
+        self.assertTrue(
+            any("silent_store" in item and "lineage" in item for item in receipt.limitations),
+            receipt.limitations,
+        )
+
+    def test_audited_empty_scope_can_verify(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        importer.adapters.append(AuditedEmptyAdapter())
+        receipt = importer.repair(supersede())
+        self.assertEqual(receipt.stores["audited_empty_store"], Coverage.VERIFIED)
+        self.assertEqual(receipt.aggregate, Coverage.VERIFIED)
+
+    def test_missing_lineage_evidence_never_upgrades_a_failure(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        importer.adapters.append(SilentFailingAdapter())
+        receipt = importer.repair(supersede())
+        self.assertEqual(receipt.stores["silent_failing_store"], Coverage.FAILED)
+        self.assertEqual(receipt.aggregate, Coverage.FAILED)
+
+
+class SplitViewEquivocationIsOutsideOneImporter(unittest.TestCase):
+    def test_one_importer_remembers_a_conflict_across_observe_calls(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        first_event = supersede().replace(erratum_id="err_A", signature=None)
+        second_event = supersede().replace(
+            erratum_id="err_B", replacement="is vegan now", signature=None
+        )
+        importer.quarantine(OWNER.sign_erratum(first_event))
+        with self.assertRaisesRegex(Exception, "conflict in this importer view"):
+            importer.quarantine(OWNER.sign_erratum(second_event))
+
+    def test_each_receipt_discloses_that_its_feed_view_is_local(self) -> None:
+        first_event = supersede().replace(erratum_id="err_A", signature=None)
+        second_event = supersede().replace(
+            erratum_id="err_B",
+            replacement="is vegan now",
+            postconditions={
+                "negative": "vegetarian",
+                "positive": "is vegan now",
+                "preserve": "quiet restaurants|moderate budget",
+            },
+            signature=None,
+        )
+        first = build_importer(OWNER).repair(OWNER.sign_erratum(first_event))
+        second = build_importer(OWNER).repair(OWNER.sign_erratum(second_event))
+
+        self.assertTrue(first.verify(build_importer(OWNER).signer.public))
+        self.assertTrue(second.verify(build_importer(OWNER).signer.public))
+        self.assertNotEqual(first.erratum_id, second.erratum_id)
+        for receipt in (first, second):
+            self.assertTrue(
+                any("global" in item and "equivocation" in item for item in receipt.limitations),
+                receipt.limitations,
+            )
 
 
 class FeedRollbackIsRefusedByTheController(unittest.TestCase):

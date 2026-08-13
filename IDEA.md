@@ -260,6 +260,16 @@ Signature validity authenticates the importer and receipt bytes; it does not est
 
 Coverage truthfulness requires the signed stores, aggregate, and limitations to match the declared required scope without upgrading missing or opaque evidence.
 
+An empty enumeration is not evidence of complete lineage. A required adapter
+may report `verified` for an empty root scope only when it also establishes a
+root-specific write-time or audited lineage authority; otherwise the signed
+store result is `unknown` with a limitation.
+
+A receipt establishes the signed event accepted by one importer. Importer-local
+sequence checks detect conflicts visible in that view, but cannot establish
+global owner non-equivocation across split views without an external witnessed
+or append-only log.
+
 The broad candidates were rejected: “a personal LLM wiki,” “portable memory,” “a memory makefile,” “verified forgetting,” “a temporal contradiction ledger,” and “self-correcting memory.” A signed post-export update feed was also rejected: EngramSpec already provides cross-runtime corrections and incremental diffs, while vCon Lifecycle/SCITT and downstream-deletion frameworks cover event and acknowledgment control planes. The surviving combination is still a synthesis of known mechanisms, so its strongest defensible claim is product and conformance design—not fundamental invention.
 
 The strongest AI-memory transport collision is [EngramSpec](https://engramspec.org/). The strongest formal standards/control-plane collision is the individual [vCon Lifecycle using SCITT draft](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01), which records cross-recipient lifecycle events and acknowledgments backed by SCITT transparency receipts. LLM Errata profiles a boundary neither source normatively specifies: a notice reached an importer; now what must happen to the importer's locally derived AI memory, and what evidence must come back?

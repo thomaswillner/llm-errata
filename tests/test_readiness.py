@@ -435,7 +435,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Phase 2 is internally complete: schemas, CLI quarantine checkpoints, semantic probes, key rotation, concurrency, invalid-target, confidentiality, and complete receipt-field binding vectors are implemented; no qualifying independent review is recorded.",
+                "Phase 2 implementation includes conflict-disclosed remediation for split-view equivocation and unsupported empty enumeration, plus schemas, checkpoints, semantic probes, key rotation, invalid-target, confidentiality, and receipt binding; no qualifying independent review is recorded.",
                 "local tests prove readiness.",
             )
 
@@ -454,7 +454,7 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         def mutate(root):
             rewrite(
                 root / "PRODUCTION_READINESS.md",
-                "Dated independent external conformance-review result covering the exact complete Phase 2 surface.",
+                "Dated independent external conformance-review result covering the exact complete Phase 2 surface after remediation.",
                 "Local tests are enough.",
             )
 

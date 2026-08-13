@@ -29,6 +29,12 @@ lineage gaps, opaque coverage, receipt binding, erasure confidentiality, key
 lifecycle, retries, and incomplete stores. Find the smallest counterexample that
 breaks an invariant or makes the contract impractical.
 
+The current reference boundary distinguishes same-importer conflict detection
+from global non-equivocation. A receipt proves which signed event one importer
+accepted; it does not prove every importer received the same event. Also test
+whether an empty adapter enumeration has root-specific lineage-completeness
+evidence. Empty-without-evidence must be `unknown`, not `verified`.
+
 ## Required review record
 
 Please identify:
