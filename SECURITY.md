@@ -5,15 +5,14 @@ LLM Errata is currently a public concept proposal and may later include schemas,
 ## Supported versions
 
 Until a later policy states otherwise, only the latest versioned release is
-eligible for security fixes. Support moves from 0.3.x to 0.4.x beginning with the immutable `v0.4.0` release. Development revisions after the latest release
+eligible for security fixes. Support moved from 0.3.x to 0.4.x with the immutable `v0.4.0` release. Development revisions after the latest release
 receive fixes at maintainer discretion and are not represented as supported
 releases.
 
 | Version | Supported |
 |---|---|
-| 0.4.x | Yes, after `v0.4.0` is published |
-| 0.3.x | Yes, until `v0.4.0` is published |
-| 0.2.x and earlier | No |
+| 0.4.x | Yes |
+| 0.3.x and earlier | No |
 | Unreleased development revisions | No |
 
 ## Reporting a vulnerability

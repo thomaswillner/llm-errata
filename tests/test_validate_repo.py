@@ -23,10 +23,10 @@ class Release040Metadata(unittest.TestCase):
         self.assertEqual((root / "VERSION").read_text().strip(), "0.4.0")
         citation = (root / "CITATION.cff").read_text(encoding="utf-8")
         self.assertIn("version: 0.4.0", citation)
-        self.assertIn("date-released: 2026-08-13", citation)
+        self.assertIn("date-released: 2026-08-14", citation)
         self.assertIn("Version 0.4.0", (root / "README.md").read_text())
         self.assertIn(
-            "| 0.4.x | Yes, after `v0.4.0` is published |",
+            "| 0.4.x | Yes |",
             (root / "SECURITY.md").read_text(),
         )
         changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -34,8 +34,10 @@ class Release040Metadata(unittest.TestCase):
         self.assertIn("Rastislav Drahos", changelog)
         self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
         security = (root / "SECURITY.md").read_text(encoding="utf-8")
-        self.assertIn("beginning with the immutable `v0.4.0` release", security)
-        self.assertIn("until `v0.4.0` is published", security)
+        self.assertIn("with the immutable `v0.4.0` release", security)
+        self.assertIn("| 0.3.x and earlier | No |", security)
+        self.assertIn("first materially improved experimental release", changelog)
+        self.assertIn("Experimental release readiness is separate", (root / "README.md").read_text())
 
 
 class ValidatorPasses(unittest.TestCase):
@@ -385,7 +387,7 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            expected = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
+            expected = f"| {major}.{minor}.x | Yes |"
             rewrite(root / "SECURITY.md", expected, "| 0.0.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
@@ -396,18 +398,42 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            supported = f"| {major}.{minor}.x | Yes, after `v{current}` is published |"
+            supported = f"| {major}.{minor}.x | Yes |"
             rewrite(root / "SECURITY.md", supported, supported + "\n| 0.2.x | Yes |")
 
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("SECURITY supported version", result.stdout)
 
+    def test_experimental_release_boundary_cannot_be_removed(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "README.md",
+                "Experimental release readiness is separate from production readiness.",
+                "Every release is production ready.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("publication metadata", result.stdout)
+
+    def test_sole_owner_release_policy_cannot_be_removed(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "PUBLISHING.md",
+                "In a sole-owner repository, do not configure a mandatory CODEOWNER approval",
+                "require an unavailable reviewer forever",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("publication discipline", result.stdout)
+
     def test_earlier_security_versions_cannot_be_supported(self) -> None:
         def mutate(root: Path) -> None:
             current = (root / "VERSION").read_text(encoding="utf-8").strip()
             major, minor, _ = current.split(".")
-            row = f"| {major}.{int(minor) - 2}.x and earlier |"
+            row = f"| {major}.{int(minor) - 1}.x and earlier |"
             rewrite(
                 root / "SECURITY.md",
                 f"{row} No |",

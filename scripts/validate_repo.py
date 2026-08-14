@@ -426,12 +426,14 @@ def check_publication_metadata(reporter: Reporter) -> None:
         "request for comment",
         "independent proposal",
         "ai-assisted research",
+        "experimental release readiness is separate from production readiness",
+        "not_prod_ready",
     )
     reporter.check(
         "publication metadata",
         all(value in readme for value in required_readme),
-        "README contains authorship, status, independence, and AI-assistance disclosure",
-        "Add the author, RFC status, independent-publication disclaimer, and AI-assisted research disclosure to README.md.",
+        "README contains authorship, status, independence, AI-assistance, and release/readiness separation",
+        "Add the author, RFC status, independent-publication disclaimer, AI-assisted research disclosure, and experimental-release versus production-readiness boundary to README.md.",
     )
 
     license_text = read_utf8(license_path)
@@ -501,6 +503,11 @@ def check_publication_metadata(reporter: Reporter) -> None:
             "Active surface",
             "Historical surface",
             "publication/active-surfaces.json",
+        ),
+        "PUBLISHING.md": (
+            "Publishing an experimental version and declaring production readiness are",
+            "Silence is neither approval nor a blocker",
+            "In a sole-owner repository, do not configure a mandatory CODEOWNER approval",
         ),
     }
     publication_alignment = all(

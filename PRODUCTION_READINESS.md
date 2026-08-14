@@ -10,6 +10,13 @@
 
 Build health means the repository's deterministic structure/metadata checks, bounded-claim guard, readiness-evidence honesty check, and self-tests pass. Production readiness is a separate, evidence-based decision: it requires every gate below to pass with the evidence stated for that gate. Green local tests and agent reviews are useful internal evidence, but neither is external evidence and neither can change an external gate to `PASS`.
 
+This matrix governs claims of production readiness, not whether an experimental
+release may be published. A release may ship with blocked gates when its
+version, source, tests, limitations, ownership, licence, and evidence boundaries
+are internally consistent and the release remains labeled `NOT_PROD_READY`.
+G2–G6 therefore remain active development and validation work rather than a
+requirement to wait indefinitely for unsolicited external reviewers.
+
 ## Readiness matrix
 
 | Gate | Criterion | Current status | Current evidence | Next evidence required |

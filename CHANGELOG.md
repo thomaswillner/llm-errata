@@ -8,7 +8,15 @@ Changes to the bounded novelty statement or the source comparison are recorded h
 
 ## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.4.0...HEAD)
 
-## [0.4.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.0) - 2026-08-13
+## [0.4.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.0) - 2026-08-14
+
+This is the first materially improved experimental release of LLM Errata. It
+is suitable for continued public evaluation, implementation experiments, and
+iterative development; it is not a production-readiness certification. The
+open G2–G6 evidence gaps remain visible development and validation work. Their
+future completion can improve later releases, but absence of unsolicited
+external review does not prevent publishing an honestly scoped experimental
+version.
 
 ### Added — adapter conformance and validator hardening
 
