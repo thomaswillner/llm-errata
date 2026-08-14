@@ -147,3 +147,22 @@ review of LLM Errata and not evidence that G3 passes.
 | [libsodium 1.0.22](https://github.com/jedisct1/libsodium/releases/tag/1.0.22-RELEASE) | 1.0.22, 2026-04-09 | Current public point release at assessment time |
 | [Libsodium 1.0.12 and 1.0.13 Security Assessment](https://www.privateinternetaccess.com/blog/wp-content/uploads/2017/08/libsodium.pdf) | assessment of 1.0.12 and 1.0.13 | Third-party review included Ed25519 signatures and reported no major vulnerabilities in reviewed versions; it is not a current 1.0.22 audit |
 | [CVE-2025-69277](https://nvd.nist.gov/vuln/detail/CVE-2025-69277) | CVE-2025-69277 | Older libsodium revisions had an Ed25519 point-validation flaw; 1.0.22 post-dates the cited fix, without making vulnerability review unnecessary |
+
+## Controlled-pilot candidate-system discovery
+
+These official pages were read on 2026-08-14 only to identify possible
+independently operated systems for the controlled-pilot design. Listing a
+system does not establish compatibility, authorization, operator independence,
+data handling, evidence publication, or G5 qualification. Every candidate must
+complete the nomination and approval process in
+[`PHASE3_SYSTEMS.md`](PHASE3_SYSTEMS.md).
+
+| Source | Observed surface | Project use |
+|---|---|---|
+| [Mem0 Platform overview](https://docs.mem0.ai/platform/overview) | Official platform documentation describes managed memory types and an API surface. | Discovery candidate only; no account or experiment is authorized. |
+| [Zep documentation](https://help.getzep.com/) | Official documentation describes managed memory and temporal knowledge-graph concepts. | Discovery candidate only; no account or experiment is authorized. |
+| [Amazon Bedrock AgentCore Memory](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory.html) | Official AWS documentation describes AgentCore Memory as a fully managed agent-memory service. | Discovery candidate only; no account or experiment is authorized. |
+
+The current official GitHub release for libsodium was rechecked on 2026-08-14:
+`1.0.22-RELEASE`, published 2026-04-09. This confirms source freshness only and
+does not narrow the documented current-version audit gap.
