@@ -4,7 +4,7 @@
   "sequence": 1,
   "target_root": "mem_01HX",
   "operation": "supersede",
-  "pre_state_root": "3854e8a2829938d5f9b63b1d581e5c6c",
+  "pre_state_root": "3854e8a2829938d5f9b63b1d581e5c6c3854e8a2829938d5f9b63b1d581e5c6c",
   "stores": {
     "markdown": "verified",
     "vector": "verified",

@@ -13,10 +13,10 @@
 | Field | Value |
 |---|---|
 | Author | Thomas Rainer Willner |
-| Version | 0.4.0 |
+| Version | 0.4.1 |
 | Status | Public concept proposal / Request for Comment |
 | Published | 2026-08-07 |
-| Latest release | v0.4.0 — first materially improved experimental release |
+| Latest release | v0.4.1 — integrity and conformance hardening release |
 | Research reviewed through | 2026-08-01 |
 | License | Attributed specification implementations permitted; reference code remains personal-use. See [LICENSE](LICENSE). |
 
@@ -129,6 +129,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) | Nominations for future authorized three-system synthetic-data experiment. |
 | [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) | Evidence-bounded publication channels and canonical announcement copy. |
 | [docs/PUBLICATION_LOG.md](docs/PUBLICATION_LOG.md) | Public GitHub calls, blocked external-channel attempts, and readiness boundary. |
+| [docs/READINESS_EVIDENCE_SCHEMAS.md](docs/READINESS_EVIDENCE_SCHEMAS.md) | Exact commit-bound G3-G5 external evidence records and qualification boundaries. |
 
 ## Verifying this repository
 
@@ -147,6 +148,11 @@ make links    # liveness of every cited external URL (needs network)
 | `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. |
 | `make readiness` | Is the recorded readiness evidence structurally honest and synchronized with the human matrix? | The ledger is malformed, evidence is insufficient for a recorded status, or the matrix contradicts the ledger. |
 | `make test` | Do those checkers reject what they claim to reject? | A checker has stopped catching a fault it is supposed to catch. |
+
+`make publication` proves offline manifest consistency and local Git binding
+only. It prints remote GitHub state as unverified; a live publication or latest
+feedback claim additionally requires the repository-wide freshness receipt
+described in `PUBLISHING.md`.
 
 The self-tests exist because a check that has never failed has not been shown to
 work. The self-tests build corpora that misstate the proposal — an inverted
@@ -180,12 +186,12 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.4.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface include conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, mutation coverage for every signed receipt field, and independently authored adapter-level cases with target-instance tracing, complete outcomes, bounded proposition multiplicity, exact semantic mutations, and executable validator anti-vacuity controls. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
+Version 0.4.1 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. It hardens immutable review/release binding, append-only publication history, readiness matrix equality, gate-specific external-evidence independence, full-width state roots, snapshot limitation disclosure, licence scope, and byte-preserving conformance-corpus digests. G4 validator reports must bind the same erratum and exact receipts from both adapters; G5 reports must record the complete declared three-system experiment rather than generic system passes. Phase 1 and the internal Phase 2 conformance surface retain conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 
 Experimental release readiness is separate from production readiness. Version
-0.4.0 is published so implementers can evaluate and extend a materially better
+0.4.1 is published so implementers can evaluate and extend a materially better
 baseline while G2–G6 remain an explicit backlog. External challenge is welcome
 whenever users or reviewers encounter the project, but no release claims those
 gates passed merely because a reviewer did not appear.

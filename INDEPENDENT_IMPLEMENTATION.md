@@ -68,6 +68,14 @@ normalization or embedding similarity cannot substitute for identity. A pass
 is candidate internal evidence only and still requires a separate producer to
 validate both implementations and the validator.
 
+The binding command executes imported Python inside the invoking process. It is
+for **trusted code only** from a reviewed, clean checkout. Git identity,
+tracked-byte binding, namespace isolation, and timeouts improve evidence
+provenance; they are not an operating-system sandbox and do not make untrusted
+candidate code safe. Production evaluation of untrusted submissions requires a
+separate least-privilege process or container with explicit filesystem,
+network, secret, CPU, and memory limits.
+
 ## Independence and evidence
 
 An implementation report must name its authors, repository and commit, supported
@@ -85,6 +93,13 @@ One producer may supply an adapter and benchmark results, but that producer
 cannot also occupy the separately authored third-party validator role for its
 own implementation. Commercial interest and other conflicts must be disclosed;
 they do not erase technical evidence, but they control how it can satisfy G4.
+
+Qualifying G4 ledger records must bind both adapter receipts to the same
+erratum, immutable commit, and canonical surface digest. The validator must
+name both adapter implementation IDs and exact receipt IDs and SHA-256 digests;
+an unrelated validator result cannot be combined with otherwise valid adapter
+records. See [`docs/READINESS_EVIDENCE_SCHEMAS.md`](docs/READINESS_EVIDENCE_SCHEMAS.md)
+for the exact role-specific fields.
 
 No per-implementer permission is required for an independently authored
 commercial or non-commercial implementation of the specification. The

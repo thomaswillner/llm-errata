@@ -12,7 +12,7 @@
       "description": "The four terminal results. `pending` is a lifecycle state and is deliberately absent."
     },
     "probe": {"enum": ["pass", "fail"]},
-    "stateRoot": {"type": "string", "pattern": "^[0-9a-f]{32}$"}
+    "stateRoot": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
   },
   "properties": {
     "importer": {"type": "string", "minLength": 1},

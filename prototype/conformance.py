@@ -18,6 +18,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from prototype.surface_digest import (
+    SurfaceDigestError,
+    g2_surface_digest_at_commit,
+)
+
 
 class ConformanceInputError(ValueError):
     """Corpus or source evidence cannot support a conformance run."""
@@ -261,8 +266,6 @@ STORE_KEYS = {"multiplicity", "erased_absent", "preserved_present", "unrelated_p
 RECEIPT_KEYS = {"names_store", "non_trivial", "forbidden_absent"}
 MUTATION_KEYS = {"id", "exact_counter_result"}
 CONTROL_KEYS = {"id", "mutation", "required_failure"}
-REQUIRED_TARGET = "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
-REQUIRED_DIGEST = "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
 GIT_TIMEOUT_SECONDS = 10.0
 BINDING_TIMEOUT_SECONDS = 10.0
 REQUIRED_PROVENANCE = {
@@ -318,38 +321,11 @@ def _git(root: Path, *args: str) -> bytes:
     return result.stdout
 
 
-def _surface_paths_at_commit(root: Path, commit: str) -> tuple[str, ...]:
-    required_tests = (
-        "tests/test_adapters.py", "tests/test_checkpoints.py", "tests/test_cli.py",
-        "tests/test_controller.py", "tests/test_ed25519.py",
-        "tests/test_errata_feed.py", "tests/test_schema.py",
-        "tests/test_semantic.py", "tests/test_sqlite_store.py",
-    )
-    listed = _git(root, "ls-tree", "-r", "--name-only", commit).decode("utf-8").splitlines()
-    files = set(listed)
-    groups = (
-        tuple(sorted(path for path in files if re.fullmatch(r"prototype/[^/]+\.py", path))),
-        ("prototype/README.md", "spec/README.md"),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/[^/]+\.schema\.json", path))),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/vectors/[^/]+\.json", path))),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/semantic/[^/]+\.json", path))),
-        ("ROADMAP.md", "THREAT_MODEL.md", "SECURITY.md"),
-        required_tests,
-    )
-    paths = tuple(sorted(item for group in groups for item in group))
-    if any(path not in files for path in paths):
-        raise ConformanceInputError("canonical surface is incomplete")
-    return paths
-
-
 def _surface_digest_at_commit(root: Path, commit: str) -> str:
-    digest = hashlib.sha256()
-    for relative in _surface_paths_at_commit(root, commit):
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(_git(root, "show", f"{commit}:{relative}"))
-        digest.update(b"\0")
-    return digest.hexdigest()
+    try:
+        return g2_surface_digest_at_commit(root, commit)
+    except SurfaceDigestError as error:
+        raise ConformanceInputError(str(error)) from error
 
 
 def _validate_outcome(value: object, operation: str, label: str) -> dict[str, Any]:
@@ -369,6 +345,18 @@ def _validate_outcome(value: object, operation: str, label: str) -> dict[str, An
     return outcome
 
 
+def _publication_target(source_root: Path) -> dict[str, Any]:
+    try:
+        publication = json.loads(
+            (source_root / "publication" / "active-surfaces.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        return _exact(publication["review_target"], TARGET_KEYS, "publication target")
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError) as error:
+        raise ConformanceInputError("publication review target is unavailable") from error
+
+
 def load_corpus(
     path: Path, source_root: Path, *, require_canonical_path: bool = False
 ) -> AdapterCorpus:
@@ -385,9 +373,10 @@ def load_corpus(
     if root["schema_version"] != 1:
         raise ConformanceInputError("corpus schema version must be 1")
     target = _exact(root["normative_target"], TARGET_KEYS, "normative target")
-    if target["commit"] != REQUIRED_TARGET:
+    publication_target = _publication_target(source_root)
+    if target["commit"] != publication_target["commit"]:
         raise ConformanceInputError("normative target commit is not canonical")
-    if target["surface_digest"] != REQUIRED_DIGEST:
+    if target["surface_digest"] != publication_target["surface_digest"]:
         raise ConformanceInputError("normative surface digest is not canonical")
     actual_digest = _surface_digest_at_commit(source_root, target["commit"])
     if actual_digest != target["surface_digest"]:

@@ -15,13 +15,20 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 
 ## Before making the repository public
 
+LLM Errata uses two non-interchangeable commit identities. The immutable
+`review_target` is the normative source commit. A later packaging commit may
+change only `publication/active-surfaces.json` and
+`spec/adapter-conformance.json` to point back to that source. The release tag
+binds the packaging commit. This avoids requiring a Git commit to contain its
+own SHA while keeping normative and release identities auditable.
+
 1. Run `make check` from the repository root. It must exit zero. Exit `2` from the claim guard is *inconclusive*, not a pass.
 2. Run `make links`. Every cited URL must resolve or be reported as `blocked`, never `dead`.
 3. Review the author name, date, independent-publication disclaimer, and AI-assisted research disclosure.
 4. Check every claim in `PRIOR_ART.md` against the cited primary or authoritative source.
 5. Request a public archive snapshot for each source listed as unpinned in `SOURCES.md`, then replace `none` with the snapshot URL. These are the sources the collision matrix depends on most and the ones most likely to change.
 6. Confirm that no employer, customer, personal, confidential, or credential material is present.
-7. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag agree with each other. Never re-tag existing content with an older version: the prior-art claim is dated, and a release tag that back-dates it corrupts the only thing this repository is for.
+7. Confirm that `VERSION`, `CITATION.cff`, `CHANGELOG.md`, and the release tag agree with each other. Run `python3 scripts/check_publication.py --tag v$(cat VERSION)` after creating the local annotated tag and before pushing it. Never re-tag existing content with an older version: the prior-art claim is dated, and a release tag that back-dates it corrupts the only thing this repository is for.
 8. Enable GitHub Issues.
 9. Enable GitHub private vulnerability reporting before pointing readers to `SECURITY.md`.
 10. Decide whether GitHub Discussions should be enabled for design debate; keep factual corrections and prior-art challenges in Issues so they remain traceable.
@@ -31,6 +38,11 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 14. Confirm the `validate` workflow has run green on `main` at least once, and make it a required status check for pull requests.
 15. Create the `prior-art`, `correction`, `conformance`, `implementation`, and `maintenance` labels used by the issue forms and Dependabot.
 16. Publish [REVIEW_REQUEST.md](REVIEW_REQUEST.md), [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md), and [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) only as calls for evidence. Record an external review, independent implementation, or system experiment in the readiness ledger only after its dated, independently produced result exists.
+
+The default publication checker is deliberately offline. It validates tracked
+metadata and local Git bindings; it does not prove GitHub comments still exist
+or remain unchanged. Live publication claims require a fresh repository-wide
+GitHub inventory and schema-v2 freshness receipt after the last mutation.
 
 ## Experimental release policy
 

@@ -1,289 +1,49 @@
 #!/usr/bin/env python3
-"""Validate the tracked active-publication-surface manifest offline."""
+"""Validate local publication metadata without pretending to verify GitHub."""
 
 from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
+from check_readiness import g2_surface_digest, g2_surface_digest_at_commit
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "publication" / "active-surfaces.json"
-
-CANONICAL_COMMIT = "ad36ed5e209a53aacab17751b5a183ca8a1aac1f"
-CANONICAL_DIGEST = (
-    "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d"
-)
+CORPUS = ROOT / "spec" / "adapter-conformance.json"
 REPOSITORY_URL = "https://github.com/thomaswillner/llm-errata"
 ALLOWED_GATES = {"G2", "G3", "G4", "G5", "G6"}
 REQUIRED_ATTRIBUTION = {"LLM Errata", "Thomas Willner", REPOSITORY_URL}
-REQUIRED_SURFACES = {
-    "g4-inspeximus-v040-target-reply": {
-        "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5287579823",
-        "gates": ["G2", "G4"],
-        "roles": ["inspeximus-adapter-author"],
-        "mentions": ["DanceNitra"],
-        "evidence_boundary": "recruitment-only",
-    },
+ALLOWED_PACKAGING_PATHS = {
+    "publication/active-surfaces.json",
+    "spec/adapter-conformance.json",
 }
 
 ROOT_KEYS = {
-    "schema_version", "review_target", "license", "historical_surfaces", "surfaces"
+    "schema_version", "review_target", "release_binding", "license",
+    "historical_surfaces", "surfaces",
 }
 TARGET_KEYS = {"commit", "surface_digest"}
+RELEASE_KEYS = {"version", "tag", "allowed_packaging_paths", "commit_model"}
 LICENSE_KEYS = {
-    "specification_implementation",
-    "required_attribution",
-    "reference_code",
+    "specification_implementation", "required_attribution", "reference_code",
     "case_by_case_permission_required",
 }
 SURFACE_KEYS = {
-    "id",
-    "kind",
-    "url",
-    "published",
-    "commit",
-    "surface_digest",
-    "gates",
-    "roles",
-    "mentions",
-    "supersedes",
-    "evidence_boundary",
+    "id", "kind", "url", "published", "commit", "surface_digest", "gates",
+    "roles", "mentions", "supersedes", "evidence_boundary",
 }
 HISTORICAL_SURFACE_KEYS = SURFACE_KEYS | {"superseded_by"}
-REQUIRED_HISTORICAL_SURFACES = [
-    {
-        "id": "g4-inspeximus-current-target-reply",
-        "kind": "issue-comment",
-        "url": f"{REPOSITORY_URL}/issues/4#issuecomment-5282207719",
-        "published": "2026-08-13",
-        "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
-        "surface_digest": (
-            "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
-        ),
-        "gates": ["G2", "G4"],
-        "roles": ["inspeximus-adapter-author"],
-        "mentions": ["DanceNitra"],
-        "supersedes": [
-            f"{REPOSITORY_URL}/issues/4#issuecomment-5280210050",
-            f"{REPOSITORY_URL}/pull/8#issuecomment-5280225709",
-        ],
-        "evidence_boundary": "recruitment-only",
-        "superseded_by": f"{REPOSITORY_URL}/issues/4#issuecomment-5287579823",
-    }
-]
 
 
 def load_manifest(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def validate_manifest(payload: object) -> list[str]:
-    failures: list[str] = []
-    if not isinstance(payload, dict) or set(payload) != ROOT_KEYS:
-        return ["manifest schema: root must contain the exact required fields"]
-
-    if payload.get("schema_version") != 2:
-        failures.append("manifest schema: schema_version must be 2")
-
-    target = payload.get("review_target")
-    target_valid = (
-        isinstance(target, dict)
-        and set(target) == TARGET_KEYS
-        and target.get("commit") == CANONICAL_COMMIT
-        and target.get("surface_digest") == CANONICAL_DIGEST
-    )
-    if not target_valid:
-        failures.append(
-            "review target: commit and digest must equal the corrected canonical target"
-        )
-
-    license_data = payload.get("license")
-    if not isinstance(license_data, dict) or set(license_data) != LICENSE_KEYS:
-        failures.append("licence posture: exact licence fields are required")
-    else:
-        posture = license_data.get("specification_implementation")
-        posture_terms = {
-            "irrevocable",
-            "worldwide",
-            "royalty-free",
-            "commercial",
-            "non-commercial",
-        }
-        posture_valid = (
-            isinstance(posture, str)
-            and all(term in posture.casefold() for term in posture_terms)
-            and license_data.get("case_by_case_permission_required") is False
-            and "written" not in posture.casefold()
-            and "permission" not in posture.casefold()
-        )
-        if not posture_valid:
-            failures.append(
-                "licence posture: attributed independent implementation grant must not require case-by-case permission"
-            )
-
-        attribution = license_data.get("required_attribution")
-        if (
-            not isinstance(attribution, list)
-            or any(not isinstance(item, str) for item in attribution)
-            or set(attribution) != REQUIRED_ATTRIBUTION
-            or len(attribution) != len(REQUIRED_ATTRIBUTION)
-        ):
-            failures.append(
-                "licence attribution: LLM Errata, Thomas Willner, and repository URL are required exactly once"
-            )
-
-        reference_code = license_data.get("reference_code")
-        if not (
-            isinstance(reference_code, str)
-            and "personal-use" in reference_code.casefold()
-            and all(
-                path in reference_code
-                for path in ("prototype/", "scripts/", "tests/")
-            )
-        ):
-            failures.append(
-                "reference code boundary: personal-use prototype/, scripts/, and tests/ scope is required"
-            )
-
-    historical = payload.get("historical_surfaces")
-    if historical != REQUIRED_HISTORICAL_SURFACES:
-        failures.append(
-            "historical surfaces: exact immutable superseded records are required"
-        )
-
-    surfaces = payload.get("surfaces")
-    if not isinstance(surfaces, list):
-        failures.append("required active surfaces: surfaces must be a list")
-        return failures
-
-    surface_ids: list[str] = []
-    surface_urls: list[str] = []
-    roles: list[str] = []
-    mentions: list[str] = []
-    for index, surface in enumerate(surfaces):
-        label = f"surface fields: entry {index + 1}"
-        if not isinstance(surface, dict) or set(surface) != SURFACE_KEYS:
-            failures.append(f"{label} must contain the exact required fields")
-            continue
-
-        surface_id = surface.get("id")
-        kind = surface.get("kind")
-        url = surface.get("url")
-        published = surface.get("published")
-        gates = surface.get("gates")
-        entry_roles = surface.get("roles")
-        entry_mentions = surface.get("mentions")
-        supersedes = surface.get("supersedes")
-        boundary = surface.get("evidence_boundary")
-
-        expected = REQUIRED_SURFACES.get(surface_id) if isinstance(surface_id, str) else None
-        valid_date = False
-        if isinstance(published, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", published):
-            try:
-                valid_date = date.fromisoformat(published) <= date.today()
-            except ValueError:
-                valid_date = False
-        valid_url = isinstance(url, str) and _is_repository_url(url)
-        valid_string_list_fields = all(
-            isinstance(value, list)
-            and all(isinstance(item, str) and item for item in value)
-            for value in (gates, entry_roles, entry_mentions, supersedes)
-        )
-        valid_gates = (
-            isinstance(gates, list)
-            and bool(gates)
-            and len(gates) == len(set(gates))
-            and set(gates).issubset(ALLOWED_GATES)
-        )
-        valid_supersedes = (
-            isinstance(supersedes, list)
-            and bool(supersedes)
-            and len(supersedes) == len(set(supersedes))
-            and all(_is_repository_url(item) for item in supersedes)
-        )
-        expected_fields_match = expected is not None and all(
-            surface.get(field) == value for field, value in expected.items()
-        )
-        if not (
-            isinstance(surface_id, str)
-            and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", surface_id)
-            and kind in {"issue-comment", "pull-request-comment", "discussion-comment"}
-            and valid_url
-            and valid_date
-            and valid_string_list_fields
-            and valid_gates
-            and valid_supersedes
-            and boundary in {"recruitment-only", "publication-only"}
-            and expected_fields_match
-        ):
-            failures.append(
-                f"{label} has invalid or non-canonical ID, kind, URL, date, gates, roles, mentions, supersession, or boundary"
-            )
-
-        if (
-            surface.get("commit") != CANONICAL_COMMIT
-            or surface.get("surface_digest") != CANONICAL_DIGEST
-        ):
-            failures.append(
-                f"surface target binding: {surface_id!r} must bind canonical commit and digest"
-            )
-
-        if boundary == "recruitment-only" and not entry_roles:
-            failures.append(
-                f"evidence boundary: recruitment surface {surface_id!r} requires roles"
-            )
-        if boundary == "publication-only" and (entry_roles or entry_mentions):
-            failures.append(
-                f"evidence boundary: publication surface {surface_id!r} cannot recruit or mention users"
-            )
-        if boundary not in {"recruitment-only", "publication-only"}:
-            failures.append(
-                f"evidence boundary: {surface_id!r} cannot represent invitation or publication as independent evidence"
-            )
-
-        if isinstance(surface_id, str):
-            surface_ids.append(surface_id)
-        if isinstance(url, str):
-            surface_urls.append(url)
-        if isinstance(entry_roles, list):
-            roles.extend(item for item in entry_roles if isinstance(item, str))
-        if isinstance(entry_mentions, list):
-            mentions.extend(item.casefold() for item in entry_mentions if isinstance(item, str))
-
-    if set(surface_ids) != set(REQUIRED_SURFACES) or len(surface_ids) != len(REQUIRED_SURFACES):
-        failures.append(
-            "required active surfaces: manifest must contain each canonical active surface exactly once"
-        )
-    if len(surface_urls) != len(set(surface_urls)):
-        failures.append("unique surface URLs: active surface URLs must not repeat")
-    if len(roles) != len(set(roles)):
-        failures.append("unique evidence roles: each evidence role needs one owner")
-    if len(mentions) != len(set(mentions)):
-        failures.append("unique GitHub mentions: each identity may be notified only once")
-
-    active_url_set = set(surface_urls)
-    for surface in surfaces:
-        if isinstance(surface, dict) and isinstance(surface.get("supersedes"), list):
-            if active_url_set.intersection(surface["supersedes"]):
-                failures.append(
-                    "surface fields: active surface URL cannot also be superseded"
-                )
-                break
-
-    if isinstance(historical, list):
-        historical_urls = {
-            item.get("url") for item in historical if isinstance(item, dict)
-        }
-        if active_url_set.intersection(historical_urls):
-            failures.append("historical surfaces: historical URL cannot remain active")
-
-    return failures
 
 
 def _is_repository_url(value: object) -> bool:
@@ -299,7 +59,392 @@ def _is_repository_url(value: object) -> bool:
     )
 
 
+def _valid_date(value: object) -> bool:
+    if not isinstance(value, str) or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is None:
+        return False
+    try:
+        return date.fromisoformat(value) <= date.today()
+    except ValueError:
+        return False
+
+
+def _valid_target(value: object) -> bool:
+    return (
+        isinstance(value, dict)
+        and set(value) == TARGET_KEYS
+        and isinstance(value.get("commit"), str)
+        and re.fullmatch(r"[0-9a-f]{40}", value["commit"]) is not None
+        and isinstance(value.get("surface_digest"), str)
+        and re.fullmatch(r"[0-9a-f]{64}", value["surface_digest"]) is not None
+    )
+
+
+def _validate_surface(
+    surface: object,
+    *,
+    target: dict[str, str],
+    historical: bool,
+) -> list[str]:
+    failures: list[str] = []
+    expected_keys = HISTORICAL_SURFACE_KEYS if historical else SURFACE_KEYS
+    if not isinstance(surface, dict) or set(surface) != expected_keys:
+        return ["surface fields: exact versioned fields are required"]
+    values = (surface.get("gates"), surface.get("roles"), surface.get("mentions"), surface.get("supersedes"))
+    valid_lists = all(
+        isinstance(value, list)
+        and all(isinstance(item, str) and bool(item) for item in value)
+        for value in values
+    )
+    boundary = surface.get("evidence_boundary")
+    fields_valid = (
+        isinstance(surface.get("id"), str)
+        and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", surface["id"]) is not None
+        and surface.get("kind") in {"issue-comment", "pull-request-comment", "discussion-comment"}
+        and _is_repository_url(surface.get("url"))
+        and _valid_date(surface.get("published"))
+        and isinstance(surface.get("commit"), str)
+        and re.fullmatch(r"[0-9a-f]{40}", surface["commit"]) is not None
+        and isinstance(surface.get("surface_digest"), str)
+        and re.fullmatch(r"[0-9a-f]{64}", surface["surface_digest"]) is not None
+        and valid_lists
+        and bool(surface["gates"])
+        and len(surface["gates"]) == len(set(surface["gates"]))
+        and set(surface["gates"]).issubset(ALLOWED_GATES)
+        and len(surface["supersedes"]) == len(set(surface["supersedes"]))
+        and all(_is_repository_url(item) for item in surface["supersedes"])
+        and boundary in {"recruitment-only", "publication-only"}
+    )
+    if not fields_valid:
+        label = "historical surfaces" if historical else "surface fields"
+        failures.append(f"{label}: invalid ID, URL, date, target, gates, supersession, or boundary")
+    if not historical and (
+        surface.get("commit") != target["commit"]
+        or surface.get("surface_digest") != target["surface_digest"]
+    ):
+        failures.append("surface target binding: active surfaces must bind the review target")
+    if boundary == "recruitment-only" and not surface.get("roles"):
+        failures.append("evidence boundary: recruitment surfaces require roles")
+    if boundary == "publication-only" and (surface.get("roles") or surface.get("mentions")):
+        failures.append("evidence boundary: publication surfaces cannot recruit or mention users")
+    if boundary not in {"recruitment-only", "publication-only"}:
+        failures.append("evidence boundary: invitations and publication are not independent evidence")
+    if historical and not _is_repository_url(surface.get("superseded_by")):
+        failures.append("historical surfaces: superseded_by must be a repository URL")
+    return failures
+
+
+def _git(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=False
+    )
+
+
+def _manifest_history() -> tuple[list[dict[str, object]], list[str]]:
+    """Read every committed manifest revision from oldest to newest."""
+
+    failures: list[str] = []
+    log = _git("log", "--format=%H", "--", "publication/active-surfaces.json")
+    if log.returncode != 0:
+        return [], ["publication history: committed manifest history is unavailable"]
+    manifests: list[dict[str, object]] = []
+    for commit in reversed(log.stdout.splitlines()):
+        shown = _git("show", f"{commit}:publication/active-surfaces.json")
+        try:
+            payload = json.loads(shown.stdout)
+        except (json.JSONDecodeError, TypeError):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} is unreadable"
+            )
+            continue
+        if not (
+            shown.returncode == 0
+            and isinstance(payload, dict)
+            and isinstance(payload.get("surfaces"), list)
+        ):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} lacks surface records"
+            )
+            continue
+        if payload.get("schema_version") in {1, 2}:
+            continue
+        if not isinstance(payload.get("historical_surfaces"), list):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} lacks historical records"
+            )
+            continue
+        manifests.append(payload)
+    return manifests, failures
+
+
+def _same_active_record(left: object, right: object) -> bool:
+    return (
+        isinstance(left, dict)
+        and isinstance(right, dict)
+        and set(left) == SURFACE_KEYS
+        and set(right) == SURFACE_KEYS
+        and left == right
+    )
+
+
+def _historical_version_of(active: object, historical: object) -> bool:
+    return (
+        isinstance(active, dict)
+        and isinstance(historical, dict)
+        and set(active) == SURFACE_KEYS
+        and set(historical) == HISTORICAL_SURFACE_KEYS
+        and all(historical.get(key) == active.get(key) for key in SURFACE_KEYS)
+        and _is_repository_url(historical.get("superseded_by"))
+    )
+
+
+def _validate_supersession_chains(
+    active: list[object], historical: list[object]
+) -> list[str]:
+    """Require every historical forward link to have an exact reverse link."""
+
+    records = [record for record in (*historical, *active) if isinstance(record, dict)]
+    by_url = {
+        record["url"]: record
+        for record in records
+        if isinstance(record.get("url"), str)
+    }
+    active_urls = {
+        record["url"]
+        for record in active
+        if isinstance(record, dict) and isinstance(record.get("url"), str)
+    }
+    if len(by_url) != len(records):
+        return ["active surfaces: supersession-chain URLs must be unique"]
+
+    failed = False
+    for origin in historical:
+        if not isinstance(origin, dict):
+            continue
+        origin_url = origin.get("url")
+        successor_url = origin.get("superseded_by")
+        successor = by_url.get(successor_url)
+        if not (
+            isinstance(origin_url, str)
+            and isinstance(successor, dict)
+            and isinstance(successor.get("supersedes"), list)
+            and origin_url in successor["supersedes"]
+        ):
+            failed = True
+            continue
+
+        visited = {origin_url}
+        cursor = successor
+        while cursor.get("url") not in active_urls:
+            cursor_url = cursor.get("url")
+            next_url = cursor.get("superseded_by")
+            if not isinstance(cursor_url, str) or cursor_url in visited:
+                failed = True
+                break
+            visited.add(cursor_url)
+            next_record = by_url.get(next_url)
+            if not (
+                isinstance(next_record, dict)
+                and isinstance(next_record.get("supersedes"), list)
+                and cursor_url in next_record["supersedes"]
+            ):
+                failed = True
+                break
+            cursor = next_record
+
+    return [
+        "active surfaces: supersession chains must be bidirectional and terminate at a current surface"
+    ] if failed else []
+
+
+def _validate_append_only_history(payload: dict[str, object]) -> list[str]:
+    """Require every committed surface transition to preserve exact prior records."""
+
+    manifests, failures = _manifest_history()
+    if failures:
+        return failures
+    if not manifests:
+        return []
+    if manifests[-1] != payload:
+        manifests.append(payload)
+
+    history_failed = False
+    mapping_failed = False
+    for previous, current in zip(manifests, manifests[1:]):
+        prior_history = previous["historical_surfaces"]
+        current_history = current["historical_surfaces"]
+        prior_active = previous["surfaces"]
+        current_active = current["surfaces"]
+
+        if any(record not in current_history for record in prior_history):
+            history_failed = True
+
+        removed_active = []
+        for record in prior_active:
+            if any(_same_active_record(record, candidate) for candidate in current_active):
+                continue
+            if not any(
+                _historical_version_of(record, candidate)
+                for candidate in current_history
+            ):
+                history_failed = True
+            removed_active.append(record)
+
+        removed_urls = {
+            record.get("url") for record in removed_active if isinstance(record, dict)
+        }
+        if removed_urls:
+            for record in current_active:
+                if any(_same_active_record(record, candidate) for candidate in prior_active):
+                    continue
+                supersedes = record.get("supersedes") if isinstance(record, dict) else None
+                if not isinstance(supersedes, list) or not removed_urls.intersection(supersedes):
+                    mapping_failed = True
+
+    if history_failed:
+        failures.append(
+            "historical surfaces: committed records must remain exact and append-only"
+        )
+    if mapping_failed:
+        failures.append(
+            "active surfaces: replacement mapping must supersede the prior active URL"
+        )
+    return failures
+
+
+def validate_manifest(payload: object) -> list[str]:
+    failures: list[str] = []
+    if not isinstance(payload, dict) or set(payload) != ROOT_KEYS:
+        return ["manifest schema: root must contain the exact required fields"]
+    if payload.get("schema_version") != 3:
+        failures.append("manifest schema: schema_version must be 3")
+
+    target = payload.get("review_target")
+    if not _valid_target(target):
+        failures.append("review target: full commit and SHA-256 surface digest are required")
+        target = {"commit": "", "surface_digest": ""}
+
+    release = payload.get("release_binding")
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    if not (
+        isinstance(release, dict)
+        and set(release) == RELEASE_KEYS
+        and release.get("version") == version
+        and release.get("tag") == f"v{version}"
+        and release.get("allowed_packaging_paths") == sorted(ALLOWED_PACKAGING_PATHS)
+        and release.get("commit_model")
+        == "review target plus metadata-only packaging commit; tag binds release commit"
+    ):
+        failures.append("release binding: version, tag, commit model, and packaging paths must align")
+
+    try:
+        corpus = json.loads(CORPUS.read_text(encoding="utf-8"))
+        corpus_target = corpus["normative_target"]
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError):
+        corpus_target = None
+    if target != corpus_target:
+        failures.append("review target: publication and conformance targets must be identical")
+
+    license_data = payload.get("license")
+    if not isinstance(license_data, dict) or set(license_data) != LICENSE_KEYS:
+        failures.append("licence posture: exact licence fields are required")
+    else:
+        posture = license_data.get("specification_implementation")
+        terms = {"irrevocable", "worldwide", "royalty-free", "commercial", "non-commercial"}
+        if not (
+            isinstance(posture, str)
+            and all(term in posture.casefold() for term in terms)
+            and license_data.get("case_by_case_permission_required") is False
+            and "written" not in posture.casefold()
+            and "permission" not in posture.casefold()
+        ):
+            failures.append("licence posture: implementation grant must not require case-by-case permission")
+        attribution = license_data.get("required_attribution")
+        if not (
+            isinstance(attribution, list)
+            and all(isinstance(item, str) for item in attribution)
+            and set(attribution) == REQUIRED_ATTRIBUTION
+            and len(attribution) == len(REQUIRED_ATTRIBUTION)
+        ):
+            failures.append("licence attribution: project, author, and repository are required exactly once")
+        reference_code = license_data.get("reference_code")
+        if not (
+            isinstance(reference_code, str)
+            and "personal-use" in reference_code.casefold()
+            and all(path in reference_code for path in ("prototype/", "scripts/", "tests/"))
+        ):
+            failures.append("reference code boundary: personal-use code scope is required")
+
+    surfaces = payload.get("surfaces")
+    historical = payload.get("historical_surfaces")
+    if not isinstance(surfaces, list) or not surfaces:
+        failures.append("required active surfaces: at least one current surface is required")
+        surfaces = []
+    if not isinstance(historical, list) or not historical:
+        failures.append("historical surfaces: append-only superseded records are required")
+        historical = []
+    for surface in surfaces:
+        failures.extend(_validate_surface(surface, target=target, historical=False))
+    for surface in historical:
+        failures.extend(_validate_surface(surface, target=target, historical=True))
+
+    active_ids = [surface.get("id") for surface in surfaces if isinstance(surface, dict)]
+    active_urls = [surface.get("url") for surface in surfaces if isinstance(surface, dict)]
+    roles = [role for surface in surfaces if isinstance(surface, dict) for role in surface.get("roles", [])]
+    mentions = [mention.casefold() for surface in surfaces if isinstance(surface, dict) for mention in surface.get("mentions", [])]
+    if len(active_ids) != len(set(active_ids)) or len(active_urls) != len(set(active_urls)):
+        failures.append("unique surface URLs: active IDs and URLs must not repeat")
+    if len(roles) != len(set(roles)):
+        failures.append("unique evidence roles: each active role needs one owner")
+    if len(mentions) != len(set(mentions)):
+        failures.append("unique GitHub mentions: each identity may be notified only once")
+    failures.extend(_validate_supersession_chains(surfaces, historical))
+
+    if (ROOT / ".git").exists() and _valid_target(target):
+        failures.extend(_validate_append_only_history(payload))
+        commit = target["commit"]
+        ancestor = _git("merge-base", "--is-ancestor", commit, "HEAD")
+        if ancestor.returncode != 0:
+            failures.append("review target: commit must be an ancestor of runtime HEAD")
+        try:
+            if target["surface_digest"] != g2_surface_digest_at_commit(commit, ROOT):
+                failures.append("review target: committed surface digest does not match")
+            if target["surface_digest"] != g2_surface_digest(ROOT):
+                failures.append("review target: runtime surface differs from reviewed source")
+        except OSError as error:
+            failures.append(f"review target: {error}")
+        changed = _git("diff", "--name-only", commit)
+        untracked = _git("ls-files", "--others", "--exclude-standard")
+        if changed.returncode != 0 or untracked.returncode != 0:
+            failures.append("release binding: packaging delta cannot be inspected")
+        elif (
+            set(changed.stdout.splitlines()) | set(untracked.stdout.splitlines())
+        ) - ALLOWED_PACKAGING_PATHS:
+            failures.append("release binding: runtime contains non-packaging changes after review target")
+    return failures
+
+
+def _validate_tag(tag: str) -> tuple[int, str]:
+    if not (ROOT / ".git").exists():
+        return 2, "[INCONCLUSIVE] release tag: Git metadata is unavailable"
+    resolved = _git("rev-parse", f"refs/tags/{tag}^{{commit}}")
+    if resolved.returncode != 0:
+        return 2, f"[INCONCLUSIVE] release tag: {tag} does not exist"
+    head = _git("rev-parse", "HEAD")
+    if resolved.stdout.strip() != head.stdout.strip():
+        return 1, f"[FAIL] release tag: {tag} does not resolve to HEAD"
+    return 0, f"[PASS] release tag: {tag} resolves to current release commit"
+
+
 def main() -> int:
+    args = sys.argv[1:]
+    require_remote = "--require-remote" in args
+    tag = None
+    if "--tag" in args:
+        index = args.index("--tag")
+        if index + 1 >= len(args):
+            print("[FAIL] release tag: --tag requires a value")
+            return 1
+        tag = args[index + 1]
     try:
         payload = load_manifest(MANIFEST)
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
@@ -313,13 +458,19 @@ def main() -> int:
         print(f"\nPublication validation failed: {len(failures)} issue(s).")
         return 1
 
-    print("[PASS] manifest schema: exact versioned fields")
-    print("[PASS] review target: corrected immutable commit and digest")
-    print("[PASS] licence posture: implementation rights and attribution aligned")
-    print("[PASS] active surfaces: required URLs, roles, mentions, and boundaries")
-    print("\nPublication validation passed.")
+    print("[PASS] offline manifest consistency: local schema, target, licence, and evidence boundaries align")
+    print("[UNVERIFIED] remote GitHub surfaces were not verified by this offline checker")
+    if tag is not None:
+        status, message = _validate_tag(tag)
+        print(message)
+        if status:
+            return status
+    if require_remote:
+        print("[INCONCLUSIVE] remote publication state requires a fresh GitHub inventory receipt")
+        return 2
+    print("\nOffline publication metadata validation passed; remote state remains unverified.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

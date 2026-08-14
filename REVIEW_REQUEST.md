@@ -8,6 +8,15 @@ Repository: https://github.com/thomaswillner/llm-errata
 
 Current verdict: **NOT_PROD_READY**.
 
+## Immutable target model
+
+The `review_target` in `publication/active-surfaces.json` and the
+`normative_target` in `spec/adapter-conformance.json` must be identical. That
+commit is the normative source target. The final release commit may be a later
+metadata-only packaging commit; its tag is validated separately. Reviewers
+should report both identities and must not substitute the release tag for the
+normative target without checking the allowed packaging delta.
+
 ## Reviews requested
 
 ### Novelty and conformance review
@@ -94,14 +103,20 @@ byte. Canonical path enumeration is:
 all first-party prototype/*.py
 prototype/README.md
 spec/README.md
+spec/adapter-conformance.json (only its target commit and digest string values are normalized)
 all first-party spec/*.schema.json
 all first-party spec/vectors/*.json
 all first-party spec/semantic/*.json
 ROADMAP.md
 THREAT_MODEL.md
 SECURITY.md
+INDEPENDENT_IMPLEMENTATION.md
+REVIEW_REQUEST.md
+docs/READINESS_EVIDENCE_SCHEMAS.md
 tests/test_adapters.py
+tests/test_checkpoints.py
 tests/test_cli.py
+tests/test_conformance.py
 tests/test_controller.py
 tests/test_ed25519.py
 tests/test_errata_feed.py
@@ -109,6 +124,11 @@ tests/test_schema.py
 tests/test_semantic.py
 tests/test_sqlite_store.py
 ```
+
+Corpus normalization preserves every byte except the two lowercase hexadecimal
+string values under the top-level `normative_target`. Whitespace, key order,
+escape spelling, provenance, cases, controls, and all other bytes remain
+digest-bound. Duplicate JSON keys and non-canonical target scalars fail closed.
 
 Vendor files under `spec/vendor/` are excluded. All named groups must be
 nonempty. Use `python3 -c 'from scripts.check_readiness import

@@ -9,12 +9,15 @@ versions permanently. This licence does not, and cannot, withdraw it.
 1. DEFINITIONS
 
    "Specification Materials" means the normative requirements incorporated by
-   reference from README.md, IDEA.md, ROADMAP.md, SECURITY.md, and
-   THREAT_MODEL.md, plus files under `spec/` other than `spec/vendor/`.
+   reference from README.md, IDEA.md, ROADMAP.md, SECURITY.md, THREAT_MODEL.md,
+   HARD_PROBLEMS.md, PRIOR_ART.md, RESEARCH.md, PRODUCTION_READINESS.md,
+   INDEPENDENT_IMPLEMENTATION.md, and PHASE3_SYSTEMS.md, plus files under
+   `spec/` other than `spec/vendor/`.
 
    "Reference Code" means files under `prototype/`, `scripts/`, and `tests/`,
    together with other repository software not expressly included in the
-   Specification Materials.
+   Specification Materials. Markdown documentation is not Reference Code merely
+   because it is not listed as a Specification Material.
 
    "Implementation" means independently authored software or services that
    implement a material part of the Specification Materials without copying

@@ -4,8 +4,8 @@
   "sequence": 1,
   "target_root": "mem_01HX",
   "operation": "supersede",
-  "pre_state_root": "3854e8a2829938d5f9b63b1d581e5c6c",
-  "post_state_root": "0397835561846e8f0ac0c239710f752a",
+  "pre_state_root": "3854e8a2829938d5f9b63b1d581e5c6c3854e8a2829938d5f9b63b1d581e5c6c",
+  "post_state_root": "0397835561846e8f0ac0c239710f752a0397835561846e8f0ac0c239710f752a",
   "stores": {
     "markdown": "probably-fine"
   },

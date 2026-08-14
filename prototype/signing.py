@@ -43,7 +43,7 @@ def canonical_bytes(payload: dict[str, Any]) -> bytes:
 
 
 def commitment(*parts: str) -> str:
-    """A short, stable digest used to bind states and identify artifacts.
+    """A full-width SHA-256 digest used to bind inspectable importer state.
 
     This is never applied to an erased value. Committing to a low-entropy
     proposition — "vegetarian" — would produce a digest an attacker can confirm
@@ -56,7 +56,7 @@ def commitment(*parts: str) -> str:
     for part in parts:
         digest.update(part.encode("utf-8"))
         digest.update(b"\x1f")
-    return digest.hexdigest()[:32]
+    return digest.hexdigest()
 
 
 @dataclass(frozen=True)

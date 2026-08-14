@@ -17,26 +17,26 @@ from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, r
 SCRIPT = "validate_repo.py"
 
 
-class Release040Metadata(unittest.TestCase):
+class Release041Metadata(unittest.TestCase):
     def test_version_citation_maturity_security_and_changelog_align(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        self.assertEqual((root / "VERSION").read_text().strip(), "0.4.0")
+        self.assertEqual((root / "VERSION").read_text().strip(), "0.4.1")
         citation = (root / "CITATION.cff").read_text(encoding="utf-8")
-        self.assertIn("version: 0.4.0", citation)
+        self.assertIn("version: 0.4.1", citation)
         self.assertIn("date-released: 2026-08-14", citation)
-        self.assertIn("Version 0.4.0", (root / "README.md").read_text())
+        self.assertIn("Version 0.4.1", (root / "README.md").read_text())
         self.assertIn(
             "| 0.4.x | Yes |",
             (root / "SECURITY.md").read_text(),
         )
         changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertIn("## [0.4.0]", changelog)
+        self.assertIn("## [0.4.1]", changelog)
         self.assertIn("Rastislav Drahos", changelog)
         self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
         security = (root / "SECURITY.md").read_text(encoding="utf-8")
-        self.assertIn("with the immutable `v0.4.0` release", security)
+        self.assertIn("current immutable supported release is `v0.4.1`", security)
         self.assertIn("| 0.3.x and earlier | No |", security)
-        self.assertIn("first materially improved experimental release", changelog)
+        self.assertIn("Integrity and conformance hardening release", changelog)
         self.assertIn("Experimental release readiness is separate", (root / "README.md").read_text())
 
 
@@ -89,6 +89,29 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
             "does not cover `prototype/`, `scripts/`, or `tests/`",
             "also covers `prototype/`, `scripts/`, and `tests/`",
         )
+
+    def test_all_normative_markdown_is_inside_specification_materials(self) -> None:
+        license_text = (Path(__file__).resolve().parents[1] / "LICENSE").read_text(
+            encoding="utf-8"
+        )
+        for path in (
+            "HARD_PROBLEMS.md",
+            "PRIOR_ART.md",
+            "RESEARCH.md",
+            "PRODUCTION_READINESS.md",
+            "INDEPENDENT_IMPLEMENTATION.md",
+            "PHASE3_SYSTEMS.md",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, license_text)
+
+    def test_candidate_binding_execution_is_documented_as_trusted_code_only(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        combined = "\n".join(
+            (root / path).read_text(encoding="utf-8")
+            for path in ("INDEPENDENT_IMPLEMENTATION.md", "prototype/README.md", "SECURITY.md")
+        )
+        self.assertIn("trusted code only", combined.casefold())
 
     def test_false_endorsement_protection_cannot_be_removed(self) -> None:
         self._assert_license_mutation_is_rejected(

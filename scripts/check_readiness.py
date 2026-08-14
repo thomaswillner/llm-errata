@@ -5,16 +5,27 @@ from __future__ import annotations
 
 import json
 import re
-import hashlib
 import math
 import operator
 import subprocess
 import sys
 from datetime import date, datetime
+from itertools import combinations
 from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from prototype.surface_digest import (
+    g2_surface_digest as _shared_g2_surface_digest,
+    g2_surface_digest_at_commit as _shared_g2_surface_digest_at_commit,
+    g2_surface_files as _shared_g2_surface_files,
+    review_surface_content,
+    surface_digest_from_bytes,
+)
+
 LEDGER = ROOT / "readiness" / "production-readiness.json"
 MATRIX = ROOT / "PRODUCTION_READINESS.md"
 REQUIRED_GATES = {"G1", "G2", "G3", "G4", "G5", "G6"}
@@ -30,7 +41,7 @@ VERDICTS = {"NOT_PROD_READY", "PROD_READY"}
 STATUSES = {"PASS", "FAIL", "BLOCKED"}
 CLASSES = {"internal", "external"}
 GENERIC_NON_INDEPENDENT_PRODUCER_RE = re.compile(
-    r"(?:^|[\s:_-])(local|self|maintainer|agent|repository|repo)(?:$|[\s:_-])",
+    r"(?:^|[\s:_-])(author|owner|implementer|operator|contributor|maintainer|thomas|willner|project|reference|local|agent|repository|repo|self)(?:$|[\s:_-])",
     re.IGNORECASE,
 )
 G2_NON_INDEPENDENT_PRODUCER_RE = re.compile(
@@ -39,18 +50,6 @@ G2_NON_INDEPENDENT_PRODUCER_RE = re.compile(
 )
 URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
 G2_ATTESTATION = "llm-errata-independent-review-v1"
-G2_REQUIRED_TESTS = (
-    "tests/test_adapters.py",
-    "tests/test_checkpoints.py",
-    "tests/test_cli.py",
-    "tests/test_conformance.py",
-    "tests/test_controller.py",
-    "tests/test_ed25519.py",
-    "tests/test_errata_feed.py",
-    "tests/test_schema.py",
-    "tests/test_semantic.py",
-    "tests/test_sqlite_store.py",
-)
 G2_SCOPE = frozenset(
     {
         "schemas",
@@ -64,6 +63,47 @@ G2_SCOPE = frozenset(
     }
 )
 G2_RESULTS = {"pass", "pass-with-findings", "fail"}
+G3_ATTESTATION = "llm-errata-independent-cryptography-review-v1"
+G3_ENTRY_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "scope", "result", "relationship", "conflicts",
+    "independence_attestation", "surface_digest", "implementation",
+}
+G3_SCOPE = frozenset({
+    "library-build", "constant-time", "malformed-input-refusal",
+    "key-rotation", "key-recovery", "revocation", "delegation",
+})
+G4_ATTESTATION = "llm-errata-independent-implementation-v1"
+G4_COMMON_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "surface_digest", "result", "relationship", "conflicts",
+    "independence_attestation", "evidence_role", "implementation_id", "erratum_id",
+}
+G4_RECEIPT_KEYS = {"receipt_id", "receipt_digest", "evidence_ref"}
+G4_VALIDATION_KEYS = {
+    "implementation_id", "receipt_id", "receipt_digest", "result", "evidence_ref",
+}
+G5_ATTESTATION = "llm-errata-independent-interoperability-review-v1"
+G5_ENTRY_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "surface_digest", "result", "relationship", "conflicts",
+    "independence_attestation", "synthetic_data", "user_controlled_root",
+    "root_id", "systems",
+}
+G5_SYSTEM_KEYS = {
+    "name", "version", "operator", "operator_identity", "evidence_ref", "result",
+    "independently_operated", "intentionally_nonconforming", "coverage",
+    "mixed_artifact_lineage", "operations", "measurements",
+}
+G5_OPERATION_KEYS = {"operation", "completed", "evidence_ref"}
+G5_OPERATIONS = frozenset({"correction", "supersession", "erasure"})
+G5_MEASUREMENT_KEYS = {"metric", "value", "unit", "evidence_ref"}
+G5_MEASUREMENTS = frozenset({
+    "observation-to-quarantine-time", "known-descendant-coverage",
+    "stale-behavior-rate", "replacement-activation", "collateral-retention",
+    "stale-reimport-resistance", "opaque-coverage", "operator-effort",
+    "user-visible-friction",
+})
 G6_ATTESTATION = "llm-errata-independent-operational-review-v1"
 G6_SCOPE = frozenset(
     {
@@ -181,69 +221,26 @@ def valid_g2_identity_ref(value: object) -> bool:
     return parsed.scheme == "https" and bool(parsed.netloc) and parsed.path not in {"", "/"}
 
 
+def _token_in(value: object, allowed: set[str] | frozenset[str]) -> bool:
+    """Test enum membership without hashing malformed JSON containers."""
+
+    return isinstance(value, str) and value in allowed
+
+
 def g2_surface_files(root: Path = ROOT) -> tuple[str, ...]:
-    """Return comprehensive sorted first-party Phase 2 review manifest."""
+    """Return the comprehensive sorted first-party Phase 2 review manifest."""
 
-    groups = (
-        tuple(sorted((root / "prototype").glob("*.py"))),
-        (root / "prototype" / "README.md",),
-        (root / "spec" / "README.md",),
-        (root / "spec" / "adapter-conformance.json",),
-        tuple(sorted((root / "spec").glob("*.schema.json"))),
-        tuple(sorted((root / "spec" / "vectors").glob("*.json"))),
-        tuple(sorted((root / "spec" / "semantic").glob("*.json"))),
-        tuple(root / path for path in ("ROADMAP.md", "THREAT_MODEL.md", "SECURITY.md")),
-        tuple(root / path for path in G2_REQUIRED_TESTS),
-    )
-    if any(not group for group in groups) or any(not path.is_file() for group in groups for path in group):
-        raise OSError("canonical G2 surface is incomplete")
-    return tuple(
-        sorted(path.relative_to(root).as_posix() for group in groups for path in group)
-    )
-
-
-def surface_digest_from_bytes(entries: list[tuple[str, bytes]]) -> str:
-    """SHA-256 over `relative path + NUL + raw bytes + NUL` ordered entries."""
-
-    digest = hashlib.sha256()
-    for relative, content in entries:
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(content)
-        digest.update(b"\0")
-    return digest.hexdigest()
+    return _shared_g2_surface_files(root)
 
 
 def g2_surface_digest(root: Path = ROOT) -> str:
-    return surface_digest_from_bytes(
-        [(relative, (root / relative).read_bytes()) for relative in g2_surface_files(root)]
-    )
+    return _shared_g2_surface_digest(root)
 
 
 def g2_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
     if not reviewed_commit_exists(commit, root):
         raise OSError("reviewed commit is unavailable")
-    listed = subprocess.run(
-        ["git", "ls-tree", "-r", "--name-only", commit],
-        cwd=root,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    if listed.returncode != 0:
-        raise OSError("reviewed commit tree is unavailable")
-    commit_files = set(listed.stdout.splitlines())
-    entries = []
-    for relative in g2_surface_files(root):
-        if relative == "spec/adapter-conformance.json" and relative not in commit_files:
-            continue
-        result = subprocess.run(
-            ["git", "show", f"{commit}:{relative}"], cwd=root, capture_output=True, check=False
-        )
-        if result.returncode != 0:
-            raise OSError(f"reviewed commit lacks {relative}")
-        entries.append((relative, result.stdout))
-    return surface_digest_from_bytes(entries)
+    return _shared_g2_surface_digest_at_commit(root, commit)
 
 
 def reviewed_commit_exists(value: str, root: Path = ROOT) -> bool:
@@ -300,7 +297,7 @@ def valid_g2_review_evidence(
             and all(isinstance(token, str) for token in scope)
             and len(scope) == len(set(scope))
             and set(scope) == G2_SCOPE
-            and entry.get("result") in G2_RESULTS
+            and _token_in(entry.get("result"), G2_RESULTS)
             and entry.get("relationship") == "independent-third-party"
             and isinstance(entry.get("conflicts"), list)
             and isinstance(entry.get("producer_identity"), str)
@@ -318,10 +315,327 @@ def qualifying_g2_review_evidence(
 ) -> bool:
     """Return whether a valid G2 review can satisfy a G2 PASS gate."""
 
-    return valid_g2_review_evidence(entry, today=today, root=root) and entry.get("result") in {
-        "pass",
-        "pass-with-findings",
-    }
+    return valid_g2_review_evidence(entry, today=today, root=root) and _token_in(
+        entry.get("result"), {"pass", "pass-with-findings"}
+    )
+
+
+def _surface_digest_for_files(files: tuple[str, ...], root: Path) -> str:
+    if any(not (root / relative).is_file() for relative in files):
+        raise OSError("gate surface is incomplete")
+    return surface_digest_from_bytes(
+        [(relative, (root / relative).read_bytes()) for relative in sorted(files)]
+    )
+
+
+def _surface_digest_for_files_at_commit(
+    files: tuple[str, ...], commit: str, root: Path
+) -> str:
+    if not reviewed_commit_exists(commit, root):
+        raise OSError("reviewed commit is unavailable")
+    entries = []
+    for relative in sorted(files):
+        result = subprocess.run(
+            ["git", "show", f"{commit}:{relative}"], cwd=root,
+            capture_output=True, check=False,
+        )
+        if result.returncode != 0:
+            raise OSError(f"reviewed commit lacks {relative}")
+        entries.append((relative, result.stdout))
+    return surface_digest_from_bytes(entries)
+
+
+G3_SURFACE_FILES = (
+    "prototype/ed25519.py", "prototype/errata.py", "prototype/signing.py",
+    "THREAT_MODEL.md", "docs/CRYPTOGRAPHY_QUALIFICATION.md",
+    "docs/READINESS_EVIDENCE_SCHEMAS.md",
+    "tests/test_ed25519.py", "tests/test_errata_feed.py",
+)
+G5_SURFACE_FILES = (
+    "PHASE3_SYSTEMS.md", "ROADMAP.md", "spec/erratum.schema.json",
+    "spec/receipt.schema.json", "docs/READINESS_EVIDENCE_SCHEMAS.md",
+)
+
+
+def _commit_bound_external(
+    entry: object,
+    *,
+    attestation: str,
+    surface_files: tuple[str, ...] | None,
+    today: date | None,
+    root: Path,
+) -> bool:
+    if not valid_external_evidence(entry, today=today) or not isinstance(entry, dict):
+        return False
+    commit = entry.get("reviewed_commit")
+    if not (
+        entry.get("kind") == "external"
+        and valid_g2_report_ref(entry.get("ref"))
+        and isinstance(commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", commit) is not None
+        and _token_in(entry.get("relationship"), {
+            "independent-third-party", "independent-implementation",
+            "independent-third-party-validator", "independent-experiment-report",
+        })
+        and isinstance(entry.get("conflicts"), list)
+        and valid_g2_identity_ref(entry.get("producer_identity"))
+        and entry.get("independence_attestation") == attestation
+        and _token_in(entry.get("result"), G2_RESULTS)
+    ):
+        return False
+    try:
+        if surface_files is None:
+            current = g2_surface_digest(root)
+            committed = g2_surface_digest_at_commit(commit, root)
+        else:
+            current = _surface_digest_for_files(surface_files, root)
+            committed = _surface_digest_for_files_at_commit(surface_files, commit, root)
+        return entry.get("surface_digest") == current == committed
+    except OSError:
+        return False
+
+
+def valid_g3_security_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    if not _commit_bound_external(
+        entry, attestation=G3_ATTESTATION, surface_files=G3_SURFACE_FILES,
+        today=today, root=root,
+    ) or not isinstance(entry, dict):
+        return False
+    implementation = entry.get("implementation")
+    scope = entry.get("scope")
+    return (
+        set(entry) == G3_ENTRY_KEYS
+        and entry.get("review_type") == "production-cryptography"
+        and entry.get("relationship") == "independent-third-party"
+        and isinstance(scope, list)
+        and all(isinstance(token, str) for token in scope)
+        and len(scope) == len(G3_SCOPE)
+        and len(scope) == len(set(scope))
+        and set(scope) == G3_SCOPE
+        and _exact_dict(implementation, {
+            "library", "version", "binding", "build_digest", "platforms",
+            "constant_time", "audited_build",
+        })
+        and all(_nonempty(implementation[key]) for key in ("library", "version", "binding"))
+        and isinstance(implementation["build_digest"], str)
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", implementation["build_digest"]) is not None
+        and isinstance(implementation["platforms"], list) and bool(implementation["platforms"])
+        and all(_nonempty(item) for item in implementation["platforms"])
+        and isinstance(implementation["constant_time"], bool)
+        and isinstance(implementation["audited_build"], bool)
+    )
+
+
+def qualifying_g3_security_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    return (
+        valid_g3_security_evidence(entry, today=today, root=root)
+        and _token_in(entry["result"], {"pass", "pass-with-findings"})
+        and entry["implementation"]["constant_time"] is True
+        and entry["implementation"]["audited_build"] is True
+    )
+
+
+def valid_g4_implementation_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    if not _commit_bound_external(
+        entry, attestation=G4_ATTESTATION, surface_files=None,
+        today=today, root=root,
+    ) or not isinstance(entry, dict):
+        return False
+    role = entry.get("evidence_role")
+    expected_relationship = (
+        "independent-implementation" if role == "adapter"
+        else "independent-third-party-validator"
+    )
+    if not (
+        entry.get("review_type") == "g4-conformance"
+        and _token_in(role, {"adapter", "validator"})
+        and entry.get("relationship") == expected_relationship
+        and _nonempty(entry.get("implementation_id"))
+        and _nonempty(entry.get("erratum_id"))
+    ):
+        return False
+    if role == "adapter":
+        receipt = entry.get("receipt")
+        return (
+            set(entry) == G4_COMMON_KEYS | {"receipt"}
+            and _exact_dict(receipt, G4_RECEIPT_KEYS)
+            and _nonempty(receipt["receipt_id"])
+            and isinstance(receipt["receipt_digest"], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", receipt["receipt_digest"])
+            is not None
+            and valid_g2_report_ref(receipt["evidence_ref"])
+        )
+    validated = entry.get("validated_receipts")
+    if not (
+        set(entry) == G4_COMMON_KEYS | {"validated_receipts"}
+        and isinstance(validated, list)
+        and len(validated) >= 2
+    ):
+        return False
+    for result in validated:
+        if not (
+            _exact_dict(result, G4_VALIDATION_KEYS)
+            and _nonempty(result["implementation_id"])
+            and _nonempty(result["receipt_id"])
+            and isinstance(result["receipt_digest"], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", result["receipt_digest"])
+            is not None
+            and _token_in(result["result"], G2_RESULTS)
+            and valid_g2_report_ref(result["evidence_ref"])
+        ):
+            return False
+    identities = [result["implementation_id"] for result in validated]
+    receipts = [result["receipt_id"] for result in validated]
+    return len(identities) == len(set(identities)) and len(receipts) == len(set(receipts))
+
+
+def qualifying_g4_evidence(
+    entries: list[dict[str, object]], *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    valid = [
+        entry for entry in entries
+        if valid_g4_implementation_evidence(entry, today=today, root=root)
+    ]
+    adapters = [
+        entry for entry in valid
+        if entry["evidence_role"] == "adapter"
+        and _token_in(entry["result"], {"pass", "pass-with-findings"})
+    ]
+    validators = [
+        entry for entry in valid
+        if entry["evidence_role"] == "validator"
+        and _token_in(entry["result"], {"pass", "pass-with-findings"})
+    ]
+    if len(adapters) < 2 or not validators:
+        return False
+    all_adapter_identities = {entry["producer_identity"] for entry in adapters}
+    for validator in validators:
+        if validator["producer_identity"] in all_adapter_identities:
+            continue
+        validated = {
+            (
+                result["implementation_id"], result["receipt_id"],
+                result["receipt_digest"],
+            )
+            for result in validator["validated_receipts"]
+            if _token_in(result["result"], {"pass", "pass-with-findings"})
+        }
+        validator_target = (validator["reviewed_commit"], validator["surface_digest"])
+        for first, second in combinations(adapters, 2):
+            if first["producer_identity"] == second["producer_identity"]:
+                continue
+            if first["implementation_id"] == second["implementation_id"]:
+                continue
+            if not (
+                first["erratum_id"] == second["erratum_id"] == validator["erratum_id"]
+            ):
+                continue
+            if any(
+                (adapter["reviewed_commit"], adapter["surface_digest"])
+                != validator_target
+                for adapter in (first, second)
+            ):
+                continue
+            expected = {
+                (
+                    adapter["implementation_id"], adapter["receipt"]["receipt_id"],
+                    adapter["receipt"]["receipt_digest"],
+                )
+                for adapter in (first, second)
+            }
+            if expected.issubset(validated):
+                return True
+    return False
+
+
+def valid_g5_interoperability_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    if not _commit_bound_external(
+        entry, attestation=G5_ATTESTATION, surface_files=G5_SURFACE_FILES,
+        today=today, root=root,
+    ) or not isinstance(entry, dict):
+        return False
+    systems = entry.get("systems")
+    if not (
+        set(entry) == G5_ENTRY_KEYS
+        and entry.get("review_type") == "phase3-interoperability"
+        and entry.get("relationship") == "independent-experiment-report"
+        and isinstance(entry.get("synthetic_data"), bool)
+        and isinstance(entry.get("user_controlled_root"), bool)
+        and _nonempty(entry.get("root_id"))
+        and isinstance(systems, list) and len(systems) == 3
+    ):
+        return False
+    for system in systems:
+        if not (
+            _exact_dict(system, G5_SYSTEM_KEYS)
+            and all(_nonempty(system[key]) for key in ("name", "version", "operator"))
+            and valid_g2_identity_ref(system["operator_identity"])
+            and valid_g2_report_ref(system["evidence_ref"])
+            and _token_in(system["result"], {"pass", "fail"})
+            and isinstance(system["independently_operated"], bool)
+            and isinstance(system["intentionally_nonconforming"], bool)
+            and _token_in(system["coverage"], {"complete", "incomplete", "opaque"})
+            and isinstance(system["mixed_artifact_lineage"], bool)
+        ):
+            return False
+        operations = system["operations"]
+        if not (
+            isinstance(operations, list)
+            and len(operations) == len(G5_OPERATIONS)
+            and all(_exact_dict(operation, G5_OPERATION_KEYS) for operation in operations)
+            and all(isinstance(operation["operation"], str) for operation in operations)
+            and {operation["operation"] for operation in operations} == G5_OPERATIONS
+            and all(isinstance(operation["completed"], bool) for operation in operations)
+            and all(valid_g2_report_ref(operation["evidence_ref"]) for operation in operations)
+        ):
+            return False
+        measurements = system["measurements"]
+        if not (
+            isinstance(measurements, list)
+            and len(measurements) == len(G5_MEASUREMENTS)
+            and all(_exact_dict(measurement, G5_MEASUREMENT_KEYS) for measurement in measurements)
+            and all(isinstance(measurement["metric"], str) for measurement in measurements)
+            and {measurement["metric"] for measurement in measurements} == G5_MEASUREMENTS
+            and all(_finite_number(measurement["value"]) for measurement in measurements)
+            and all(_nonempty(measurement["unit"]) for measurement in measurements)
+            and all(valid_g2_report_ref(measurement["evidence_ref"]) for measurement in measurements)
+        ):
+            return False
+    return (
+        len({system["name"] for system in systems}) == 3
+        and len({system["operator_identity"] for system in systems}) == 3
+    )
+
+
+def qualifying_g5_interoperability_evidence(
+    entry: object, *, today: date | None = None, root: Path = ROOT
+) -> bool:
+    if not valid_g5_interoperability_evidence(entry, today=today, root=root):
+        return False
+    systems = entry["systems"]
+    return (
+        _token_in(entry["result"], {"pass", "pass-with-findings"})
+        and entry["synthetic_data"] is True
+        and entry["user_controlled_root"] is True
+        and all(system["result"] == "pass" for system in systems)
+        and all(system["independently_operated"] is True for system in systems)
+        and all(
+            operation["completed"] is True
+            for system in systems
+            for operation in system["operations"]
+        )
+        and any(system["intentionally_nonconforming"] for system in systems)
+        and any(system["coverage"] in {"incomplete", "opaque"} for system in systems)
+        and any(system["mixed_artifact_lineage"] for system in systems)
+    )
 
 
 def g6_surface_files(root: Path = ROOT) -> tuple[str, ...]:
@@ -338,24 +652,11 @@ def g6_surface_files(root: Path = ROOT) -> tuple[str, ...]:
 
 
 def g6_surface_digest(root: Path = ROOT) -> str:
-    return surface_digest_from_bytes(
-        [(relative, (root / relative).read_bytes()) for relative in g6_surface_files(root)]
-    )
+    return _surface_digest_for_files(g6_surface_files(root), root)
 
 
 def g6_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
-    if not reviewed_commit_exists(commit, root):
-        raise OSError("reviewed commit is unavailable")
-    entries = []
-    for relative in g6_surface_files(root):
-        result = subprocess.run(
-            ["git", "show", f"{commit}:{relative}"], cwd=root,
-            capture_output=True, check=False,
-        )
-        if result.returncode != 0:
-            raise OSError(f"reviewed commit lacks {relative}")
-        entries.append((relative, result.stdout))
-    return surface_digest_from_bytes(entries)
+    return _surface_digest_for_files_at_commit(g6_surface_files(root), commit, root)
 
 
 def _exact_dict(value: object, keys: set[str]) -> bool:
@@ -387,7 +688,7 @@ def _valid_measurement(value: object) -> bool:
         _nonempty(value["metric"])
         and _finite_number(value["value"])
         and _nonempty(value["unit"])
-        and value["comparator"] in COMPARATORS
+        and _token_in(value["comparator"], set(COMPARATORS))
         and _finite_number(value["threshold"])
         and valid_g2_report_ref(value["evidence_ref"])
     )
@@ -417,7 +718,7 @@ def valid_g6_operational_evidence(
         and entry.get("relationship") == "independent-third-party"
         and isinstance(entry.get("conflicts"), list)
         and entry.get("independence_attestation") == G6_ATTESTATION
-        and entry.get("result") in G2_RESULTS
+        and _token_in(entry.get("result"), G2_RESULTS)
         and isinstance(reviewed_commit, str)
         and re.fullmatch(r"[0-9a-f]{40}", reviewed_commit) is not None
         and _exact_dict(deployment, {
@@ -452,7 +753,7 @@ def valid_g6_operational_evidence(
         measurements = scope["measurements"]
         if not (
             isinstance(scope["scope"], str)
-            and scope["status"] in {"pass", "fail"}
+            and _token_in(scope["status"], {"pass", "fail"})
             and isinstance(artifacts, list) and artifacts
             and all(valid_g2_report_ref(item) for item in artifacts)
             and isinstance(measurements, list) and measurements
@@ -478,7 +779,7 @@ def qualifying_g6_operational_evidence(
     if not valid_g6_operational_evidence(entry, today=today, root=root):
         return False
     return (
-        entry["result"] in {"pass", "pass-with-findings"}
+        _token_in(entry["result"], {"pass", "pass-with-findings"})
         and all(scope["status"] == "pass" for scope in entry["scopes"])
         and all(
             _measurement_passes(measurement)
@@ -600,6 +901,28 @@ def validate_matrix(
         "all rows must be unique, well formed, and exact",
     )
 
+    ledger_gates = {
+        gate.get("id"): gate
+        for gate in raw_gates
+        if isinstance(gate, dict) and isinstance(gate.get("id"), str)
+    } if isinstance(raw_gates, list) else {}
+    matrix_gate_rows = {
+        markdown_value(row[0]): row
+        for row in gate_rows
+        if len(row) == 5 and markdown_value(row[0]) in REQUIRED_GATES
+    }
+    for gate_id in sorted(REQUIRED_GATES):
+        gate = ledger_gates.get(gate_id)
+        row = matrix_gate_rows.get(gate_id)
+        criterion = gate.get("criterion") if isinstance(gate, dict) else None
+        reporter.check(
+            f"{gate_id} matrix criterion",
+            isinstance(criterion, str)
+            and row is not None
+            and markdown_value(row[1]) == criterion,
+            f"{gate_id} matrix criterion exactly matches the readiness ledger",
+        )
+
     g2_gate = next(
         (gate for gate in raw_gates if isinstance(gate, dict) and gate.get("id") == "G2"),
         None,
@@ -607,14 +930,6 @@ def validate_matrix(
     g2_row = next(
         (row for row in gate_rows if len(row) == 5 and markdown_value(row[0]) == "G2"),
         None,
-    )
-    g2_criterion = g2_gate.get("criterion") if isinstance(g2_gate, dict) else None
-    reporter.check(
-        "G2 matrix criterion",
-        isinstance(g2_criterion, str)
-        and g2_row is not None
-        and markdown_value(g2_row[1]) == g2_criterion,
-        "G2 matrix criterion exactly matches the readiness ledger",
     )
     reporter.check(
         "G2 matrix current evidence",
@@ -633,14 +948,6 @@ def validate_matrix(
     g6_row = next(
         (row for row in gate_rows if len(row) == 5 and markdown_value(row[0]) == "G6"),
         None,
-    )
-    g6_criterion = g6_gate.get("criterion") if isinstance(g6_gate, dict) else None
-    reporter.check(
-        "G6 matrix criterion",
-        isinstance(g6_criterion, str)
-        and g6_row is not None
-        and markdown_value(g6_row[1]) == g6_criterion,
-        "G6 matrix criterion exactly matches the readiness ledger",
     )
     reporter.check(
         "G6 matrix current evidence",
@@ -749,6 +1056,9 @@ def validate_ledger(
 
         valid_external_entries = 0
         valid_g2_reviews = 0
+        valid_g3_reports = 0
+        g4_external_entries: list[dict[str, object]] = []
+        valid_g5_reports = 0
         valid_g6_reports = 0
         evidence_valid = isinstance(evidence, list)
         if isinstance(evidence, list):
@@ -819,6 +1129,12 @@ def validate_ledger(
                     entry_valid = valid_external_evidence(entry)
                     if gate_id == "G2":
                         entry_valid = valid_g2_review_evidence(entry, root=ROOT)
+                    elif gate_id == "G3":
+                        entry_valid = valid_g3_security_evidence(entry, root=ROOT)
+                    elif gate_id == "G4":
+                        entry_valid = valid_g4_implementation_evidence(entry, root=ROOT)
+                    elif gate_id == "G5":
+                        entry_valid = valid_g5_interoperability_evidence(entry, root=ROOT)
                     elif gate_id == "G6":
                         entry_valid = valid_g6_operational_evidence(entry, root=ROOT)
                     evidence_valid = evidence_valid and entry_valid
@@ -826,6 +1142,12 @@ def validate_ledger(
                         valid_external_entries += 1
                     if gate_id == "G2" and qualifying_g2_review_evidence(entry, root=ROOT):
                         valid_g2_reviews += 1
+                    if gate_id == "G3" and qualifying_g3_security_evidence(entry, root=ROOT):
+                        valid_g3_reports += 1
+                    if gate_id == "G4":
+                        g4_external_entries.append(entry)
+                    if gate_id == "G5" and qualifying_g5_interoperability_evidence(entry, root=ROOT):
+                        valid_g5_reports += 1
                     if gate_id == "G6" and qualifying_g6_operational_evidence(entry, root=ROOT):
                         valid_g6_reports += 1
                 else:
@@ -837,6 +1159,9 @@ def validate_ledger(
 
         qualifying_external = (
             valid_g2_reviews if gate_id == "G2"
+            else valid_g3_reports if gate_id == "G3"
+            else int(qualifying_g4_evidence(g4_external_entries, root=ROOT)) if gate_id == "G4"
+            else valid_g5_reports if gate_id == "G5"
             else valid_g6_reports if gate_id == "G6"
             else valid_external_entries
         )
@@ -844,7 +1169,7 @@ def validate_ledger(
         reporter.check(
             f"{prefix} external PASS evidence",
             external_pass_valid,
-            "external evidence: G2 requires complete conformance review; G6 requires complete measured operational report; other external gates require independent evidence",
+            "external evidence: every external gate requires its gate-specific independent, commit-bound evidence schema",
         )
         if not external_pass_valid:
             all_pass = False

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from prototype.adapters import Coverage
+from prototype.adapters import Coverage, OpaqueAdapter
 from prototype.checkpoints import CheckpointError, QuarantineCheckpoint
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, Operation, RootRegistry
@@ -322,7 +322,7 @@ class QuarantinePrecedesRepair(unittest.TestCase):
             erratum_id=checkpoint.erratum_id,
             sequence=checkpoint.sequence,
             target_root=checkpoint.target_root,
-            pre_state_root="b" * 32,
+            pre_state_root="b" * 64,
             adapters=checkpoint.adapters,
             created_at=checkpoint.created_at,
         )
@@ -516,6 +516,8 @@ class ReceiptsBindStateAndReportCoverageHonestly(unittest.TestCase):
         second = build_importer(OWNER).repair(supersede())
         self.assertEqual(first.pre_state_root, second.pre_state_root)
         self.assertEqual(first.post_state_root, second.post_state_root)
+        self.assertEqual(len(first.pre_state_root), 64)
+        self.assertEqual(len(first.post_state_root), 64)
 
     def test_a_tampered_receipt_fails_verification(self) -> None:
         importer = build_importer(OWNER)
@@ -564,6 +566,26 @@ class ReceiptsBindStateAndReportCoverageHonestly(unittest.TestCase):
             any("silent_store" in item and "lineage" in item for item in receipt.limitations),
             receipt.limitations,
         )
+
+    def test_snapshotless_incomplete_lineage_discloses_state_root_non_binding(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        adapter = SilentLineageAdapter()
+        adapter.snapshot = None
+        importer.adapters.append(adapter)
+        receipt = importer.repair(supersede())
+        limitation = next(item for item in receipt.limitations if "silent_store" in item)
+        self.assertIn("state roots cannot bind", limitation)
+
+    def test_snapshotless_opaque_store_discloses_state_root_non_binding(self) -> None:
+        importer = build_importer(OWNER, include_opaque=False)
+        opaque = OpaqueAdapter("snapshotless_opaque")
+        opaque.snapshot = None
+        importer.adapters.append(opaque)
+        receipt = importer.repair(supersede())
+        limitation = next(
+            item for item in receipt.limitations if "snapshotless_opaque" in item
+        )
+        self.assertIn("state roots cannot bind", limitation)
 
     def test_audited_empty_scope_can_verify(self) -> None:
         importer = build_importer(OWNER, include_opaque=False)

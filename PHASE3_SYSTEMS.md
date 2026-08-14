@@ -20,6 +20,13 @@ Measurements include observation-to-quarantine time, known-descendant coverage,
 stale-behavior rate, replacement activation, collateral retention, stale-reimport
 resistance, opaque coverage, operator effort, and user-visible friction.
 
+A qualifying report records all three operations and every measurement for
+each system with public raw-evidence references. It also marks the intentionally
+nonconforming importer, `incomplete` or `opaque` coverage system, and
+mixed-artifact-lineage system explicitly. Three generic system-level pass
+statements cannot satisfy G5. Exact ledger fields are defined in
+[`docs/READINESS_EVIDENCE_SCHEMAS.md`](docs/READINESS_EVIDENCE_SCHEMAS.md).
+
 ## Nomination requirements
 
 Please name:

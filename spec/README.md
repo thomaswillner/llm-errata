@@ -25,6 +25,15 @@ requires calls through the exact adapter instance, and names one flattering
 mutation with its exact counter-result. An exception is not evidence that a
 mutation was caught.
 
+The G2 surface digest includes the complete adapter corpus. To avoid a
+self-referential Git hash, digest calculation canonicalizes only the corpus's
+`normative_target.commit` and `normative_target.surface_digest` values to fixed
+zero sentinels; every case, quotation, provenance field, expected outcome,
+mutation, control, path, and other byte remains bound. The normalized target
+values are validated separately against publication metadata and the immutable
+commit. A commit that predates the corpus fails explicitly rather than silently
+changing the digested file set.
+
 Preservation includes bounded proposition multiplicity. Within an inspectable
 synthetic conformance scope, an adapter supplies stable provider-local
 proposition identities and active assertion counts. Repair must not increase

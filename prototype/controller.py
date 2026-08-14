@@ -269,7 +269,7 @@ class Importer:
                 if (
                     record.artifact_ids
                     or record.coverage != "unknown"
-                    or record.limitation != self._opaque_limitation(name)
+                    or record.limitation != self._opaque_limitation(name, adapter)
                 ):
                     raise CheckpointError(f"checkpoint opaque coverage drifted: {name}")
                 continue
@@ -288,11 +288,17 @@ class Importer:
                 raise CheckpointError(f"checkpoint artifact is no longer gated: {name}")
 
     @staticmethod
-    def _opaque_limitation(name: str) -> str:
-        return (
+    def _opaque_limitation(name: str, adapter: StoreAdapter | None = None) -> str:
+        limitation = (
             f"{name}: store exposes no enumeration interface, so its coverage "
             "is unknown and no repair elsewhere changes that"
         )
+        if adapter is not None and not callable(getattr(adapter, "snapshot", None)):
+            limitation += (
+                "; adapter exposes no state snapshot, so checkpoint and receipt "
+                "state roots cannot bind its mutations"
+            )
+        return limitation
 
     @staticmethod
     def _lineage_limitation(adapter: StoreAdapter, root: str) -> str | None:
@@ -310,18 +316,24 @@ class Importer:
         except Exception:
             complete = False
         snapshot = getattr(adapter, "snapshot", None)
-        if complete and callable(snapshot):
-            return None
-        if complete:
-            return (
+        snapshot_limitation = None
+        if not callable(snapshot):
+            snapshot_limitation = (
                 f"{adapter.name}: adapter exposes no state snapshot for {root}; "
                 "checkpoint and receipt state roots cannot bind its mutations"
             )
-        return (
+        if complete and snapshot_limitation is None:
+            return None
+        if complete:
+            return snapshot_limitation
+        limitation = (
             f"{adapter.name}: enumeration returned a result but the adapter did "
             f"not establish complete root-specific lineage for {root}; empty or "
             "partial walks cannot become verified coverage"
         )
+        if snapshot_limitation is not None:
+            limitation += f"; {snapshot_limitation}"
+        return limitation
 
     @staticmethod
     def _feed_view_limitation() -> str:
@@ -374,7 +386,9 @@ class Importer:
                 acknowledge = getattr(adapter, "acknowledge", None)
                 if acknowledge is not None:
                     acknowledge(root)
-                limitations[adapter.name] = self._opaque_limitation(adapter.name)
+                limitations[adapter.name] = self._opaque_limitation(
+                    adapter.name, adapter
+                )
                 gated[adapter.name] = []
                 checkpoint_coverage[adapter.name] = Coverage.UNKNOWN
                 continue
