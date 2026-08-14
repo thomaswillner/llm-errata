@@ -5,7 +5,7 @@
   "target_root": "mem_01HX",
   "operation": "supersede",
   "pre_state_root": "not-a-digest",
-  "post_state_root": "0397835561846e8f0ac0c239710f752a",
+  "post_state_root": "0397835561846e8f0ac0c239710f752a0397835561846e8f0ac0c239710f752a",
   "stores": {
     "markdown": "verified",
     "vector": "verified",

@@ -8,6 +8,15 @@ Repository: https://github.com/thomaswillner/llm-errata
 
 Current verdict: **NOT_PROD_READY**.
 
+## Immutable target model
+
+The `review_target` in `publication/active-surfaces.json` and the
+`normative_target` in `spec/adapter-conformance.json` must be identical. That
+commit is the normative source target. The final release commit may be a later
+metadata-only packaging commit; its tag is validated separately. Reviewers
+should report both identities and must not substitute the release tag for the
+normative target without checking the allowed packaging delta.
+
 ## Reviews requested
 
 ### Novelty and conformance review

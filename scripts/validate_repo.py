@@ -448,6 +448,12 @@ def check_publication_metadata(reporter: Reporter) -> None:
         "No patent rights are granted",
         "Apache License 2.0",
         "irrevocable",
+        "HARD_PROBLEMS.md",
+        "PRIOR_ART.md",
+        "RESEARCH.md",
+        "PRODUCTION_READINESS.md",
+        "INDEPENDENT_IMPLEMENTATION.md",
+        "PHASE3_SYSTEMS.md",
     )
     reporter.check(
         "license and notice",
@@ -473,6 +479,7 @@ def check_publication_metadata(reporter: Reporter) -> None:
         "CONTRIBUTING.md": ("independently authored implementation",),
         "SECURITY.md": (
             "Licence attribution does not imply security review, endorsement, or certification",
+            "trusted code only",
         ),
     }
     public_alignment = all(

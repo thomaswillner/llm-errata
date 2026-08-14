@@ -68,6 +68,14 @@ normalization or embedding similarity cannot substitute for identity. A pass
 is candidate internal evidence only and still requires a separate producer to
 validate both implementations and the validator.
 
+The binding command executes imported Python inside the invoking process. It is
+for **trusted code only** from a reviewed, clean checkout. Git identity,
+tracked-byte binding, namespace isolation, and timeouts improve evidence
+provenance; they are not an operating-system sandbox and do not make untrusted
+candidate code safe. Production evaluation of untrusted submissions requires a
+separate least-privilege process or container with explicit filesystem,
+network, secret, CPU, and memory limits.
+
 ## Independence and evidence
 
 An implementation report must name its authors, repository and commit, supported

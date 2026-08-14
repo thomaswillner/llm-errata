@@ -6,7 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Changes to the bounded novelty statement or the source comparison are recorded here even when they narrow or retire part of the claim. That is the intended direction of travel, not an exception.
 
-## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.4.0...HEAD)
+## [Unreleased](https://github.com/thomaswillner/llm-errata/compare/v0.4.1...HEAD)
+
+## [0.4.1](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.1) - 2026-08-14
+
+Integrity and conformance hardening release following an authorized read-only
+Claude Opus 5 adversarial review of v0.4.0. The review recommended keeping
+v0.4.0 published and issuing this patch release rather than withdrawing it.
+
+- Separated the immutable normative review target from the metadata-only
+  packaging/release commit. Publication and adapter-conformance metadata now
+  share one target; tag-time validation binds the final release commit without
+  attempting a self-referential Git hash.
+- Scoped the offline publication checker to claims it can prove and made live
+  GitHub verification explicitly inconclusive without a freshness receipt.
+- Enforced ledger-to-matrix criterion equality for all six readiness gates and
+  added gate-specific, commit-bound independent evidence contracts for G3-G5.
+- Widened receipt state roots from truncated 128-bit values to full SHA-256 and
+  required the same width in durable quarantine checkpoints and vectors.
+- Disclosed state-root non-binding for every snapshot-less adapter path,
+  including opaque and lineage-incomplete stores.
+- Clarified that all six normative Markdown contracts are Specification
+  Materials and that conformance bindings execute trusted code only.
+- Replaced the silent pre-corpus digest skip with an explicit failure and bound
+  the adapter corpus into G2 digests while normalizing only its unavoidable
+  self-target pointer.
+
+The production verdict remains **NOT_PROD_READY**. G2-G6 remain `BLOCKED`; this
+release adds no external review, independent implementation, operated-system,
+cryptography, or operational-readiness evidence.
 
 ## [0.4.0](https://github.com/thomaswillner/llm-errata/releases/tag/v0.4.0) - 2026-08-14
 

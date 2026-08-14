@@ -37,13 +37,13 @@ from tests.support import (
 SCRIPT = "check_readiness.py"
 
 
-class Release040ReadinessBoundary(unittest.TestCase):
+class Release041ReadinessBoundary(unittest.TestCase):
     def test_release_updates_version_without_upgrading_external_gates(self) -> None:
         root = Path(__file__).resolve().parents[1]
         payload = json.loads(
             (root / "readiness" / "production-readiness.json").read_text()
         )
-        self.assertEqual(payload["project_version"], "0.4.0")
+        self.assertEqual(payload["project_version"], "0.4.1")
         self.assertEqual(payload["verdict"], "NOT_PROD_READY")
         self.assertEqual(
             {gate["id"]: gate["status"] for gate in payload["gates"]},
@@ -466,6 +466,25 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assert_rejected_without_traceback(result, "G2 matrix criterion")
 
+    def test_every_gate_matrix_criterion_drift_is_rejected(self) -> None:
+        for gate_id in ("G1", "G3", "G4", "G5"):
+            with self.subTest(gate_id=gate_id):
+                def mutate(root, selected=gate_id):
+                    path = root / "PRODUCTION_READINESS.md"
+                    lines = path.read_text(encoding="utf-8").splitlines()
+                    index = next(
+                        i for i, line in enumerate(lines) if line.startswith(f"| {selected} |")
+                    )
+                    cells = lines[index][1:-1].split("|")
+                    cells[1] = " criterion drift "
+                    lines[index] = "|" + "|".join(cells) + "|"
+                    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+                result = check_after(SCRIPT, mutate)
+                self.assert_rejected_without_traceback(
+                    result, f"{gate_id} matrix criterion"
+                )
+
     def test_g2_matrix_current_evidence_drift_is_rejected(self) -> None:
         def mutate(root):
             rewrite(
@@ -606,6 +625,47 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
         result = self._mutated(mutate)
         self.assertEqual(result.returncode, EXIT_FAIL)
         self.assertIn("external evidence", result.stdout)
+
+    def test_g3_g4_g5_reject_generic_or_owner_produced_external_records(self) -> None:
+        for gate_id in ("G3", "G4", "G5"):
+            with self.subTest(gate_id=gate_id):
+                def mutate(payload, selected=gate_id):
+                    gate = next(g for g in payload["gates"] if g["id"] == selected)
+                    gate["status"] = "PASS"
+                    gate["evidence"].append(
+                        {
+                            "kind": "external",
+                            "ref": "https://reviews.example.org/generic/report",
+                            "producer": "Thomas Willner",
+                            "observed": "2026-08-14",
+                        }
+                    )
+
+                result = self._mutated(mutate)
+                self.assert_rejected_without_traceback(
+                    result, f"{gate_id} external PASS evidence"
+                )
+
+    def test_pre_corpus_review_target_fails_explicitly(self) -> None:
+        with repo_copy() as root:
+            corpus = root / "spec" / "adapter-conformance.json"
+            corpus_bytes = corpus.read_bytes()
+            corpus.unlink()
+            for command in (
+                ("git", "init", "-q"),
+                ("git", "config", "user.email", "tests@example.invalid"),
+                ("git", "config", "user.name", "Readiness tests"),
+                ("git", "add", "."),
+                ("git", "commit", "-q", "-m", "pre-corpus"),
+            ):
+                subprocess.run(command, cwd=root, check=True)
+            pre_corpus = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            corpus.write_bytes(corpus_bytes)
+            with self.assertRaisesRegex(OSError, "predates the conformance corpus"):
+                g2_surface_digest_at_commit(pre_corpus, root)
 
     def test_external_evidence_without_producer_is_rejected(self) -> None:
         def mutate(payload):

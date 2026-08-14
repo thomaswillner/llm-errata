@@ -112,7 +112,9 @@ class QuarantineCheckpoint:
             raise CheckpointError("checkpoint sequence must be a positive integer")
         if not isinstance(self.target_root, str) or not self.target_root:
             raise CheckpointError("checkpoint target root is invalid")
-        if not isinstance(self.pre_state_root, str) or not self.pre_state_root:
+        if not isinstance(self.pre_state_root, str) or not _DIGEST.fullmatch(
+            self.pre_state_root
+        ):
             raise CheckpointError("checkpoint pre-state root is invalid")
         if not isinstance(self.adapters, tuple) or not self.adapters:
             raise CheckpointError("checkpoint adapters must be non-empty")

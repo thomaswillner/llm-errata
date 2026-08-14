@@ -143,6 +143,11 @@ without creating a workspace. The default reference binding drives the real
 `Importer` lifecycle through a proxy around the exact adapter instance. A
 third-party binding is supplied as `--binding module:factory`.
 
+That binding is **trusted code only**: it executes in the invoking Python
+process. Clean-tree checks, admitted-byte loading, namespace isolation, and
+timeouts bind evidence but do not provide an operating-system sandbox. Run
+untrusted candidates only in a separately constrained process or container.
+
 The canonical JSON report separates the immutable normative predecessor target
 from the runtime commit being exercised, lists complete honest and mutation
 outcomes, records exact target-instance calls, and includes three executable

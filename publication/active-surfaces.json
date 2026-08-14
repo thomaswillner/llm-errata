@@ -1,8 +1,17 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "review_target": {
     "commit": "ad36ed5e209a53aacab17751b5a183ca8a1aac1f",
     "surface_digest": "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d"
+  },
+  "release_binding": {
+    "version": "0.4.1",
+    "tag": "v0.4.1",
+    "allowed_packaging_paths": [
+      "publication/active-surfaces.json",
+      "spec/adapter-conformance.json"
+    ],
+    "commit_model": "review target plus metadata-only packaging commit; tag binds release commit"
   },
   "license": {
     "specification_implementation": "irrevocable worldwide royalty-free commercial and non-commercial",

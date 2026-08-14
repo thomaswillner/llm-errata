@@ -20,7 +20,7 @@ class CheckpointModel(unittest.TestCase):
             erratum_id="err_0001",
             sequence=1,
             target_root="mem_01HX",
-            pre_state_root="a" * 32,
+            pre_state_root="a" * 64,
             adapters=(
                 AdapterCheckpoint("prompt_cache", True, (), "unknown", "opaque"),
                 AdapterCheckpoint("sqlite", True, ("fact:diet", "summary:dining"), "verified", None),
@@ -54,6 +54,10 @@ class CheckpointModel(unittest.TestCase):
     def test_unsafe_erratum_id_is_rejected(self) -> None:
         with self.assertRaisesRegex(CheckpointError, "erratum"):
             replace(self.checkpoint(), erratum_id="../escape")
+
+    def test_truncated_pre_state_root_is_rejected(self) -> None:
+        with self.assertRaisesRegex(CheckpointError, "pre-state root"):
+            replace(self.checkpoint(), pre_state_root="a" * 32)
 
 
 class CheckpointPersistence(unittest.TestCase):

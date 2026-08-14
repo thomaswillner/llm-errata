@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import unittest
 from collections.abc import Callable
 from pathlib import Path
@@ -18,6 +20,35 @@ class PublicationGuardPasses(unittest.TestCase):
         with repo_copy() as root:
             result = run_checker(root, SCRIPT)
         self.assertEqual(result.returncode, EXIT_OK, result.stdout + result.stderr)
+
+    def test_offline_result_does_not_claim_remote_surfaces_were_verified(self) -> None:
+        with repo_copy() as root:
+            result = run_checker(root, SCRIPT)
+        self.assertEqual(result.returncode, EXIT_OK, result.stdout + result.stderr)
+        self.assertIn("offline manifest consistency", result.stdout)
+        self.assertIn("remote GitHub surfaces were not verified", result.stdout)
+        self.assertNotIn("[PASS] active surfaces", result.stdout)
+
+    def test_remote_required_mode_is_inconclusive_without_live_evidence(self) -> None:
+        with repo_copy() as root:
+            result = subprocess.run(
+                [sys.executable, str(root / "scripts" / SCRIPT), "--require-remote"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE, result.stdout)
+        self.assertIn("INCONCLUSIVE", result.stdout)
+
+    def test_review_and_conformance_targets_are_identical(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        publication = json.loads(
+            (root / "publication" / "active-surfaces.json").read_text(encoding="utf-8")
+        )
+        corpus = json.loads(
+            (root / "spec" / "adapter-conformance.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(publication["review_target"], corpus["normative_target"])
 
 
 class PublicationGuardRejectsDrift(unittest.TestCase):
@@ -97,7 +128,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
     def test_historical_surface_cannot_be_rewritten(self) -> None:
         self._assert_manifest_mutation_is_rejected(
             lambda payload: payload["historical_surfaces"][0].__setitem__(
-                "commit", "0" * 40
+                "commit", "not-a-commit"
             ),
             "historical surfaces",
         )

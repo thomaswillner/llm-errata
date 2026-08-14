@@ -47,11 +47,11 @@ class CorpusValidation(unittest.TestCase):
 
     def test_checked_in_corpus_binds_immutable_normative_sources(self) -> None:
         corpus = load_corpus(CORPUS, ROOT)
-        self.assertEqual(corpus.schema_version, 1)
-        self.assertEqual(
-            corpus.normative_target.commit,
-            "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+        publication = json.loads(
+            (ROOT / "publication" / "active-surfaces.json").read_text(encoding="utf-8")
         )
+        self.assertEqual(corpus.schema_version, 1)
+        self.assertEqual(corpus.normative_target.commit, publication["review_target"]["commit"])
         self.assertEqual(len(corpus.cases), 5)
         self.assertEqual(len(corpus.validator_controls), 3)
 
@@ -78,9 +78,12 @@ class CorpusValidation(unittest.TestCase):
 
     def test_new_current_surface_files_do_not_change_historical_manifest(self) -> None:
         corpus = load_corpus(CORPUS, ROOT)
+        publication = json.loads(
+            (ROOT / "publication" / "active-surfaces.json").read_text(encoding="utf-8")
+        )
         self.assertEqual(
             corpus.normative_target.surface_digest,
-            "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12",
+            publication["review_target"]["surface_digest"],
         )
 
     def test_quotation_drift_is_refused(self) -> None:

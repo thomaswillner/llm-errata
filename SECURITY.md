@@ -5,7 +5,7 @@ LLM Errata is currently a public concept proposal and may later include schemas,
 ## Supported versions
 
 Until a later policy states otherwise, only the latest versioned release is
-eligible for security fixes. Support moved from 0.3.x to 0.4.x with the immutable `v0.4.0` release. Development revisions after the latest release
+eligible for security fixes. The current immutable supported release is `v0.4.1`. Development revisions after the latest release
 receive fixes at maintainer discretion and are not represented as supported
 releases.
 
@@ -50,6 +50,12 @@ Security-relevant findings include, but are not limited to:
 - cross-tenant, identity-binding, or authorization failures;
 - leakage of memory contents, provenance, or deletion requests;
 - unsafe reference code or conformance tooling added to the repository.
+
+`errata adapter-conformance --binding` executes imported Python and is for
+**trusted code only**. Its source-identity and timeout controls are evidence
+bindings, not sandboxing. Untrusted candidate code requires external process or
+container isolation with no ambient secrets and explicit filesystem, network,
+CPU, and memory limits.
 
 Factual disagreements, prior-art reports, and specification design proposals are not vulnerabilities; submit them through the normal contribution process.
 

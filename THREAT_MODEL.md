@@ -19,6 +19,11 @@ mitigation or an admitted limit.
 
 ## Defended
 
+Receipt pre/post state roots use full-width SHA-256 (64 lowercase hexadecimal
+characters). Their scope remains limited to inspectable ledger and adapter
+snapshots. Any adapter without `snapshot()` contributes no state and must carry
+an explicit signed limitation that its mutations are not bound by those roots.
+
 | Threat | Mitigation | Where |
 |---|---|---|
 | Forged erratum | Ed25519 over a canonical serialisation; the feed is refused, not the entry | `errata.verify_feed` |

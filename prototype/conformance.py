@@ -261,8 +261,6 @@ STORE_KEYS = {"multiplicity", "erased_absent", "preserved_present", "unrelated_p
 RECEIPT_KEYS = {"names_store", "non_trivial", "forbidden_absent"}
 MUTATION_KEYS = {"id", "exact_counter_result"}
 CONTROL_KEYS = {"id", "mutation", "required_failure"}
-REQUIRED_TARGET = "ac4468faf73c2cc7949dd29b2a2a151f5bd23116"
-REQUIRED_DIGEST = "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12"
 GIT_TIMEOUT_SECONDS = 10.0
 BINDING_TIMEOUT_SECONDS = 10.0
 REQUIRED_PROVENANCE = {
@@ -330,6 +328,7 @@ def _surface_paths_at_commit(root: Path, commit: str) -> tuple[str, ...]:
     groups = (
         tuple(sorted(path for path in files if re.fullmatch(r"prototype/[^/]+\.py", path))),
         ("prototype/README.md", "spec/README.md"),
+        ("spec/adapter-conformance.json",),
         tuple(sorted(path for path in files if re.fullmatch(r"spec/[^/]+\.schema\.json", path))),
         tuple(sorted(path for path in files if re.fullmatch(r"spec/vectors/[^/]+\.json", path))),
         tuple(sorted(path for path in files if re.fullmatch(r"spec/semantic/[^/]+\.json", path))),
@@ -345,9 +344,25 @@ def _surface_paths_at_commit(root: Path, commit: str) -> tuple[str, ...]:
 def _surface_digest_at_commit(root: Path, commit: str) -> str:
     digest = hashlib.sha256()
     for relative in _surface_paths_at_commit(root, commit):
+        content = _git(root, "show", f"{commit}:{relative}")
+        if relative == "spec/adapter-conformance.json":
+            try:
+                payload = json.loads(content.decode("utf-8"))
+                target = payload["normative_target"]
+                if not isinstance(target, dict):
+                    raise TypeError
+                target["commit"] = "0" * 40
+                target["surface_digest"] = "0" * 64
+                content = json.dumps(
+                    payload, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
+                raise ConformanceInputError(
+                    "conformance corpus target metadata is malformed"
+                ) from error
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(_git(root, "show", f"{commit}:{relative}"))
+        digest.update(content)
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -369,6 +384,18 @@ def _validate_outcome(value: object, operation: str, label: str) -> dict[str, An
     return outcome
 
 
+def _publication_target(source_root: Path) -> dict[str, Any]:
+    try:
+        publication = json.loads(
+            (source_root / "publication" / "active-surfaces.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        return _exact(publication["review_target"], TARGET_KEYS, "publication target")
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError) as error:
+        raise ConformanceInputError("publication review target is unavailable") from error
+
+
 def load_corpus(
     path: Path, source_root: Path, *, require_canonical_path: bool = False
 ) -> AdapterCorpus:
@@ -385,10 +412,10 @@ def load_corpus(
     if root["schema_version"] != 1:
         raise ConformanceInputError("corpus schema version must be 1")
     target = _exact(root["normative_target"], TARGET_KEYS, "normative target")
-    if target["commit"] != REQUIRED_TARGET:
-        raise ConformanceInputError("normative target commit is not canonical")
-    if target["surface_digest"] != REQUIRED_DIGEST:
-        raise ConformanceInputError("normative surface digest is not canonical")
+    if target != _publication_target(source_root):
+        raise ConformanceInputError(
+            "normative target does not match the active publication review target"
+        )
     actual_digest = _surface_digest_at_commit(source_root, target["commit"])
     if actual_digest != target["surface_digest"]:
         raise ConformanceInputError("normative surface digest does not match source")

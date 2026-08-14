@@ -115,6 +115,11 @@ class PublishedSchemas(unittest.TestCase):
         with self.assertRaises(schema.SchemaError):
             schema.load("nonexistent")
 
+    def test_receipt_state_roots_require_full_sha256_width(self) -> None:
+        receipt_schema = schema.load("receipt")
+        state_root = receipt_schema["$defs"]["stateRoot"]
+        self.assertEqual(state_root["pattern"], "^[0-9a-f]{64}$")
+
 
 class ConformanceVectors(unittest.TestCase):
     def setUp(self) -> None:
