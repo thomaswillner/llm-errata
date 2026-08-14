@@ -139,6 +139,119 @@ def _git(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _manifest_history() -> tuple[list[dict[str, object]], list[str]]:
+    """Read every committed manifest revision from oldest to newest."""
+
+    failures: list[str] = []
+    log = _git("log", "--format=%H", "--", "publication/active-surfaces.json")
+    if log.returncode != 0:
+        return [], ["publication history: committed manifest history is unavailable"]
+    manifests: list[dict[str, object]] = []
+    for commit in reversed(log.stdout.splitlines()):
+        shown = _git("show", f"{commit}:publication/active-surfaces.json")
+        try:
+            payload = json.loads(shown.stdout)
+        except (json.JSONDecodeError, TypeError):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} is unreadable"
+            )
+            continue
+        if not (
+            shown.returncode == 0
+            and isinstance(payload, dict)
+            and isinstance(payload.get("surfaces"), list)
+        ):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} lacks surface records"
+            )
+            continue
+        if payload.get("schema_version") == 1:
+            continue
+        if not isinstance(payload.get("historical_surfaces"), list):
+            failures.append(
+                f"publication history: manifest at {commit[:12]} lacks historical records"
+            )
+            continue
+        manifests.append(payload)
+    return manifests, failures
+
+
+def _same_active_record(left: object, right: object) -> bool:
+    return (
+        isinstance(left, dict)
+        and isinstance(right, dict)
+        and set(left) == SURFACE_KEYS
+        and set(right) == SURFACE_KEYS
+        and left == right
+    )
+
+
+def _historical_version_of(active: object, historical: object) -> bool:
+    return (
+        isinstance(active, dict)
+        and isinstance(historical, dict)
+        and set(active) == SURFACE_KEYS
+        and set(historical) == HISTORICAL_SURFACE_KEYS
+        and all(historical.get(key) == active.get(key) for key in SURFACE_KEYS)
+        and _is_repository_url(historical.get("superseded_by"))
+    )
+
+
+def _validate_append_only_history(payload: dict[str, object]) -> list[str]:
+    """Require every committed surface transition to preserve exact prior records."""
+
+    manifests, failures = _manifest_history()
+    if failures:
+        return failures
+    if not manifests:
+        return []
+    if manifests[-1] != payload:
+        manifests.append(payload)
+
+    history_failed = False
+    mapping_failed = False
+    for previous, current in zip(manifests, manifests[1:]):
+        prior_history = previous["historical_surfaces"]
+        current_history = current["historical_surfaces"]
+        prior_active = previous["surfaces"]
+        current_active = current["surfaces"]
+
+        if any(record not in current_history for record in prior_history):
+            history_failed = True
+
+        removed_active = []
+        for record in prior_active:
+            if any(_same_active_record(record, candidate) for candidate in current_active):
+                continue
+            if not any(
+                _historical_version_of(record, candidate)
+                for candidate in current_history
+            ):
+                history_failed = True
+            removed_active.append(record)
+
+        removed_urls = {
+            record.get("url") for record in removed_active if isinstance(record, dict)
+        }
+        if removed_urls:
+            for record in current_active:
+                if any(_same_active_record(record, candidate) for candidate in prior_active):
+                    continue
+                supersedes = record.get("supersedes") if isinstance(record, dict) else None
+                if not isinstance(supersedes, list) or not removed_urls.intersection(supersedes):
+                    mapping_failed = True
+
+    if history_failed:
+        failures.append(
+            "historical surfaces: committed records must remain exact and append-only"
+        )
+    if mapping_failed:
+        failures.append(
+            "active surfaces: replacement mapping must supersede the prior active URL"
+        )
+    return failures
+
+
 def validate_manifest(payload: object) -> list[str]:
     failures: list[str] = []
     if not isinstance(payload, dict) or set(payload) != ROOT_KEYS:
@@ -227,6 +340,7 @@ def validate_manifest(payload: object) -> list[str]:
         failures.append("unique GitHub mentions: each identity may be notified only once")
 
     if (ROOT / ".git").exists() and _valid_target(target):
+        failures.extend(_validate_append_only_history(payload))
         commit = target["commit"]
         ancestor = _git("merge-base", "--is-ancestor", commit, "HEAD")
         if ancestor.returncode != 0:

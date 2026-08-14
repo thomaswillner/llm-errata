@@ -22,15 +22,25 @@ v0.4.0 published and issuing this patch release rather than withdrawing it.
   GitHub verification explicitly inconclusive without a freshness receipt.
 - Enforced ledger-to-matrix criterion equality for all six readiness gates and
   added gate-specific, commit-bound independent evidence contracts for G3-G5.
+- Made the G3 scope parser reject malformed or unhashable tokens without a
+  traceback and added complete positive records for the G3-G5 contracts.
+- Bound G4 validation to one shared erratum and the exact IDs and SHA-256
+  digests of both adapter receipts; unrelated validator evidence cannot qualify.
+- Required G5 evidence to include correction, supersession, erasure, all nine
+  measurements, three distinct operators, the deliberately nonconforming arm,
+  incomplete or opaque coverage, and mixed-artifact lineage.
+- Enforced publication history against committed Git revisions so valid-looking
+  coordinated rewrites, deletions, and arbitrary active-surface replacement fail.
 - Widened receipt state roots from truncated 128-bit values to full SHA-256 and
   required the same width in durable quarantine checkpoints and vectors.
 - Disclosed state-root non-binding for every snapshot-less adapter path,
   including opaque and lineage-incomplete stores.
-- Clarified that all six normative Markdown contracts are Specification
+- Clarified every named normative Markdown contract included in Specification
   Materials and that conformance bindings execute trusted code only.
 - Replaced the silent pre-corpus digest skip with an explicit failure and bound
-  the adapter corpus into G2 digests while normalizing only its unavoidable
-  self-target pointer.
+  the adapter corpus into G2 digests. One shared readiness/conformance module
+  now normalizes only the two unavoidable self-target scalar values and keeps
+  every other corpus byte, including whitespace and escape spelling, bound.
 
 The production verdict remains **NOT_PROD_READY**. G2-G6 remain `BLOCKED`; this
 release adds no external review, independent implementation, operated-system,

@@ -6,6 +6,11 @@
 
 **Readiness gate:** G3 remains `BLOCKED`
 
+Any future external qualification record must use the exact G3 scope,
+implementation-build, platform, audit, and constant-time fields in
+[`READINESS_EVIDENCE_SCHEMAS.md`](READINESS_EVIDENCE_SCHEMAS.md). A generic
+security-review URL or malformed scope cannot satisfy the gate.
+
 ## Decision
 
 Do not replace the reference signer yet.

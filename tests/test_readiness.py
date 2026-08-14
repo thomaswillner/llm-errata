@@ -8,21 +8,31 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 
+from prototype.conformance import _surface_digest_at_commit as conformance_surface_digest_at_commit
 from scripts.check_readiness import (
     G2_MATRIX_CURRENT_EVIDENCE,
+    G3_SCOPE,
+    G3_SURFACE_FILES,
+    G5_SURFACE_FILES,
     G6_SCOPE,
     g2_surface_digest,
     g2_surface_digest_at_commit,
     g2_surface_files,
     g6_surface_digest,
+    qualifying_g3_security_evidence,
+    qualifying_g4_evidence,
+    qualifying_g5_interoperability_evidence,
     qualifying_g6_operational_evidence,
     qualifying_g2_review_evidence,
     valid_external_evidence,
     valid_g2_review_evidence,
+    valid_g4_implementation_evidence,
     valid_g6_operational_evidence,
     markdown_value,
+    surface_digest_from_bytes,
 )
 from tests.support import (
     EXIT_FAIL,
@@ -35,6 +45,31 @@ from tests.support import (
 
 
 SCRIPT = "check_readiness.py"
+
+
+@contextmanager
+def committed_repo():
+    with repo_copy() as root:
+        for command in (
+            ("git", "init", "-q"),
+            ("git", "config", "user.email", "tests@example.invalid"),
+            ("git", "config", "user.name", "Readiness tests"),
+            ("git", "config", "gc.auto", "0"),
+            ("git", "add", "."),
+            ("git", "commit", "-q", "-m", "gate evidence baseline"),
+        ):
+            subprocess.run(command, cwd=root, check=True)
+        commit = subprocess.run(
+            ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+        yield root, commit
+
+
+def gate_surface_digest(root: Path, files: tuple[str, ...]) -> str:
+    return surface_digest_from_bytes(
+        [(relative, (root / relative).read_bytes()) for relative in sorted(files)]
+    )
 
 
 class Release041ReadinessBoundary(unittest.TestCase):
@@ -64,6 +99,301 @@ class Release041ReadinessBoundary(unittest.TestCase):
 
 
 class ReadinessCheckerPasses(unittest.TestCase):
+    def test_g2_digest_binds_non_target_corpus_bytes_with_conformance_parity(self) -> None:
+        with committed_repo() as (root, baseline_commit):
+            baseline = g2_surface_digest_at_commit(baseline_commit, root)
+            self.assertEqual(
+                baseline,
+                conformance_surface_digest_at_commit(root, baseline_commit),
+            )
+            corpus = root / "spec" / "adapter-conformance.json"
+            corpus.write_bytes(
+                corpus.read_bytes().replace(
+                    b'  "schema_version": 1,',
+                    b'    "schema_version": 1,',
+                    1,
+                )
+            )
+            subprocess.run(("git", "add", str(corpus)), cwd=root, check=True)
+            subprocess.run(
+                ("git", "commit", "-q", "-m", "change corpus whitespace"),
+                cwd=root, check=True,
+            )
+            changed_commit = subprocess.run(
+                ("git", "rev-parse", "HEAD"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            changed = g2_surface_digest_at_commit(changed_commit, root)
+            self.assertNotEqual(changed, baseline)
+            self.assertEqual(
+                changed,
+                conformance_surface_digest_at_commit(root, changed_commit),
+            )
+
+    @staticmethod
+    def _complete_g3_report(root: Path, commit: str) -> dict[str, object]:
+        return {
+            "kind": "external",
+            "ref": "https://reviews.example.org/cryptography/report-1",
+            "producer": "Independent Cryptography Laboratory",
+            "producer_identity": "https://identity.example.org/crypto-lab",
+            "observed": "2026-08-12",
+            "review_type": "production-cryptography",
+            "reviewed_commit": commit,
+            "scope": sorted(G3_SCOPE),
+            "result": "pass-with-findings",
+            "relationship": "independent-third-party",
+            "conflicts": [],
+            "independence_attestation": "llm-errata-independent-cryptography-review-v1",
+            "surface_digest": gate_surface_digest(root, G3_SURFACE_FILES),
+            "implementation": {
+                "library": "example-constant-time-library",
+                "version": "1.2.3",
+                "binding": "example-python-binding",
+                "build_digest": "sha256:" + "a" * 64,
+                "platforms": ["linux-amd64", "macos-arm64"],
+                "constant_time": True,
+                "audited_build": True,
+            },
+        }
+
+    def test_g3_complete_report_qualifies_and_malformed_scope_fails_closed(self) -> None:
+        with committed_repo() as (root, commit):
+            report = self._complete_g3_report(root, commit)
+            self.assertTrue(qualifying_g3_security_evidence(report, root=root))
+            for invalid in ([[]], [{}], ["constant-time", []]):
+                with self.subTest(scope=invalid):
+                    malformed = copy.deepcopy(report)
+                    malformed["scope"] = invalid
+                    self.assertFalse(
+                        qualifying_g3_security_evidence(malformed, root=root)
+                    )
+
+    @staticmethod
+    def _g4_common(
+        root: Path,
+        commit: str,
+        *,
+        producer: str,
+        producer_identity: str,
+        role: str,
+        implementation_id: str,
+    ) -> dict[str, object]:
+        return {
+            "kind": "external",
+            "ref": f"https://evidence.example.org/g4/{implementation_id}",
+            "producer": producer,
+            "producer_identity": producer_identity,
+            "observed": "2026-08-12",
+            "review_type": "g4-conformance",
+            "reviewed_commit": commit,
+            "result": "pass",
+            "relationship": (
+                "independent-implementation"
+                if role == "adapter"
+                else "independent-third-party-validator"
+            ),
+            "conflicts": [],
+            "independence_attestation": "llm-errata-independent-implementation-v1",
+            "surface_digest": g2_surface_digest(root),
+            "evidence_role": role,
+            "implementation_id": implementation_id,
+            "erratum_id": "erratum-synthetic-001",
+        }
+
+    @classmethod
+    def _complete_g4_records(
+        cls, root: Path, commit: str
+    ) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+        adapter_a = cls._g4_common(
+            root, commit, producer="Systems Laboratory Alpha",
+            producer_identity="https://identity.example.org/lab-alpha",
+            role="adapter", implementation_id="adapter-alpha",
+        )
+        adapter_a["receipt"] = {
+            "receipt_id": "receipt-alpha",
+            "receipt_digest": "sha256:" + "a" * 64,
+            "evidence_ref": "https://evidence.example.org/receipts/alpha",
+        }
+        adapter_b = cls._g4_common(
+            root, commit, producer="Systems Laboratory Beta",
+            producer_identity="https://identity.example.org/lab-beta",
+            role="adapter", implementation_id="adapter-beta",
+        )
+        adapter_b["receipt"] = {
+            "receipt_id": "receipt-beta",
+            "receipt_digest": "sha256:" + "b" * 64,
+            "evidence_ref": "https://evidence.example.org/receipts/beta",
+        }
+        validator = cls._g4_common(
+            root, commit, producer="Independent Validator Laboratory",
+            producer_identity="https://identity.example.org/validator-lab",
+            role="validator", implementation_id="validator-one",
+        )
+        validator["validated_receipts"] = [
+            {
+                "implementation_id": "adapter-alpha",
+                "receipt_id": "receipt-alpha",
+                "receipt_digest": "sha256:" + "a" * 64,
+                "result": "pass",
+                "evidence_ref": "https://evidence.example.org/validation/alpha",
+            },
+            {
+                "implementation_id": "adapter-beta",
+                "receipt_id": "receipt-beta",
+                "receipt_digest": "sha256:" + "b" * 64,
+                "result": "pass",
+                "evidence_ref": "https://evidence.example.org/validation/beta",
+            },
+        ]
+        return adapter_a, adapter_b, validator
+
+    def test_g4_validator_must_bind_both_adapter_receipts_for_same_erratum(self) -> None:
+        with committed_repo() as (root, commit):
+            adapter_a, adapter_b, validator = self._complete_g4_records(root, commit)
+            self.assertTrue(qualifying_g4_evidence(
+                [adapter_a, adapter_b, validator], root=root
+            ))
+
+            unrelated = copy.deepcopy(validator)
+            unrelated["validated_receipts"][0]["implementation_id"] = "adapter-other-a"
+            unrelated["validated_receipts"][1]["implementation_id"] = "adapter-other-b"
+            self.assertFalse(qualifying_g4_evidence(
+                [adapter_a, adapter_b, unrelated], root=root
+            ))
+
+            wrong_erratum = copy.deepcopy(validator)
+            wrong_erratum["erratum_id"] = "erratum-unrelated"
+            self.assertFalse(qualifying_g4_evidence(
+                [adapter_a, adapter_b, wrong_erratum], root=root
+            ))
+
+    def test_g4_role_specific_records_reject_malformed_receipt_shapes(self) -> None:
+        with committed_repo() as (root, commit):
+            adapter_a, _, validator = self._complete_g4_records(root, commit)
+            for entry, field, invalid in (
+                (adapter_a, "receipt", []),
+                (adapter_a, "receipt", {"receipt_id": []}),
+                (validator, "validated_receipts", [[]]),
+                (validator, "validated_receipts", [{"implementation_id": []}]),
+            ):
+                with self.subTest(field=field, invalid=invalid):
+                    malformed = copy.deepcopy(entry)
+                    malformed[field] = invalid
+                    self.assertFalse(
+                        valid_g4_implementation_evidence(malformed, root=root)
+                    )
+
+    @staticmethod
+    def _complete_g5_report(root: Path, commit: str) -> dict[str, object]:
+        metrics = (
+            "observation-to-quarantine-time",
+            "known-descendant-coverage",
+            "stale-behavior-rate",
+            "replacement-activation",
+            "collateral-retention",
+            "stale-reimport-resistance",
+            "opaque-coverage",
+            "operator-effort",
+            "user-visible-friction",
+        )
+        systems = []
+        for index, name in enumerate(("system-alpha", "system-beta", "system-gamma")):
+            systems.append({
+                "name": name,
+                "version": "1.0.0",
+                "operator": f"Operator {index + 1}",
+                "operator_identity": f"https://identity.example.org/operator-{index + 1}",
+                "evidence_ref": f"https://evidence.example.org/systems/{name}",
+                "result": "pass",
+                "independently_operated": True,
+                "intentionally_nonconforming": index == 0,
+                "coverage": "opaque" if index == 1 else "complete",
+                "mixed_artifact_lineage": index == 2,
+                "operations": [
+                    {
+                        "operation": operation,
+                        "completed": True,
+                        "evidence_ref": (
+                            f"https://evidence.example.org/systems/{name}/{operation}"
+                        ),
+                    }
+                    for operation in ("correction", "supersession", "erasure")
+                ],
+                "measurements": [
+                    {
+                        "metric": metric,
+                        "value": index + 1,
+                        "unit": "synthetic-unit",
+                        "evidence_ref": (
+                            f"https://evidence.example.org/systems/{name}/metrics/{metric}"
+                        ),
+                    }
+                    for metric in metrics
+                ],
+            })
+        return {
+            "kind": "external",
+            "ref": "https://reviews.example.org/interoperability/report-1",
+            "producer": "Independent Interoperability Laboratory",
+            "producer_identity": "https://identity.example.org/interoperability-lab",
+            "observed": "2026-08-12",
+            "review_type": "phase3-interoperability",
+            "reviewed_commit": commit,
+            "surface_digest": gate_surface_digest(root, G5_SURFACE_FILES),
+            "result": "pass-with-findings",
+            "relationship": "independent-experiment-report",
+            "conflicts": [],
+            "independence_attestation": "llm-errata-independent-interoperability-review-v1",
+            "synthetic_data": True,
+            "user_controlled_root": True,
+            "root_id": "synthetic-root-001",
+            "systems": systems,
+        }
+
+    def test_g5_complete_declared_experiment_qualifies(self) -> None:
+        with committed_repo() as (root, commit):
+            report = self._complete_g5_report(root, commit)
+            self.assertTrue(qualifying_g5_interoperability_evidence(report, root=root))
+
+    def test_g5_partial_or_malformed_experiment_cannot_qualify(self) -> None:
+        with committed_repo() as (root, commit):
+            baseline = self._complete_g5_report(root, commit)
+            legacy_shape = copy.deepcopy(baseline)
+            legacy_shape.pop("user_controlled_root")
+            for system in legacy_shape["systems"]:
+                for field in (
+                    "intentionally_nonconforming", "coverage",
+                    "mixed_artifact_lineage", "operations", "measurements",
+                ):
+                    system.pop(field)
+            self.assertFalse(
+                qualifying_g5_interoperability_evidence(legacy_shape, root=root)
+            )
+            mutations = {
+                "missing operation": lambda report: report["systems"][0]["operations"].pop(),
+                "missing measurement": lambda report: report["systems"][0]["measurements"].pop(),
+                "no nonconforming importer": lambda report: [
+                    system.update(intentionally_nonconforming=False)
+                    for system in report["systems"]
+                ],
+                "no incomplete system": lambda report: [
+                    system.update(coverage="complete") for system in report["systems"]
+                ],
+                "no mixed lineage": lambda report: [
+                    system.update(mixed_artifact_lineage=False)
+                    for system in report["systems"]
+                ],
+                "malformed system": lambda report: report.update(systems=[[]]),
+            }
+            for name, mutate in mutations.items():
+                with self.subTest(name=name):
+                    report = copy.deepcopy(baseline)
+                    mutate(report)
+                    self.assertFalse(
+                        qualifying_g5_interoperability_evidence(report, root=root)
+                    )
+
     def test_cryptography_qualification_foregrounds_refusal_evidence(self) -> None:
         qualification = (
             Path(__file__).resolve().parents[1]
@@ -90,6 +420,7 @@ class ReadinessCheckerPasses(unittest.TestCase):
         self.assertIn("prototype/checkpoints.py", files)
         self.assertIn("tests/test_checkpoints.py", files)
         self.assertIn("spec/adapter-conformance.json", files)
+        self.assertIn("docs/READINESS_EVIDENCE_SCHEMAS.md", files)
 
     def test_g6_complete_measured_report_is_commit_and_deployment_bound(self) -> None:
         with repo_copy() as source, tempfile.TemporaryDirectory() as temp:

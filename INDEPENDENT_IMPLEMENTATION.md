@@ -94,6 +94,13 @@ cannot also occupy the separately authored third-party validator role for its
 own implementation. Commercial interest and other conflicts must be disclosed;
 they do not erase technical evidence, but they control how it can satisfy G4.
 
+Qualifying G4 ledger records must bind both adapter receipts to the same
+erratum, immutable commit, and canonical surface digest. The validator must
+name both adapter implementation IDs and exact receipt IDs and SHA-256 digests;
+an unrelated validator result cannot be combined with otherwise valid adapter
+records. See [`docs/READINESS_EVIDENCE_SCHEMAS.md`](docs/READINESS_EVIDENCE_SCHEMAS.md)
+for the exact role-specific fields.
+
 No per-implementer permission is required for an independently authored
 commercial or non-commercial implementation of the specification. The
 irrevocable implementation grant requires every product or service to credit

@@ -129,6 +129,7 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) | Nominations for future authorized three-system synthetic-data experiment. |
 | [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) | Evidence-bounded publication channels and canonical announcement copy. |
 | [docs/PUBLICATION_LOG.md](docs/PUBLICATION_LOG.md) | Public GitHub calls, blocked external-channel attempts, and readiness boundary. |
+| [docs/READINESS_EVIDENCE_SCHEMAS.md](docs/READINESS_EVIDENCE_SCHEMAS.md) | Exact commit-bound G3-G5 external evidence records and qualification boundaries. |
 
 ## Verifying this repository
 
@@ -185,7 +186,7 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.4.1 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. It hardens immutable review/release binding, publication-check claims, readiness matrix equality and external-evidence independence, full-width state roots, snapshot limitation disclosure, licence scope, and conformance-corpus digest behavior. Phase 1 and the internal Phase 2 conformance surface retain conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
+Version 0.4.1 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. It hardens immutable review/release binding, append-only publication history, readiness matrix equality, gate-specific external-evidence independence, full-width state roots, snapshot limitation disclosure, licence scope, and byte-preserving conformance-corpus digests. G4 validator reports must bind the same erratum and exact receipts from both adapters; G5 reports must record the complete declared three-system experiment rather than generic system passes. Phase 1 and the internal Phase 2 conformance surface retain conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
 
 Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 

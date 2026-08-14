@@ -18,6 +18,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from prototype.surface_digest import (
+    SurfaceDigestError,
+    g2_surface_digest_at_commit,
+)
+
 
 class ConformanceInputError(ValueError):
     """Corpus or source evidence cannot support a conformance run."""
@@ -316,55 +321,11 @@ def _git(root: Path, *args: str) -> bytes:
     return result.stdout
 
 
-def _surface_paths_at_commit(root: Path, commit: str) -> tuple[str, ...]:
-    required_tests = (
-        "tests/test_adapters.py", "tests/test_checkpoints.py", "tests/test_cli.py",
-        "tests/test_conformance.py", "tests/test_controller.py", "tests/test_ed25519.py",
-        "tests/test_errata_feed.py", "tests/test_schema.py",
-        "tests/test_semantic.py", "tests/test_sqlite_store.py",
-    )
-    listed = _git(root, "ls-tree", "-r", "--name-only", commit).decode("utf-8").splitlines()
-    files = set(listed)
-    groups = (
-        tuple(sorted(path for path in files if re.fullmatch(r"prototype/[^/]+\.py", path))),
-        ("prototype/README.md", "spec/README.md"),
-        ("spec/adapter-conformance.json",),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/[^/]+\.schema\.json", path))),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/vectors/[^/]+\.json", path))),
-        tuple(sorted(path for path in files if re.fullmatch(r"spec/semantic/[^/]+\.json", path))),
-        ("ROADMAP.md", "THREAT_MODEL.md", "SECURITY.md"),
-        required_tests,
-    )
-    paths = tuple(sorted(item for group in groups for item in group))
-    if any(path not in files for path in paths):
-        raise ConformanceInputError("canonical surface is incomplete")
-    return paths
-
-
 def _surface_digest_at_commit(root: Path, commit: str) -> str:
-    digest = hashlib.sha256()
-    for relative in _surface_paths_at_commit(root, commit):
-        content = _git(root, "show", f"{commit}:{relative}")
-        if relative == "spec/adapter-conformance.json":
-            try:
-                payload = json.loads(content.decode("utf-8"))
-                target = payload["normative_target"]
-                if not isinstance(target, dict):
-                    raise TypeError
-                target["commit"] = "0" * 40
-                target["surface_digest"] = "0" * 64
-                content = json.dumps(
-                    payload, sort_keys=True, separators=(",", ":")
-                ).encode("utf-8")
-            except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
-                raise ConformanceInputError(
-                    "conformance corpus target metadata is malformed"
-                ) from error
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(content)
-        digest.update(b"\0")
-    return digest.hexdigest()
+    try:
+        return g2_surface_digest_at_commit(root, commit)
+    except SurfaceDigestError as error:
+        raise ConformanceInputError(str(error)) from error
 
 
 def _validate_outcome(value: object, operation: str, label: str) -> dict[str, Any]:

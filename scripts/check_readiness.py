@@ -5,16 +5,27 @@ from __future__ import annotations
 
 import json
 import re
-import hashlib
 import math
 import operator
 import subprocess
 import sys
 from datetime import date, datetime
+from itertools import combinations
 from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from prototype.surface_digest import (
+    g2_surface_digest as _shared_g2_surface_digest,
+    g2_surface_digest_at_commit as _shared_g2_surface_digest_at_commit,
+    g2_surface_files as _shared_g2_surface_files,
+    review_surface_content,
+    surface_digest_from_bytes,
+)
+
 LEDGER = ROOT / "readiness" / "production-readiness.json"
 MATRIX = ROOT / "PRODUCTION_READINESS.md"
 REQUIRED_GATES = {"G1", "G2", "G3", "G4", "G5", "G6"}
@@ -39,18 +50,6 @@ G2_NON_INDEPENDENT_PRODUCER_RE = re.compile(
 )
 URN_RE = re.compile(r"^urn:[A-Za-z0-9][A-Za-z0-9-]{1,31}:[^\s]+$")
 G2_ATTESTATION = "llm-errata-independent-review-v1"
-G2_REQUIRED_TESTS = (
-    "tests/test_adapters.py",
-    "tests/test_checkpoints.py",
-    "tests/test_cli.py",
-    "tests/test_conformance.py",
-    "tests/test_controller.py",
-    "tests/test_ed25519.py",
-    "tests/test_errata_feed.py",
-    "tests/test_schema.py",
-    "tests/test_semantic.py",
-    "tests/test_sqlite_store.py",
-)
 G2_SCOPE = frozenset(
     {
         "schemas",
@@ -65,12 +64,46 @@ G2_SCOPE = frozenset(
 )
 G2_RESULTS = {"pass", "pass-with-findings", "fail"}
 G3_ATTESTATION = "llm-errata-independent-cryptography-review-v1"
+G3_ENTRY_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "scope", "result", "relationship", "conflicts",
+    "independence_attestation", "surface_digest", "implementation",
+}
 G3_SCOPE = frozenset({
     "library-build", "constant-time", "malformed-input-refusal",
     "key-rotation", "key-recovery", "revocation", "delegation",
 })
 G4_ATTESTATION = "llm-errata-independent-implementation-v1"
+G4_COMMON_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "surface_digest", "result", "relationship", "conflicts",
+    "independence_attestation", "evidence_role", "implementation_id", "erratum_id",
+}
+G4_RECEIPT_KEYS = {"receipt_id", "receipt_digest", "evidence_ref"}
+G4_VALIDATION_KEYS = {
+    "implementation_id", "receipt_id", "receipt_digest", "result", "evidence_ref",
+}
 G5_ATTESTATION = "llm-errata-independent-interoperability-review-v1"
+G5_ENTRY_KEYS = {
+    "kind", "ref", "producer", "producer_identity", "observed", "review_type",
+    "reviewed_commit", "surface_digest", "result", "relationship", "conflicts",
+    "independence_attestation", "synthetic_data", "user_controlled_root",
+    "root_id", "systems",
+}
+G5_SYSTEM_KEYS = {
+    "name", "version", "operator", "operator_identity", "evidence_ref", "result",
+    "independently_operated", "intentionally_nonconforming", "coverage",
+    "mixed_artifact_lineage", "operations", "measurements",
+}
+G5_OPERATION_KEYS = {"operation", "completed", "evidence_ref"}
+G5_OPERATIONS = frozenset({"correction", "supersession", "erasure"})
+G5_MEASUREMENT_KEYS = {"metric", "value", "unit", "evidence_ref"}
+G5_MEASUREMENTS = frozenset({
+    "observation-to-quarantine-time", "known-descendant-coverage",
+    "stale-behavior-rate", "replacement-activation", "collateral-retention",
+    "stale-reimport-resistance", "opaque-coverage", "operator-effort",
+    "user-visible-friction",
+})
 G6_ATTESTATION = "llm-errata-independent-operational-review-v1"
 G6_SCOPE = frozenset(
     {
@@ -189,94 +222,19 @@ def valid_g2_identity_ref(value: object) -> bool:
 
 
 def g2_surface_files(root: Path = ROOT) -> tuple[str, ...]:
-    """Return comprehensive sorted first-party Phase 2 review manifest."""
+    """Return the comprehensive sorted first-party Phase 2 review manifest."""
 
-    groups = (
-        tuple(sorted((root / "prototype").glob("*.py"))),
-        (root / "prototype" / "README.md",),
-        (root / "spec" / "README.md",),
-        (root / "spec" / "adapter-conformance.json",),
-        tuple(sorted((root / "spec").glob("*.schema.json"))),
-        tuple(sorted((root / "spec" / "vectors").glob("*.json"))),
-        tuple(sorted((root / "spec" / "semantic").glob("*.json"))),
-        tuple(root / path for path in ("ROADMAP.md", "THREAT_MODEL.md", "SECURITY.md")),
-        tuple(root / path for path in G2_REQUIRED_TESTS),
-    )
-    if any(not group for group in groups) or any(not path.is_file() for group in groups for path in group):
-        raise OSError("canonical G2 surface is incomplete")
-    return tuple(
-        sorted(path.relative_to(root).as_posix() for group in groups for path in group)
-    )
-
-
-def surface_digest_from_bytes(entries: list[tuple[str, bytes]]) -> str:
-    """SHA-256 over `relative path + NUL + raw bytes + NUL` ordered entries."""
-
-    digest = hashlib.sha256()
-    for relative, content in entries:
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(content)
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
-def review_surface_content(relative: str, content: bytes) -> bytes:
-    """Normalize only the corpus's self-referential target pointer.
-
-    Cases, provenance, controls, and every other corpus byte remain digest-bound.
-    The target commit and digest are validated separately. Normalizing those two
-    fields lets a later packaging commit point at the immutable source commit
-    without requiring a Git commit to contain its own hash.
-    """
-
-    if relative != "spec/adapter-conformance.json":
-        return content
-    try:
-        payload = json.loads(content.decode("utf-8"))
-        target = payload["normative_target"]
-        if not isinstance(target, dict):
-            raise TypeError
-        target["commit"] = "0" * 40
-        target["surface_digest"] = "0" * 64
-    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
-        raise OSError("conformance corpus target metadata is malformed") from error
-    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return _shared_g2_surface_files(root)
 
 
 def g2_surface_digest(root: Path = ROOT) -> str:
-    return surface_digest_from_bytes(
-        [
-            (relative, review_surface_content(relative, (root / relative).read_bytes()))
-            for relative in g2_surface_files(root)
-        ]
-    )
+    return _shared_g2_surface_digest(root)
 
 
 def g2_surface_digest_at_commit(commit: str, root: Path = ROOT) -> str:
     if not reviewed_commit_exists(commit, root):
         raise OSError("reviewed commit is unavailable")
-    listed = subprocess.run(
-        ["git", "ls-tree", "-r", "--name-only", commit],
-        cwd=root,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    if listed.returncode != 0:
-        raise OSError("reviewed commit tree is unavailable")
-    commit_files = set(listed.stdout.splitlines())
-    entries = []
-    for relative in g2_surface_files(root):
-        if relative == "spec/adapter-conformance.json" and relative not in commit_files:
-            raise OSError("reviewed commit predates the conformance corpus")
-        result = subprocess.run(
-            ["git", "show", f"{commit}:{relative}"], cwd=root, capture_output=True, check=False
-        )
-        if result.returncode != 0:
-            raise OSError(f"reviewed commit lacks {relative}")
-        entries.append((relative, review_surface_content(relative, result.stdout)))
-    return surface_digest_from_bytes(entries)
+    return _shared_g2_surface_digest_at_commit(root, commit)
 
 
 def reviewed_commit_exists(value: str, root: Path = ROOT) -> bool:
@@ -385,11 +343,12 @@ def _surface_digest_for_files_at_commit(
 G3_SURFACE_FILES = (
     "prototype/ed25519.py", "prototype/errata.py", "prototype/signing.py",
     "THREAT_MODEL.md", "docs/CRYPTOGRAPHY_QUALIFICATION.md",
+    "docs/READINESS_EVIDENCE_SCHEMAS.md",
     "tests/test_ed25519.py", "tests/test_errata_feed.py",
 )
 G5_SURFACE_FILES = (
     "PHASE3_SYSTEMS.md", "ROADMAP.md", "spec/erratum.schema.json",
-    "spec/receipt.schema.json",
+    "spec/receipt.schema.json", "docs/READINESS_EVIDENCE_SCHEMAS.md",
 )
 
 
@@ -440,13 +399,17 @@ def qualifying_g3_security_evidence(
     ) or not isinstance(entry, dict):
         return False
     implementation = entry.get("implementation")
+    scope = entry.get("scope")
     return (
-        entry.get("review_type") == "production-cryptography"
+        set(entry) == G3_ENTRY_KEYS
+        and entry.get("review_type") == "production-cryptography"
         and entry.get("relationship") == "independent-third-party"
         and entry.get("result") in {"pass", "pass-with-findings"}
-        and isinstance(entry.get("scope"), list)
-        and set(entry["scope"]) == G3_SCOPE
-        and len(entry["scope"]) == len(G3_SCOPE)
+        and isinstance(scope, list)
+        and all(isinstance(token, str) for token in scope)
+        and len(scope) == len(G3_SCOPE)
+        and len(scope) == len(set(scope))
+        and set(scope) == G3_SCOPE
         and _exact_dict(implementation, {
             "library", "version", "binding", "build_digest", "platforms",
             "constant_time", "audited_build",
@@ -474,13 +437,48 @@ def valid_g4_implementation_evidence(
         "independent-implementation" if role == "adapter"
         else "independent-third-party-validator"
     )
-    return (
+    if not (
         entry.get("review_type") == "g4-conformance"
         and role in {"adapter", "validator"}
         and entry.get("relationship") == expected_relationship
         and entry.get("result") in {"pass", "pass-with-findings"}
         and _nonempty(entry.get("implementation_id"))
-    )
+        and _nonempty(entry.get("erratum_id"))
+    ):
+        return False
+    if role == "adapter":
+        receipt = entry.get("receipt")
+        return (
+            set(entry) == G4_COMMON_KEYS | {"receipt"}
+            and _exact_dict(receipt, G4_RECEIPT_KEYS)
+            and _nonempty(receipt["receipt_id"])
+            and isinstance(receipt["receipt_digest"], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", receipt["receipt_digest"])
+            is not None
+            and valid_g2_report_ref(receipt["evidence_ref"])
+        )
+    validated = entry.get("validated_receipts")
+    if not (
+        set(entry) == G4_COMMON_KEYS | {"validated_receipts"}
+        and isinstance(validated, list)
+        and len(validated) >= 2
+    ):
+        return False
+    for result in validated:
+        if not (
+            _exact_dict(result, G4_VALIDATION_KEYS)
+            and _nonempty(result["implementation_id"])
+            and _nonempty(result["receipt_id"])
+            and isinstance(result["receipt_digest"], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", result["receipt_digest"])
+            is not None
+            and result["result"] in {"pass", "pass-with-findings"}
+            and valid_g2_report_ref(result["evidence_ref"])
+        ):
+            return False
+    identities = [result["implementation_id"] for result in validated]
+    receipts = [result["receipt_id"] for result in validated]
+    return len(identities) == len(set(identities)) and len(receipts) == len(set(receipts))
 
 
 def qualifying_g4_evidence(
@@ -494,16 +492,44 @@ def qualifying_g4_evidence(
     validators = [entry for entry in valid if entry["evidence_role"] == "validator"]
     if len(adapters) < 2 or not validators:
         return False
-    adapter_identities = {entry["producer_identity"] for entry in adapters}
-    adapter_implementations = {entry["implementation_id"] for entry in adapters}
-    validator_identities = {entry["producer_identity"] for entry in validators}
-    targets = {(entry["reviewed_commit"], entry["surface_digest"]) for entry in valid}
-    return (
-        len(adapter_identities) >= 2
-        and len(adapter_implementations) >= 2
-        and validator_identities.isdisjoint(adapter_identities)
-        and len(targets) == 1
-    )
+    all_adapter_identities = {entry["producer_identity"] for entry in adapters}
+    for validator in validators:
+        if validator["producer_identity"] in all_adapter_identities:
+            continue
+        validated = {
+            (
+                result["implementation_id"], result["receipt_id"],
+                result["receipt_digest"],
+            )
+            for result in validator["validated_receipts"]
+            if result["result"] in {"pass", "pass-with-findings"}
+        }
+        validator_target = (validator["reviewed_commit"], validator["surface_digest"])
+        for first, second in combinations(adapters, 2):
+            if first["producer_identity"] == second["producer_identity"]:
+                continue
+            if first["implementation_id"] == second["implementation_id"]:
+                continue
+            if not (
+                first["erratum_id"] == second["erratum_id"] == validator["erratum_id"]
+            ):
+                continue
+            if any(
+                (adapter["reviewed_commit"], adapter["surface_digest"])
+                != validator_target
+                for adapter in (first, second)
+            ):
+                continue
+            expected = {
+                (
+                    adapter["implementation_id"], adapter["receipt"]["receipt_id"],
+                    adapter["receipt"]["receipt_digest"],
+                )
+                for adapter in (first, second)
+            }
+            if expected.issubset(validated):
+                return True
+    return False
 
 
 def qualifying_g5_interoperability_evidence(
@@ -516,28 +542,59 @@ def qualifying_g5_interoperability_evidence(
         return False
     systems = entry.get("systems")
     if not (
-        entry.get("review_type") == "phase3-interoperability"
+        set(entry) == G5_ENTRY_KEYS
+        and entry.get("review_type") == "phase3-interoperability"
         and entry.get("relationship") == "independent-experiment-report"
         and entry.get("result") in {"pass", "pass-with-findings"}
         and entry.get("synthetic_data") is True
+        and entry.get("user_controlled_root") is True
         and _nonempty(entry.get("root_id"))
         and isinstance(systems, list) and len(systems) == 3
     ):
         return False
     for system in systems:
         if not (
-            _exact_dict(system, {
-                "name", "version", "operator", "operator_identity",
-                "evidence_ref", "result", "independently_operated",
-            })
+            _exact_dict(system, G5_SYSTEM_KEYS)
             and all(_nonempty(system[key]) for key in ("name", "version", "operator"))
             and valid_g2_identity_ref(system["operator_identity"])
             and valid_g2_report_ref(system["evidence_ref"])
             and system["result"] == "pass"
             and system["independently_operated"] is True
+            and isinstance(system["intentionally_nonconforming"], bool)
+            and system["coverage"] in {"complete", "incomplete", "opaque"}
+            and isinstance(system["mixed_artifact_lineage"], bool)
         ):
             return False
-    return len({system["operator_identity"] for system in systems}) == 3
+        operations = system["operations"]
+        if not (
+            isinstance(operations, list)
+            and len(operations) == len(G5_OPERATIONS)
+            and all(_exact_dict(operation, G5_OPERATION_KEYS) for operation in operations)
+            and all(isinstance(operation["operation"], str) for operation in operations)
+            and {operation["operation"] for operation in operations} == G5_OPERATIONS
+            and all(operation["completed"] is True for operation in operations)
+            and all(valid_g2_report_ref(operation["evidence_ref"]) for operation in operations)
+        ):
+            return False
+        measurements = system["measurements"]
+        if not (
+            isinstance(measurements, list)
+            and len(measurements) == len(G5_MEASUREMENTS)
+            and all(_exact_dict(measurement, G5_MEASUREMENT_KEYS) for measurement in measurements)
+            and all(isinstance(measurement["metric"], str) for measurement in measurements)
+            and {measurement["metric"] for measurement in measurements} == G5_MEASUREMENTS
+            and all(_finite_number(measurement["value"]) for measurement in measurements)
+            and all(_nonempty(measurement["unit"]) for measurement in measurements)
+            and all(valid_g2_report_ref(measurement["evidence_ref"]) for measurement in measurements)
+        ):
+            return False
+    return (
+        len({system["name"] for system in systems}) == 3
+        and len({system["operator_identity"] for system in systems}) == 3
+        and any(system["intentionally_nonconforming"] for system in systems)
+        and any(system["coverage"] in {"incomplete", "opaque"} for system in systems)
+        and any(system["mixed_artifact_lineage"] for system in systems)
+    )
 
 
 def g6_surface_files(root: Path = ROOT) -> tuple[str, ...]:
