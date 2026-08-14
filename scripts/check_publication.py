@@ -165,7 +165,7 @@ def _manifest_history() -> tuple[list[dict[str, object]], list[str]]:
                 f"publication history: manifest at {commit[:12]} lacks surface records"
             )
             continue
-        if payload.get("schema_version") == 1:
+        if payload.get("schema_version") in {1, 2}:
             continue
         if not isinstance(payload.get("historical_surfaces"), list):
             failures.append(
@@ -352,10 +352,13 @@ def validate_manifest(payload: object) -> list[str]:
                 failures.append("review target: runtime surface differs from reviewed source")
         except OSError as error:
             failures.append(f"review target: {error}")
-        changed = _git("diff", "--name-only", f"{commit}..HEAD")
-        if changed.returncode != 0:
+        changed = _git("diff", "--name-only", commit)
+        untracked = _git("ls-files", "--others", "--exclude-standard")
+        if changed.returncode != 0 or untracked.returncode != 0:
             failures.append("release binding: packaging delta cannot be inspected")
-        elif set(changed.stdout.splitlines()) - ALLOWED_PACKAGING_PATHS:
+        elif (
+            set(changed.stdout.splitlines()) | set(untracked.stdout.splitlines())
+        ) - ALLOWED_PACKAGING_PATHS:
             failures.append("release binding: runtime contains non-packaging changes after review target")
     return failures
 

@@ -218,6 +218,14 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
 
         self._assert_history_mutation_is_rejected(mutate, "active surfaces")
 
+    def test_uncommitted_nonpackaging_delta_is_rejected(self) -> None:
+        with bound_publication_repo() as root:
+            readme = root / "README.md"
+            readme.write_bytes(readme.read_bytes() + b"\nnon-packaging mutation\n")
+            result = run_checker(root, SCRIPT)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout + result.stderr)
+        self.assertIn("release binding", result.stdout)
+
     def test_duplicate_surface_url_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
             payload["surfaces"].append(dict(payload["surfaces"][0]))
