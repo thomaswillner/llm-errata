@@ -9,6 +9,9 @@ Shared fields are `kind=external`, a public report `ref`, non-empty `producer`,
 public `producer_identity`, ISO `observed` date, exact `reviewed_commit`, exact
 `surface_digest`, `conflicts` array, gate-specific `review_type`, relationship,
 and independence attestation. Extra or malformed fields fail closed.
+`result` is exactly `pass`, `pass-with-findings`, or `fail`. Structural
+admission preserves a complete negative report; gate qualification separately
+requires the passing values described below.
 
 ## G3 cryptography record
 
@@ -38,7 +41,8 @@ producer identity, and `validated_receipts`. Every result names the adapter
 reference. G4 qualifies only when one validator reports passing results for
 the exact receipts from two different adapter producers against the same
 erratum, commit, and surface digest. An unrelated validator report cannot be
-combined with the adapters.
+combined with the adapters. Structurally complete adapter, validator, and
+per-receipt `fail` results remain admissible evidence but do not qualify G4.
 
 ## G5 interoperability record
 
@@ -63,7 +67,11 @@ operator identities. Every system names version and evidence, completes
 Every operation and measurement has its own public evidence reference. The
 three-system set must include at least one intentionally nonconforming importer,
 one `incomplete` or `opaque` coverage system, and one mixed-artifact-lineage
-system. Three generic passing system summaries are insufficient.
+system. A structurally complete failed report may record a failed system,
+`independently_operated=false`, or `completed=false`. Qualification requires a
+passing report, synthetic data, a user-controlled root, three independently
+operated passing systems, every operation completed, and all three required
+experiment arms. Three generic passing system summaries are insufficient.
 
 These schemas establish structural admission only. Maintainer review still
 must verify real identities, authorship, conflicts, authorization, raw evidence,

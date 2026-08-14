@@ -29,7 +29,9 @@ from scripts.check_readiness import (
     qualifying_g2_review_evidence,
     valid_external_evidence,
     valid_g2_review_evidence,
+    valid_g3_security_evidence,
     valid_g4_implementation_evidence,
+    valid_g5_interoperability_evidence,
     valid_g6_operational_evidence,
     markdown_value,
     surface_digest_from_bytes,
@@ -355,6 +357,71 @@ class ReadinessCheckerPasses(unittest.TestCase):
         with committed_repo() as (root, commit):
             report = self._complete_g5_report(root, commit)
             self.assertTrue(qualifying_g5_interoperability_evidence(report, root=root))
+
+    def test_failed_g3_g4_g5_records_are_valid_but_do_not_qualify(self) -> None:
+        with committed_repo() as (root, commit):
+            g3 = self._complete_g3_report(root, commit)
+            g3["result"] = "fail"
+            g3["implementation"]["constant_time"] = False
+            self.assertTrue(valid_g3_security_evidence(g3, root=root))
+            self.assertFalse(qualifying_g3_security_evidence(g3, root=root))
+
+            adapter_a, adapter_b, validator = self._complete_g4_records(root, commit)
+            adapter_a["result"] = "fail"
+            validator["validated_receipts"][0]["result"] = "fail"
+            self.assertTrue(valid_g4_implementation_evidence(adapter_a, root=root))
+            self.assertTrue(valid_g4_implementation_evidence(validator, root=root))
+            self.assertFalse(
+                qualifying_g4_evidence([adapter_a, adapter_b, validator], root=root)
+            )
+
+            g5 = self._complete_g5_report(root, commit)
+            g5["result"] = "fail"
+            g5["systems"][0]["result"] = "fail"
+            g5["systems"][0]["operations"][0]["completed"] = False
+            self.assertTrue(valid_g5_interoperability_evidence(g5, root=root))
+            self.assertFalse(qualifying_g5_interoperability_evidence(g5, root=root))
+
+    def test_external_evidence_unhashable_status_tokens_fail_closed(self) -> None:
+        with committed_repo() as (root, commit):
+            g2 = self._complete_review(root, commit)
+            g3 = self._complete_g3_report(root, commit)
+            adapter, _, validator = self._complete_g4_records(root, commit)
+            g5 = self._complete_g5_report(root, commit)
+            g6 = self._complete_g6_report(root, commit)
+            cases = (
+                ("G2 result", g2, lambda record: record.update(result=[]),
+                 valid_g2_review_evidence),
+                ("G3 result", g3, lambda record: record.update(result=[]),
+                 valid_g3_security_evidence),
+                ("G4 result", adapter, lambda record: record.update(result={}),
+                 valid_g4_implementation_evidence),
+                ("G4 receipt result", validator,
+                 lambda record: record["validated_receipts"][0].update(result=[]),
+                 valid_g4_implementation_evidence),
+                ("G5 result", g5, lambda record: record.update(result={}),
+                 valid_g5_interoperability_evidence),
+                ("G5 system result", g5,
+                 lambda record: record["systems"][0].update(result=[]),
+                 valid_g5_interoperability_evidence),
+                ("G5 coverage", g5,
+                 lambda record: record["systems"][0].update(coverage={}),
+                 valid_g5_interoperability_evidence),
+                ("G6 result", g6, lambda record: record.update(result=[]),
+                 valid_g6_operational_evidence),
+                ("G6 scope status", g6,
+                 lambda record: record["scopes"][0].update(status={}),
+                 valid_g6_operational_evidence),
+                ("G6 comparator", g6,
+                 lambda record: record["scopes"][0]["measurements"][0].update(
+                     comparator=[]
+                 ), valid_g6_operational_evidence),
+            )
+            for name, baseline, mutate, validator_fn in cases:
+                with self.subTest(name=name):
+                    malformed = copy.deepcopy(baseline)
+                    mutate(malformed)
+                    self.assertFalse(validator_fn(malformed, root=root))
 
     def test_g5_partial_or_malformed_experiment_cannot_qualify(self) -> None:
         with committed_repo() as (root, commit):
@@ -976,6 +1043,21 @@ class ReadinessCheckerFailsClosed(unittest.TestCase):
                 self.assert_rejected_without_traceback(
                     result, f"{gate_id} external PASS evidence"
                 )
+
+    def test_blocked_g3_g4_g5_reject_malformed_independent_records(self) -> None:
+        for gate_id in ("G3", "G4", "G5"):
+            with self.subTest(gate_id=gate_id):
+                def mutate(payload, selected=gate_id):
+                    gate = next(g for g in payload["gates"] if g["id"] == selected)
+                    gate["evidence"].append({
+                        "kind": "external",
+                        "ref": f"https://reviews.example.org/{selected.lower()}/malformed",
+                        "producer": "Independent Evidence Laboratory",
+                        "observed": "2026-08-14",
+                    })
+
+                result = self._mutated(mutate)
+                self.assert_rejected_without_traceback(result, f"{gate_id} evidence")
 
     def test_pre_corpus_review_target_fails_explicitly(self) -> None:
         with repo_copy() as root:

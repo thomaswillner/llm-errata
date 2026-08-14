@@ -218,6 +218,55 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
 
         self._assert_history_mutation_is_rejected(mutate, "active surfaces")
 
+    def test_superseded_by_must_point_to_the_replacement_surface(self) -> None:
+        def mutate(payload: dict[str, object]) -> None:
+            prior = payload["surfaces"].pop()
+            historical = dict(prior)
+            historical["superseded_by"] = (
+                "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-9999999997"
+            )
+            payload["historical_surfaces"].append(historical)
+            replacement = dict(prior)
+            replacement["id"] = "replacement-current-surface"
+            replacement["url"] = (
+                "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-9999999996"
+            )
+            replacement["supersedes"] = [prior["url"]]
+            payload["surfaces"].append(replacement)
+
+        self._assert_history_mutation_is_rejected(mutate, "active surfaces")
+
+    def test_non_ancestor_review_target_is_rejected(self) -> None:
+        with bound_publication_repo() as root:
+            tree = subprocess.run(
+                ("git", "rev-parse", "HEAD^{tree}"), cwd=root, check=True,
+                capture_output=True, text=True,
+            ).stdout.strip()
+            unrelated = subprocess.run(
+                ("git", "commit-tree", tree), cwd=root, check=True,
+                input="unrelated source\n", capture_output=True, text=True,
+            ).stdout.strip()
+            digest = g2_surface_digest_at_commit(unrelated, root)
+            publication_path = root / "publication" / "active-surfaces.json"
+            corpus_path = root / "spec" / "adapter-conformance.json"
+            publication = json.loads(publication_path.read_text(encoding="utf-8"))
+            corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+            target = {"commit": unrelated, "surface_digest": digest}
+            publication["review_target"] = target
+            corpus["normative_target"] = target
+            for surface in publication["surfaces"]:
+                surface["commit"] = unrelated
+                surface["surface_digest"] = digest
+            publication_path.write_text(
+                json.dumps(publication, indent=2) + "\n", encoding="utf-8"
+            )
+            corpus_path.write_text(
+                json.dumps(corpus, indent=2) + "\n", encoding="utf-8"
+            )
+            result = run_checker(root, SCRIPT)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout + result.stderr)
+        self.assertIn("commit must be an ancestor", result.stdout)
+
     def test_uncommitted_nonpackaging_delta_is_rejected(self) -> None:
         with bound_publication_repo() as root:
             readme = root / "README.md"

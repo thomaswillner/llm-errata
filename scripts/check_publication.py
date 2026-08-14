@@ -197,6 +197,65 @@ def _historical_version_of(active: object, historical: object) -> bool:
     )
 
 
+def _validate_supersession_chains(
+    active: list[object], historical: list[object]
+) -> list[str]:
+    """Require every historical forward link to have an exact reverse link."""
+
+    records = [record for record in (*historical, *active) if isinstance(record, dict)]
+    by_url = {
+        record["url"]: record
+        for record in records
+        if isinstance(record.get("url"), str)
+    }
+    active_urls = {
+        record["url"]
+        for record in active
+        if isinstance(record, dict) and isinstance(record.get("url"), str)
+    }
+    if len(by_url) != len(records):
+        return ["active surfaces: supersession-chain URLs must be unique"]
+
+    failed = False
+    for origin in historical:
+        if not isinstance(origin, dict):
+            continue
+        origin_url = origin.get("url")
+        successor_url = origin.get("superseded_by")
+        successor = by_url.get(successor_url)
+        if not (
+            isinstance(origin_url, str)
+            and isinstance(successor, dict)
+            and isinstance(successor.get("supersedes"), list)
+            and origin_url in successor["supersedes"]
+        ):
+            failed = True
+            continue
+
+        visited = {origin_url}
+        cursor = successor
+        while cursor.get("url") not in active_urls:
+            cursor_url = cursor.get("url")
+            next_url = cursor.get("superseded_by")
+            if not isinstance(cursor_url, str) or cursor_url in visited:
+                failed = True
+                break
+            visited.add(cursor_url)
+            next_record = by_url.get(next_url)
+            if not (
+                isinstance(next_record, dict)
+                and isinstance(next_record.get("supersedes"), list)
+                and cursor_url in next_record["supersedes"]
+            ):
+                failed = True
+                break
+            cursor = next_record
+
+    return [
+        "active surfaces: supersession chains must be bidirectional and terminate at a current surface"
+    ] if failed else []
+
+
 def _validate_append_only_history(payload: dict[str, object]) -> list[str]:
     """Require every committed surface transition to preserve exact prior records."""
 
@@ -338,6 +397,7 @@ def validate_manifest(payload: object) -> list[str]:
         failures.append("unique evidence roles: each active role needs one owner")
     if len(mentions) != len(set(mentions)):
         failures.append("unique GitHub mentions: each identity may be notified only once")
+    failures.extend(_validate_supersession_chains(surfaces, historical))
 
     if (ROOT / ".git").exists() and _valid_target(target):
         failures.extend(_validate_append_only_history(payload))
