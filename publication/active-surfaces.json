@@ -1,8 +1,8 @@
 {
   "schema_version": 3,
   "review_target": {
-    "commit": "ae9018c5d464b8ddd0fdf2ac99577e5e7fdc562b",
-    "surface_digest": "fc2be2c194c801349c4e39462394b6e1e52b2e479619b68a5615e7386bfdf5b9"
+    "commit": "d396e9515e1f82bc6da1abfc8fb19b7cdf073019",
+    "surface_digest": "a5a4152cd679f21a903f4e36ad19f59f4303bf47e089127030f667975cc26a2d"
   },
   "release_binding": {
     "version": "0.4.1",
@@ -74,9 +74,7 @@
       ],
       "evidence_boundary": "recruitment-only",
       "superseded_by": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288798624"
-    }
-  ],
-  "surfaces": [
+    },
     {
       "id": "v041-corrected-review-target",
       "kind": "issue-comment",
@@ -89,6 +87,41 @@
       "mentions": [],
       "supersedes": [
         "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288780760"
+      ],
+      "evidence_boundary": "recruitment-only",
+      "superseded_by": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288996319"
+    },
+    {
+      "id": "v041-second-corrected-review-target",
+      "kind": "issue-comment",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288996319",
+      "published": "2026-08-14",
+      "commit": "504cb659436f9d719aef27158191ced8422af022",
+      "surface_digest": "a5a4152cd679f21a903f4e36ad19f59f4303bf47e089127030f667975cc26a2d",
+      "gates": ["G2", "G4"],
+      "roles": ["independent-reviewer"],
+      "mentions": [],
+      "supersedes": [
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288798624"
+      ],
+      "evidence_boundary": "recruitment-only",
+      "superseded_by": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5289016713"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "v041-final-corrected-review-target",
+      "kind": "issue-comment",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5289016713",
+      "published": "2026-08-14",
+      "commit": "d396e9515e1f82bc6da1abfc8fb19b7cdf073019",
+      "surface_digest": "a5a4152cd679f21a903f4e36ad19f59f4303bf47e089127030f667975cc26a2d",
+      "gates": ["G2", "G4"],
+      "roles": ["independent-reviewer"],
+      "mentions": [],
+      "supersedes": [
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288996319",
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5288798624"
       ],
       "evidence_boundary": "recruitment-only"
     }

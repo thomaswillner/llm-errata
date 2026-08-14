@@ -3,8 +3,8 @@
   "status": "candidate-internal",
   "evidence_boundary": "Passing this corpus is internal conformance evidence. It is not G2 or G4 evidence.",
   "normative_target": {
-    "commit": "ae9018c5d464b8ddd0fdf2ac99577e5e7fdc562b",
-    "surface_digest": "fc2be2c194c801349c4e39462394b6e1e52b2e479619b68a5615e7386bfdf5b9"
+    "commit": "d396e9515e1f82bc6da1abfc8fb19b7cdf073019",
+    "surface_digest": "a5a4152cd679f21a903f4e36ad19f59f4303bf47e089127030f667975cc26a2d"
   },
   "provenance": {
     "reported_by": "Rastislav Drahos / DanceNitra",
