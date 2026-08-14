@@ -149,9 +149,7 @@ class PublicationGuardRejectsDrift(unittest.TestCase):
 
     def test_duplicate_mention_is_rejected(self) -> None:
         def mutate(payload: dict[str, object]) -> None:
-            payload["surfaces"][0]["mentions"].append(
-                payload["surfaces"][0]["mentions"][0]
-            )
+            payload["surfaces"][0]["mentions"] = ["Reviewer", "Reviewer"]
 
         self._assert_manifest_mutation_is_rejected(mutate, "unique GitHub mentions")
 

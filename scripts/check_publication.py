@@ -96,7 +96,7 @@ def _validate_surface(
         for value in values
     )
     boundary = surface.get("evidence_boundary")
-    if not (
+    fields_valid = (
         isinstance(surface.get("id"), str)
         and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", surface["id"]) is not None
         and surface.get("kind") in {"issue-comment", "pull-request-comment", "discussion-comment"}
@@ -113,8 +113,10 @@ def _validate_surface(
         and len(surface["supersedes"]) == len(set(surface["supersedes"]))
         and all(_is_repository_url(item) for item in surface["supersedes"])
         and boundary in {"recruitment-only", "publication-only"}
-    ):
-        failures.append("surface fields: invalid ID, URL, date, target, gates, supersession, or boundary")
+    )
+    if not fields_valid:
+        label = "historical surfaces" if historical else "surface fields"
+        failures.append(f"{label}: invalid ID, URL, date, target, gates, supersession, or boundary")
     if not historical and (
         surface.get("commit") != target["commit"]
         or surface.get("surface_digest") != target["surface_digest"]
@@ -124,6 +126,8 @@ def _validate_surface(
         failures.append("evidence boundary: recruitment surfaces require roles")
     if boundary == "publication-only" and (surface.get("roles") or surface.get("mentions")):
         failures.append("evidence boundary: publication surfaces cannot recruit or mention users")
+    if boundary not in {"recruitment-only", "publication-only"}:
+        failures.append("evidence boundary: invitations and publication are not independent evidence")
     if historical and not _is_repository_url(surface.get("superseded_by")):
         failures.append("historical surfaces: superseded_by must be a repository URL")
     return failures
