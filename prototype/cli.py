@@ -23,22 +23,126 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from prototype.adapters import Coverage, OpaqueAdapter
+from prototype.checkpoints import CheckpointError
+from prototype.conformance import (
+    ConformanceInputError,
+    ReferenceConformanceBinding,
+    load_binding_factory,
+    validate_adapter_conformance,
+)
 from prototype.controller import Importer, Phase
 from prototype.errata import Erratum, FeedError, Operation, RootRegistry, read_feed
 from prototype.lineage import LineageLedger
-from prototype.receipts import Receipt
+from prototype.receipts import Receipt, receipt_acceptance_errors
 from prototype.schema import load as load_schema, validate as validate_schema
+from prototype.semantic import (
+    RecordedSemanticVerifier,
+    SemanticCoverage,
+    SemanticObservation,
+    SemanticProbe,
+    SemanticProbeRunner,
+    VerifierConfig,
+)
 from prototype.signing import Ed25519Signer
 from prototype.sqlite_store import SqliteAdapter
-from prototype.workspace import Workspace
+from prototype.workspace import ReceiptReadError, Workspace
 
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+def cmd_adapter_conformance(ws: Workspace, args: argparse.Namespace) -> int:
+    """Run provider-neutral adapter cases and validator self-controls."""
+
+    try:
+        if args.binding is None:
+            factory = ReferenceConformanceBinding
+            source = None
+            binding_root = args.binding_root
+        else:
+            binding_root = args.binding_root or args.source_root
+            with load_binding_factory(args.binding, binding_root) as (factory, source):
+                report = validate_adapter_conformance(
+                    args.corpus,
+                    args.source_root,
+                    factory,
+                    binding_root=binding_root,
+                    binding_source=source,
+                )
+        if args.binding is None:
+            report = validate_adapter_conformance(
+                args.corpus,
+                args.source_root,
+                factory,
+                binding_root=binding_root,
+                binding_source=source,
+            )
+    except ConformanceInputError as error:
+        print(f"invalid conformance evidence: {error}", file=sys.stderr)
+        return EXIT_INCONCLUSIVE
+    print(report.canonical_json())
+    return EXIT_OK if report.passed else EXIT_REFUSED
+
+
+def _load_json(path: Path, *, label: str) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"{label} is not readable JSON") from error
+
+
+def _probe_case(path: Path, case_name: str) -> tuple[SemanticProbe, ...]:
+    value = _load_json(path, label="probe manifest")
+    if not isinstance(value, dict) or set(value) != {"cases"}:
+        raise ValueError("probe manifest must contain only cases")
+    cases = value["cases"]
+    if not isinstance(cases, dict) or not all(isinstance(name, str) for name in cases):
+        raise ValueError("probe manifest cases must be an object")
+    records = cases.get(case_name)
+    if not isinstance(records, list):
+        raise ValueError(f"probe case is missing: {case_name}")
+    return tuple(SemanticProbe.from_dict(item) for item in records)
+
+
+def _observations_for_case(path: Path, case_name: str) -> tuple[SemanticObservation, ...]:
+    value = _load_json(path, label="observations manifest")
+    if not isinstance(value, dict) or set(value) != {"cases"}:
+        raise ValueError("observations manifest must contain only cases")
+    cases = value["cases"]
+    if not isinstance(cases, dict) or not all(isinstance(name, str) for name in cases):
+        raise ValueError("observations manifest cases must be an object")
+    records = cases.get(case_name)
+    if not isinstance(records, list):
+        raise ValueError(f"observations case is missing: {case_name}")
+    return tuple(SemanticObservation.from_dict(item) for item in records)
+
+
+def cmd_semantic_test(ws: Workspace, args: argparse.Namespace) -> int:
+    """Run checked-in or supplied offline semantic observations."""
+
+    try:
+        probes = _probe_case(args.probes, args.case)
+        config = VerifierConfig.from_dict(_load_json(args.config, label="verifier configuration"))
+        observations = _observations_for_case(args.observations, args.case)
+        report = SemanticProbeRunner().run(
+            probes, config, RecordedSemanticVerifier(observations)
+        )
+    except ValueError as error:
+        print(f"invalid input: {error}", file=sys.stderr)
+        return EXIT_REFUSED
+
+    print(report.canonical_json())
+    return {
+        SemanticCoverage.VERIFIED: EXIT_OK,
+        SemanticCoverage.FAILED: EXIT_REFUSED,
+        SemanticCoverage.UNKNOWN: EXIT_INCONCLUSIVE,
+    }[report.coverage]
 
 
 def _importer(ws: Workspace) -> tuple[Importer, SqliteAdapter]:
@@ -147,26 +251,58 @@ def cmd_plan(ws: Workspace, args: argparse.Namespace) -> int:
         store.close()
 
 
+def _next_pending(ws: Workspace, importer: Importer) -> Erratum | None:
+    errata = read_feed(ws.feed_path.read_text(encoding="utf-8"))
+    pending = [item for item in errata if item.sequence > importer.last_sequence]
+    return pending[0] if pending else None
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def cmd_quarantine(ws: Workspace, args: argparse.Namespace) -> int:
+    importer, store = _importer(ws)
+    try:
+        erratum = _next_pending(ws, importer)
+        if erratum is None:
+            print("nothing to quarantine")
+            return EXIT_OK
+        path = ws.checkpoint_path(erratum.sequence, erratum.erratum_id)
+        try:
+            if path.exists():
+                checkpoint = ws.load_checkpoint(erratum.sequence, erratum.erratum_id)
+                validated = importer.observe(erratum)
+                importer._validate_checkpoint(validated, checkpoint)
+            else:
+                checkpoint = importer.quarantine(erratum)
+                path = ws.write_checkpoint(checkpoint)
+        except (CheckpointError, FeedError, OSError, ValueError) as error:
+            print(f"refused: {error}", file=sys.stderr)
+            return EXIT_REFUSED
+        print(f"checkpoint: {path.relative_to(ws.root)}")
+        print(f"digest: {checkpoint.checkpoint_digest}")
+        return EXIT_OK
+    finally:
+        store.close()
+
+
 def cmd_repair(ws: Workspace, args: argparse.Namespace) -> int:
     importer, store = _importer(ws)
     try:
-        errata = read_feed(ws.feed_path.read_text(encoding="utf-8"))
-        pending = [e for e in errata if e.sequence > importer.last_sequence]
-        if not pending:
+        erratum = _next_pending(ws, importer)
+        if erratum is None:
             print("nothing to repair")
             return EXIT_OK
-
-        last: Receipt | None = None
-        for erratum in pending:
-            try:
-                last = importer.repair(erratum)
-            except FeedError as error:
-                print(f"refused: {error}", file=sys.stderr)
-                return EXIT_REFUSED
+        try:
+            checkpoint = ws.load_checkpoint(erratum.sequence, erratum.erratum_id)
+            last = importer.repair_quarantined(erratum, checkpoint)
             ws.write_receipt(last)
             ws.record_applied(last.target_root, last.sequence)
-
-        assert last is not None
+            ws.consume_checkpoint(last.sequence, last.erratum_id, _now())
+        except (CheckpointError, FeedError, OSError, ValueError) as error:
+            print(f"refused: checkpoint admission failed: {error}", file=sys.stderr)
+            return EXIT_REFUSED
         for event in importer.journal:
             if event.phase in (Phase.QUARANTINE_COMPLETE, Phase.TEST):
                 print(f"  {event.phase.value}: {event.detail}")
@@ -220,16 +356,23 @@ def cmd_audit(ws: Workspace, args: argparse.Namespace) -> int:
 def cmd_verify(ws: Workspace, args: argparse.Namespace) -> int:
     """Check every receipt against the published key and the published schema."""
 
-    receipts = ws.all_receipts()
+    try:
+        receipts = ws.all_receipts()
+    except ReceiptReadError as error:
+        print(f"  {error} -> BAD")
+        return EXIT_REFUSED
     if not receipts:
         print("no receipts to verify", file=sys.stderr)
         return EXIT_REFUSED
 
     key = ws.importer_verification_key()
-    schema = load_schema("receipt")
     bad = 0
     for name, payload in receipts:
-        errors = validate_schema(payload, schema)
+        errors = receipt_acceptance_errors(payload)
+        if errors:
+            bad += 1
+            print(f"  {name}: signature=not-checked schema={errors[0]} -> BAD")
+            continue
         signature = payload.get("signature")
         rebuilt = Receipt(
             importer=payload["importer"],
@@ -264,11 +407,14 @@ COMMANDS = {
     "publish": cmd_publish,
     "pull": cmd_pull,
     "plan": cmd_plan,
+    "quarantine": cmd_quarantine,
     "repair": cmd_repair,
     "test": cmd_test,
     "attest": cmd_attest,
     "audit": cmd_audit,
     "verify": cmd_verify,
+    "semantic-test": cmd_semantic_test,
+    "adapter-conformance": cmd_adapter_conformance,
 }
 
 
@@ -310,7 +456,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("pull", help="list errata not yet applied")
     sub.add_parser("plan", help="show what a repair would touch, without touching it")
-    sub.add_parser("repair", help="quarantine, rebuild, probe, and attest")
+    sub.add_parser("quarantine", help="gate the next erratum and persist a checkpoint")
+    sub.add_parser("repair", help="rebuild, probe, and attest from a checkpoint")
     sub.add_parser("test", help="show the repair triad from the latest receipt")
     sub.add_parser("attest", help="print the latest receipt")
 
@@ -318,13 +465,30 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--json", action="store_true")
 
     sub.add_parser("verify", help="check every receipt's signature and schema")
+
+    semantic_test = sub.add_parser(
+        "semantic-test", help="run recorded semantic-probe observations offline"
+    )
+    semantic_test.add_argument("--probes", required=True, type=Path)
+    semantic_test.add_argument("--config", required=True, type=Path)
+    semantic_test.add_argument("--observations", required=True, type=Path)
+    semantic_test.add_argument("--case", default="verified-correction")
+
+    adapter_conformance = sub.add_parser(
+        "adapter-conformance",
+        help="run adapter cases and validator anti-vacuity controls",
+    )
+    adapter_conformance.add_argument("--corpus", required=True, type=Path)
+    adapter_conformance.add_argument("--source-root", required=True, type=Path)
+    adapter_conformance.add_argument("--binding-root", type=Path)
+    adapter_conformance.add_argument("--binding")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     ws = Workspace(args.workspace)
-    if args.command != "init" and not ws.exists():
+    if args.command not in {"init", "semantic-test", "adapter-conformance"} and not ws.exists():
         print(
             f"no workspace at {args.workspace}; run `errata init` first",
             file=sys.stderr,

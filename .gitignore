@@ -6,6 +6,7 @@ __pycache__/
 *.zip
 dist/
 build/
+.worktrees/
 
 
 # Local build tracker (see docs/agents/issue-tracker.md)

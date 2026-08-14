@@ -1,0 +1,204 @@
+{
+  "cases": {
+    "failed-supersession": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "supersede",
+        "probe_id": "supersede-negative-v1",
+        "response_digest": "0707070707070707070707070707070707070707070707070707070707070707",
+        "verdict": "fail"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "supersede",
+        "probe_id": "supersede-positive-v1",
+        "response_digest": "0808080808080808080808080808080808080808080808080808080808080808",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "supersede",
+        "probe_id": "supersede-preservation-v1",
+        "response_digest": "0909090909090909090909090909090909090909090909090909090909090909",
+        "verdict": "pass"
+      }
+    ],
+    "unknown-erasure": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "erase",
+        "probe_id": "erase-negative-v1",
+        "response_digest": "0404040404040404040404040404040404040404040404040404040404040404",
+        "verdict": "inconclusive"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "erase",
+        "probe_id": "erase-preservation-v1",
+        "response_digest": "0505050505050505050505050505050505050505050505050505050505050505",
+        "verdict": "pass"
+      }
+    ],
+    "provider-error": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "correct",
+        "probe_id": "provider-error-negative-v1",
+        "response_digest": "1010101010101010101010101010101010101010101010101010101010101010",
+        "verdict": "error"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "correct",
+        "probe_id": "provider-error-positive-v1",
+        "response_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "provider-error-preservation-v1",
+        "response_digest": "1212121212121212121212121212121212121212121212121212121212121212",
+        "verdict": "pass"
+      }
+    ],
+    "missing-response": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "correct",
+        "probe_id": "missing-negative-v1",
+        "response_digest": "1313131313131313131313131313131313131313131313131313131313131313",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "missing-preservation-v1",
+        "response_digest": "1414141414141414141414141414141414141414141414141414141414141414",
+        "verdict": "pass"
+      }
+    ],
+    "duplicate-response": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "correct",
+        "probe_id": "duplicate-negative-v1",
+        "response_digest": "1515151515151515151515151515151515151515151515151515151515151515",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "correct",
+        "probe_id": "duplicate-negative-v1",
+        "response_digest": "1616161616161616161616161616161616161616161616161616161616161616",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "duplicate-positive-v1",
+        "response_digest": "1717171717171717171717171717171717171717171717171717171717171717",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:03Z",
+        "operation": "correct",
+        "probe_id": "duplicate-preservation-v1",
+        "response_digest": "1818181818181818181818181818181818181818181818181818181818181818",
+        "verdict": "pass"
+      }
+    ],
+    "configuration-drift": [
+      {
+        "config_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "correct",
+        "probe_id": "drift-negative-v1",
+        "response_digest": "1919191919191919191919191919191919191919191919191919191919191919",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "correct",
+        "probe_id": "drift-positive-v1",
+        "response_digest": "2020202020202020202020202020202020202020202020202020202020202020",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "drift-preservation-v1",
+        "response_digest": "2121212121212121212121212121212121212121212121212121212121212121",
+        "verdict": "pass"
+      }
+    ],
+    "nonconforming-output": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "supersede",
+        "probe_id": "nonconforming-negative-v1",
+        "response_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "correct",
+        "probe_id": "nonconforming-positive-v1",
+        "response_digest": "2323232323232323232323232323232323232323232323232323232323232323",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "nonconforming-preservation-v1",
+        "response_digest": "2424242424242424242424242424242424242424242424242424242424242424",
+        "verdict": "pass"
+      }
+    ],
+    "verified-correction": [
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:00Z",
+        "operation": "correct",
+        "probe_id": "correct-negative-v1",
+        "response_digest": "0101010101010101010101010101010101010101010101010101010101010101",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:01Z",
+        "operation": "correct",
+        "probe_id": "correct-positive-v1",
+        "response_digest": "0202020202020202020202020202020202020202020202020202020202020202",
+        "verdict": "pass"
+      },
+      {
+        "config_digest": "cb6f4284ee4d7946c8f970ef2025c9e6d2fd41d553405a2b99ca287ab4faf125",
+        "observed_at": "2026-08-12T09:00:02Z",
+        "operation": "correct",
+        "probe_id": "correct-preservation-v1",
+        "response_digest": "0303030303030303030303030303030303030303030303030303030303030303",
+        "verdict": "pass"
+      }
+    ]
+  }
+}

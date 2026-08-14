@@ -8,12 +8,36 @@ say nothing about whether the proposal still states its bounded claim — that i
 from __future__ import annotations
 
 import unittest
+import json
 from pathlib import Path
 
 from tests.support import EXIT_FAIL, EXIT_OK, check_after, repo_copy, rewrite, run_checker
 
 
 SCRIPT = "validate_repo.py"
+
+
+class Release040Metadata(unittest.TestCase):
+    def test_version_citation_maturity_security_and_changelog_align(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual((root / "VERSION").read_text().strip(), "0.4.0")
+        citation = (root / "CITATION.cff").read_text(encoding="utf-8")
+        self.assertIn("version: 0.4.0", citation)
+        self.assertIn("date-released: 2026-08-14", citation)
+        self.assertIn("Version 0.4.0", (root / "README.md").read_text())
+        self.assertIn(
+            "| 0.4.x | Yes |",
+            (root / "SECURITY.md").read_text(),
+        )
+        changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [0.4.0]", changelog)
+        self.assertIn("Rastislav Drahos", changelog)
+        self.assertIn("2ba1e299b3483b9038d03387345702427608b90b", changelog)
+        security = (root / "SECURITY.md").read_text(encoding="utf-8")
+        self.assertIn("with the immutable `v0.4.0` release", security)
+        self.assertIn("| 0.3.x and earlier | No |", security)
+        self.assertIn("first materially improved experimental release", changelog)
+        self.assertIn("Experimental release readiness is separate", (root / "README.md").read_text())
 
 
 class ValidatorPasses(unittest.TestCase):
@@ -24,6 +48,123 @@ class ValidatorPasses(unittest.TestCase):
 
 
 class ValidatorRejectsStructuralFaults(unittest.TestCase):
+    def _assert_public_license_mutation_is_rejected(
+        self, relative_path: str, old: str, new: str
+    ) -> None:
+        def mutate(root: Path) -> None:
+            path = root / relative_path
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(old, text, f"missing public licence contract: {old}")
+            path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("public licence alignment", result.stdout)
+
+    def _assert_license_mutation_is_rejected(self, old: str, new: str) -> None:
+        def mutate(root: Path) -> None:
+            path = root / "LICENSE"
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(old, text, f"missing licence contract: {old}")
+            path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("license and notice", result.stdout)
+
+    def test_specification_implementation_grant_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "commercial and non-commercial products and services",
+            "personal non-commercial experiments",
+        )
+
+    def test_required_product_attribution_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "Implements the LLM Errata specification by Thomas Willner",
+            "Implements an unnamed memory specification",
+        )
+
+    def test_reference_code_cannot_be_relicensed_by_specification_grant(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "does not cover `prototype/`, `scripts/`, or `tests/`",
+            "also covers `prototype/`, `scripts/`, and `tests/`",
+        )
+
+    def test_false_endorsement_protection_cannot_be_removed(self) -> None:
+        self._assert_license_mutation_is_rejected(
+            "does not imply endorsement, sponsorship, certification, or audit",
+            "implies certification by the author",
+        )
+
+    def test_readme_dual_license_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "README.md",
+            "Commercial and non-commercial independent implementations are permitted",
+            "Only personal experiments are permitted",
+        )
+
+    def test_notice_product_attribution_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "NOTICE",
+            "Implements the LLM Errata specification by Thomas Willner",
+            "Implements a memory specification",
+        )
+
+    def test_independent_implementation_permission_rule_cannot_regress(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "INDEPENDENT_IMPLEMENTATION.md",
+            "No per-implementer permission is required",
+            "Written permission is required",
+        )
+
+    def test_contributing_clean_room_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "CONTRIBUTING.md",
+            "independently authored implementation",
+            "copy of the reference implementation",
+        )
+
+    def test_security_no_endorsement_boundary_cannot_be_removed(self) -> None:
+        self._assert_public_license_mutation_is_rejected(
+            "SECURITY.md",
+            "Licence attribution does not imply security review, endorsement, or certification",
+            "Licence attribution provides security certification",
+        )
+
+    def test_publication_discipline_cannot_be_removed(self) -> None:
+        required = {
+            "AGENTS.md": (
+                "publication/active-surfaces.json",
+                "git cat-file -e <commit>:<path>",
+                "Recruitment evidence is not independent readiness evidence",
+            ),
+            "CONTRIBUTING.md": (
+                "append-only supersession",
+                "make publication",
+                "read-after-write",
+            ),
+            "docs/PUBLICATION_STRATEGY.md": (
+                "Active surface",
+                "Historical surface",
+                "publication/active-surfaces.json",
+            ),
+        }
+        for relative_path, phrases in required.items():
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    target = root / path
+                    text = target.read_text(encoding="utf-8")
+                    for phrase in required[path]:
+                        self.assertIn(phrase, text, f"missing publication contract: {phrase}")
+                    target.write_text(
+                        text.replace(required[path][0], "removed publication rule", 1),
+                        encoding="utf-8",
+                    )
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("publication discipline", result.stdout)
+
     def test_missing_required_file_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             (root / "SECURITY.md").unlink()
@@ -31,6 +172,141 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("required files", result.stdout)
+
+    def test_missing_production_readiness_matrix_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            (root / "PRODUCTION_READINESS.md").unlink()
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("required files", result.stdout)
+
+    def test_missing_independent_validation_program_artifacts_are_rejected(self) -> None:
+        for relative_path in (
+            "REVIEW_REQUEST.md",
+            "INDEPENDENT_IMPLEMENTATION.md",
+            "PHASE3_SYSTEMS.md",
+            "docs/PUBLICATION_STRATEGY.md",
+        ):
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    (root / path).unlink()
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("required files", result.stdout)
+
+    def test_missing_publication_guard_artifacts_are_rejected(self) -> None:
+        for relative_path in (
+            "publication/active-surfaces.json",
+            "scripts/check_publication.py",
+            "tests/test_publication.py",
+        ):
+            with self.subTest(relative_path=relative_path):
+                def mutate(root: Path, path: str = relative_path) -> None:
+                    (root / path).unlink()
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("required files", result.stdout)
+    def test_internal_phase_two_completion_cannot_upgrade_g2(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / "readiness" / "production-readiness.json"
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+            gate["status"] = "PASS"
+            path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("G2 independent review gate", result.stdout)
+
+    def test_g2_pass_rejects_malformed_external_review_evidence(self) -> None:
+        invalid_reviews = (
+            {"ref": "", "producer": "Independent reviewer", "observed": "2026-08-09"},
+            {"ref": "ftp://example.invalid/review", "producer": "Independent reviewer", "observed": "2026-08-09"},
+            {"ref": "urn:example:review", "producer": "local implementer", "observed": "2026-08-09"},
+            {"ref": "urn:example:review", "producer": "Independent reviewer", "observed": "invalid"},
+            {"ref": "urn:example:review", "producer": "Independent reviewer", "observed": "2999-01-01"},
+        )
+        for review in invalid_reviews:
+            with self.subTest(review=review):
+                def mutate(root: Path, evidence: dict[str, str] = review) -> None:
+                    path = root / "readiness" / "production-readiness.json"
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+                    gate["status"] = "PASS"
+                    gate["evidence"].append({"kind": "external", **evidence})
+                    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("G2 independent review gate", result.stdout)
+
+    def test_g2_pass_requires_complete_independent_review_schema(self) -> None:
+        from scripts.check_readiness import g2_surface_digest
+
+        review = {
+            "kind": "external",
+            "ref": "https://reviews.example.org/phase2/report",
+            "producer": "Independent Systems Lab",
+            "observed": "2026-08-12",
+            "review_type": "phase2-conformance",
+            "reviewed_commit": "a" * 40,
+            "scope": [
+                "schemas", "vectors", "cli", "adapter-interface",
+                "transactional-store", "substrate-evidence", "semantic-probes",
+                "security-boundaries",
+            ],
+            "result": "pass-with-findings",
+            "relationship": "independent-third-party",
+            "conflicts": [],
+            "producer_identity": "https://identity.example.org/reviewer",
+            "independence_attestation": "llm-errata-independent-review-v1",
+            "surface_digest": g2_surface_digest(),
+        }
+        invalid_reviews = []
+        for field in (
+            "kind", "review_type", "reviewed_commit", "scope", "result", "relationship",
+            "conflicts", "producer_identity", "independence_attestation", "surface_digest",
+        ):
+            invalid = dict(review)
+            invalid.pop(field)
+            invalid_reviews.append(invalid)
+        for field, value in (
+            ("kind", "repository"),
+            ("ref", "urn:"),
+            ("producer", "project owner"),
+            ("producer", "reference implementer"),
+            ("reviewed_commit", "a" * 39),
+            ("scope", ["schemas"]),
+            ("scope", review["scope"] + ["schemas"]),
+            ("scope", review["scope"] + ["extra"]),
+            ("result", "fail"),
+            ("relationship", "maintainer"),
+            ("conflicts", "none"),
+            ("producer_identity", "https://identity.example.org"),
+            ("producer_identity", "https://identity.example.org/"),
+            ("independence_attestation", "independent"),
+            ("surface_digest", "a" * 64),
+        ):
+            invalid = dict(review)
+            invalid[field] = value
+            invalid_reviews.append(invalid)
+
+        for evidence in invalid_reviews:
+            with self.subTest(evidence=evidence):
+                def mutate(root: Path, review_entry: dict[str, object] = evidence) -> None:
+                    path = root / "readiness" / "production-readiness.json"
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    gate = next(gate for gate in payload["gates"] if gate["id"] == "G2")
+                    gate["status"] = "PASS"
+                    gate["evidence"].append(review_entry)
+                    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+                result = check_after(SCRIPT, mutate)
+                self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+                self.assertIn("G2 independent review gate", result.stdout)
 
     def test_broken_repository_relative_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
@@ -89,6 +365,97 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("CITATION.cff release version", result.stdout)
 
+    def test_readme_maturity_version_drift_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            rewrite(root / "README.md", f"Version {current}", "Version 0.0.0")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("README maturity version", result.stdout)
+
+    def test_readme_maturity_version_prefix_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            rewrite(root / "README.md", f"Version {current}", f"Version {current}.1")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("README maturity version", result.stdout)
+
+    def test_security_supported_version_drift_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            expected = f"| {major}.{minor}.x | Yes |"
+            rewrite(root / "SECURITY.md", expected, "| 0.0.x | Yes |")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
+    def test_extra_security_supported_version_is_rejected(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            supported = f"| {major}.{minor}.x | Yes |"
+            rewrite(root / "SECURITY.md", supported, supported + "\n| 0.2.x | Yes |")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
+    def test_experimental_release_boundary_cannot_be_removed(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "README.md",
+                "Experimental release readiness is separate from production readiness.",
+                "Every release is production ready.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("publication metadata", result.stdout)
+
+    def test_sole_owner_release_policy_cannot_be_removed(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "PUBLISHING.md",
+                "In a sole-owner repository, do not configure a mandatory CODEOWNER approval",
+                "require an unavailable reviewer forever",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("publication discipline", result.stdout)
+
+    def test_earlier_security_versions_cannot_be_supported(self) -> None:
+        def mutate(root: Path) -> None:
+            current = (root / "VERSION").read_text(encoding="utf-8").strip()
+            major, minor, _ = current.split(".")
+            row = f"| {major}.{int(minor) - 1}.x and earlier |"
+            rewrite(
+                root / "SECURITY.md",
+                f"{row} No |",
+                f"{row} Yes |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
+    def test_unreleased_security_revisions_cannot_be_supported(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "SECURITY.md",
+                "| Unreleased development revisions | No |",
+                "| Unreleased development revisions | Yes |",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("SECURITY supported version", result.stdout)
+
     def test_missing_canonical_source_link_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             for name in ("IDEA.md", "PRIOR_ART.md", "RESEARCH.md", "ROADMAP.md"):
@@ -103,6 +470,83 @@ class ValidatorRejectsStructuralFaults(unittest.TestCase):
         result = check_after(SCRIPT, mutate)
         self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
         self.assertIn("canonical link", result.stdout)
+
+
+class PublicationGuardIntegration(unittest.TestCase):
+    def test_make_check_runs_publication_guard(self) -> None:
+        makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("check: lint claim readiness publication test demo", makefile)
+        self.assertIn(
+            "publication: ## Validate active public calls without upgrading readiness",
+            makefile,
+        )
+        self.assertIn("$(PYTHON) scripts/check_publication.py", makefile)
+
+    def test_ci_runs_publication_guard_explicitly(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows" / "validate.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("- name: Validate active publication surfaces", workflow)
+        self.assertIn("run: make publication", workflow)
+
+
+class GitHubActionsRuntimeGuard(unittest.TestCase):
+    def test_workflows_pin_node24_action_releases(self) -> None:
+        workflow_dir = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows"
+        )
+        workflows = "\n".join(
+            path.read_text(encoding="utf-8") for path in sorted(workflow_dir.glob("*.yml"))
+        )
+        self.assertNotIn("actions/checkout@v4", workflows)
+        self.assertNotIn("actions/setup-python@v5", workflows)
+        self.assertIn("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", workflows)
+        self.assertIn("actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97", workflows)
+
+    def test_validate_workflow_fetches_immutable_history_for_conformance(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1] / ".github" / "workflows" / "validate.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("fetch-depth: 0", workflow)
+
+    def test_validator_rejects_deprecated_action_major(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / ".github" / "workflows" / "links.yml"
+            text = path.read_text(encoding="utf-8")
+            path.write_text(
+                text.replace(
+                    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                    "actions/checkout@v4",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions Node 24 pins", result.stdout)
+
+    def test_validator_rejects_shallow_validate_checkout(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(root / ".github" / "workflows" / "validate.yml", "fetch-depth: 0", "fetch-depth: 1")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions source history", result.stdout)
+
+    def test_history_guard_ignores_comment_camouflage(self) -> None:
+        def mutate(root: Path) -> None:
+            path = root / ".github" / "workflows" / "validate.yml"
+            text = path.read_text(encoding="utf-8")
+            text = text.replace("fetch-depth: 0", "fetch-depth: 1", 1)
+            text += "\n# legacy requirement text: fetch-depth: 0\n"
+            path.write_text(text, encoding="utf-8")
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("GitHub Actions source history", result.stdout)
 
 
 if __name__ == "__main__":

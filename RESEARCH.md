@@ -16,7 +16,7 @@ The broad question was:
 
 The question that survived screening was narrower:
 
-> As of 2026-08-01, did any reviewed public implementation or normative profile require an importer of exported AI memory to receive later errata, quarantine and repair the memory's locally derived descendants, verify the repair behaviorally, and return a signed, coverage-aware result to the root owner?
+> As of 2026-08-01, did any reviewed public implementation or normative profile require an importer of exported AI memory to receive later errata, quarantine and repair the memory's locally derived descendants, verify the repair behaviorally, and return an authenticated, coverage-truthful result to the root owner?
 
 The screened result is **LLM Errata**:
 
@@ -27,7 +27,7 @@ The exact surviving feature conjunction is:
 1. **Post-export update delivery.** A previously exported memory root remains addressable through an authenticated, monotonically sequenced correction, supersession, or erasure channel.
 2. **Importer-side descendant quarantine and repair.** After validating an erratum, the importer blocks the root and its known local derivation closure before recall, then retires or rebuilds affected summaries, embeddings, profile fields, graph nodes, caches, and downstream exports from still-valid inputs.
 3. **Three-way behavioral verification.** The importer tests that the retired belief is absent, the replacement is active when applicable, and unrelated memory survives. LLM Errata calls these the negative, positive, and preservation checks.
-4. **Signed, coverage-aware callback.** The importer returns a receipt bound to the erratum and pre-/post-repair state roots, identifies the stores inspected, reports surfaces it cannot observe as `unknown`, and cannot claim aggregate success while a required store remains unresolved.
+4. **Authenticated, coverage-truthful callback.** The importer returns a signed receipt bound to the erratum and pre-/post-repair state roots, identifies the stores inspected, reports surfaces it cannot observe as `unknown`, and cannot claim aggregate success while a required store remains unresolved. Signature verification authenticates the importer and bytes; coverage evaluation separately tests whether the signed stores, aggregate, and limitations truthfully describe the required scope.
 
 The claim is about the **complete conjunction**. None of its individual mechanisms is claimed as new.
 
@@ -130,7 +130,19 @@ The distinction is not that these systems lack cross-recipient events or receipt
 
 [Shomei](https://shomei.ai/how-it-works/) documents source-linked recall, policy-checked use, lifecycle events, explicit coverage boundaries, and narrow receipts. The reviewed [HTTP API](https://shomei.ai/docs/http-api/) and [governance documentation](https://shomei.ai/docs/governance-and-receipts/) add correction/update, lineage, erasure-cascade, pending external deletion, and signed-receipt detail. Shomei also states that its receipts do not certify deletion by systems it does not govern.
 
-[Inspeximus](https://github.com/DanceNitra/inspeximus) is a strong open-source local collision: keyed supersession, `echo_guard`, revert, lineage-aware retraction, residue scans, preservation checks, and signed content-free erasure receipts are publicly described. These mechanisms apply to explicitly keyed or successfully extractor-keyed assertions; its README reports that raw conversational prose is rarely keyed reliably and supersession therefore mostly does not fire there. Its documented scope is its own store, not every vector index, prompt log, backup, or independently operated importer.
+[Inspeximus](https://github.com/DanceNitra/inspeximus) is a strong open-source
+local collision. Its pinned `retract_lineage` and `rederive` lifecycle demotes
+recorded descendants from default recall, retains them for re-derivation, and
+rebuilds eligible descendants against a corrected root. This is local
+quarantine-then-rebuild, not merely erasure. Its `erasure_audit` exposes a
+declared-lineage coverage ratio and refuses the zero-lineage case as
+`unaudited`, but nonzero incomplete lineage is not itself a failing verdict.
+The mechanisms depend on explicitly keyed assertions and recorded lineage, and
+the documented scope is its own store, not prior independently operated
+importers. The design credits the retract-and-retain lineage to [Doyle's truth-
+maintenance work](https://dblp.org/rec/journals/ai/Doyle79.html), reinforcing
+that dependency-directed retraction is established prior art rather than an
+LLM Errata invention.
 
 LLM Errata does not claim these local controls as new. It profiles their missing cross-importer contract.
 
@@ -178,7 +190,7 @@ The prior-art conclusion should be revised or withdrawn if a dated public source
 2. A valid event causes pre-repair quarantine and traversal of the importer's local descendant closure across relevant stores.
 3. Mixed descendants are rebuilt or retired while unrelated memory is preserved.
 4. Conformance requires negative, positive when applicable, and preservation checks.
-5. The importer returns a signed callback bound to the triggering event and pre-/post-repair state, with explicit `partial`, `unknown`, or `failed` coverage where full verification is impossible.
+5. The importer returns an authenticated callback bound to the triggering event and pre-/post-repair state, with separately evaluated coverage truthfulness and explicit `partial`, `unknown`, or `failed` results where full verification is impossible.
 
 Partial matches should be added to [PRIOR_ART.md](PRIOR_ART.md), not concealed. A future implementation that closes the whole gap would not make the user problem disappear; it would invalidate the claim that the conformance boundary remained unimplemented.
 

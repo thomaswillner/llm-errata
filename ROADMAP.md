@@ -95,6 +95,8 @@ The opaque adapter is not a toy edge case. It is the control that proves the agg
 - a stale export cannot silently restore the retired state;
 - an `unknown`, `partial`, or `failed` required store prevents aggregate success;
 - receipts bind the erratum plus deterministic pre-repair and post-repair state roots;
+- signature verification authenticates receipt bytes but cannot certify coverage truthfulness;
+- signed stores, aggregate, and limitations match the declared required scope without upgrading missing or opaque evidence;
 - tests run without an API key; model-graded probes are optional and clearly separated;
 - the complete demo is reproducible from a clean checkout.
 
@@ -102,7 +104,7 @@ Kill or redesign the concept if exact lineage cannot survive even the controlled
 
 ## Phase 2 — Conformance surface
 
-**Status:** items 1 through 5 implemented, not yet externally reviewed. `spec/` carries the schemas and vectors, `prototype/cli.py` the control plane, `prototype/sqlite_store.py` a real transactional store, and `prototype/residue.py` the substrate-evidence rule. Item 6, model-assisted semantic probes, is deliberately not started.
+**Status:** implemented with external findings remediated; qualifying review still incomplete. `spec/` carries schemas, static vectors, executable stateful vectors, and deterministic semantic fixtures. `prototype/cli.py` exposes the declared control-plane commands and `semantic-test`; `prototype/checkpoints.py` makes `errata quarantine` durable and requires its state-bound evidence before CLI repair; `prototype/semantic.py` keeps model-assisted probes provider-neutral, configuration-bound, and fail-closed. `OwnerKeySchedule` binds every event to the key active at its sequence. Stateful vectors execute valid rotation, rotated-key reuse, same-view sequence conflict, invalid targets, content-free erasure evidence, and mutation of every signed receipt field. Conflict-disclosed external review found that split views were overstated and an empty enumeration could receive `verified` without lineage-completeness evidence; both findings now have fail-closed tests and corrected claims. This work does not complete G2: the reviewer disclosed a commercial conflict and did not cover the full required scope, so a dated qualifying independent review remains required.
 
 Only after the file-backed proof passes:
 
@@ -122,15 +124,37 @@ Only after the file-backed proof passes:
    errata audit
    ```
 
-4. Define an adapter interface for enumeration, quarantine, reconstruction, verification, and coverage reporting.
+4. Define the complete adapter interface for enumeration, root-specific lineage-completeness evidence, quarantine and quarantine-phase coverage, store-owned repair inputs, retirement, reconstruction, recall probes, final dispositions, and coverage reporting. Empty enumeration or missing phase evidence is `unknown`; final success cannot overwrite a worse durable checkpoint.
 5. Publish conformance vectors for signatures, sequencing, key rotation, concurrent events, invalid targets, receipt binding, and confidentiality.
-6. Add model-assisted semantic probes only behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration.
+6. Add model-assisted semantic probes behind a provider-neutral interface with deterministic fixtures and recorded verifier configuration. **Implemented internally:** [`prototype/semantic.py`](prototype/semantic.py), [`spec/semantic/`](spec/semantic/), and `errata semantic-test` record only structured, configuration-bound observations; inconclusive, malformed, missing, duplicate, or drifted required evidence is not success.
+7. Publish adapter-level conformance with exact target-instance call controls,
+   complete outcomes, bounded proposition multiplicity, exact semantic
+   mutations, and executable validator anti-vacuity attacks. **Implemented
+   internally:** [`prototype/conformance.py`](prototype/conformance.py),
+   [`spec/adapter-conformance.json`](spec/adapter-conformance.json), and
+   `errata adapter-conformance`. Passing is internal evidence, not G2 or G4.
 
-Phase 2 is successful when two independently implemented adapters can consume the same erratum and produce receipts that a third-party validator evaluates consistently.
+The CLI quarantine checkpoint is also implemented internally. `errata quarantine`
+authenticates exactly the next pending erratum, gates enumerable descendants,
+records opaque stores as `unknown`, and atomically persists a digest bound to
+the erratum, sequence, target, pre-state, adapter inventory, gated set, and each
+adapter's own quarantine-phase coverage.
+`errata repair` re-authenticates and refuses missing, consumed, replayed, or
+drifted checkpoints before rebuild.
+
+Phase 2 internal implementation is complete. G2 remains blocked until a dated independent external reviewer evaluates the exact committed surface; local tests and author-directed review cannot satisfy that gate. Inspeximus `v2.7.0` is one tagged externally authored adapter candidate with a claimed clean-room rewrite, not established independent evidence. It targets historical commit `a477fe4f5c86730031b6285d9505778fb8eec060`; provenance review and rebinding to the current immutable target are required before current conformance results can be evaluated. Broader interoperability remains contingent on two independently implemented adapters consuming the same erratum and a third-party validator evaluating their receipts consistently. See [REVIEW_REQUEST.md](REVIEW_REQUEST.md) and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md).
 
 ## Phase 3 — Interoperability experiment
 
-Run one user-controlled root across at least three independently operated runtimes or memory systems.
+Run one user-controlled root across at least three independently operated runtimes or memory systems. [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) records public system-nomination requirements; nomination is not experiment approval.
+
+Operational promotion is separately governed by
+[`docs/OPERATIONAL_READINESS.md`](docs/OPERATIONAL_READINESS.md). Interoperability
+does not substitute for deployment provenance, rollback, recovery,
+observability, privacy, compatibility, performance, overload, incident-response,
+access, secret, dependency, or vulnerability-management evidence. One
+independent report must pass all ten scopes against operator-declared numeric
+thresholds before G6 can pass.
 
 Measure:
 
@@ -175,7 +199,7 @@ Every phase must account for:
 
 - issuer authorization and delegated authority;
 - key rotation, recovery, and compromise;
-- feed rollback and equivocation;
+- feed rollback, same-view conflicts, and split-view equivocation requiring an external witness or transparency mechanism;
 - poisoned or instruction-bearing payloads;
 - denial of service through excessive repair events;
 - privacy leakage through identifiers, polling, registrations, and receipts;

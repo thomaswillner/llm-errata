@@ -14,12 +14,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from prototype.conformance import ReferenceConformanceBinding
+from prototype.receipts import receipt_acceptance_errors
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SEMANTIC_FIXTURES = REPO_ROOT / "spec" / "semantic"
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_INCONCLUSIVE = 2
+
+
+class ExplodingConformanceBinding(ReferenceConformanceBinding):
+    name = "exploding-test-binding"
+
+    def apply_mutation(self, case, importer, adapter, context) -> None:
+        raise RuntimeError("deliberate mutation failure")
 
 
 class CliCase(unittest.TestCase):
@@ -30,14 +41,19 @@ class CliCase(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_cli(
+        self, *args: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        pythonpath = str(REPO_ROOT)
+        if extra_pythonpath is not None:
+            pythonpath = f"{extra_pythonpath}:{pythonpath}"
         return subprocess.run(
             [sys.executable, "-m", "prototype.cli", "--workspace", ".errata", *args],
             cwd=self.cwd,
             capture_output=True,
             text=True,
             check=False,
-            env={"PYTHONPATH": str(REPO_ROOT), "PATH": "/usr/bin:/bin"},
+            env={"PYTHONPATH": pythonpath, "PATH": "/usr/bin:/bin"},
         )
 
     def seed(self) -> None:
@@ -56,6 +72,82 @@ class CliCase(unittest.TestCase):
             "--replacement", "eats meat again", "--negative", "vegetarian",
             "--positive", "eats meat again", "--preserve", "quiet restaurants",
         )
+
+    def quarantine_and_repair(self) -> subprocess.CompletedProcess[str]:
+        quarantine = self.run_cli("quarantine")
+        self.assertEqual(quarantine.returncode, EXIT_OK, quarantine.stdout + quarantine.stderr)
+        return self.run_cli("repair")
+
+
+class AdapterConformanceCommand(CliCase):
+    def run_conformance(
+        self, *extra: str, extra_pythonpath: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        return self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(REPO_ROOT),
+            *extra,
+            extra_pythonpath=extra_pythonpath,
+        )
+
+    def test_reference_binding_emits_canonical_passing_report(self) -> None:
+        result = self.run_conformance()
+        self.assertEqual(result.returncode, EXIT_OK, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["passed"])
+        self.assertEqual(len(payload["cases"]), 5)
+        self.assertEqual(len(payload["validator_controls"]), 3)
+        self.assertRegex(payload["corpus_sha256"], r"^[0-9a-f]{64}$")
+        self.assertIn("not G2 or G4 evidence", payload["evidence_boundary"])
+        self.assertEqual(result.stdout.strip(), json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ))
+
+    def test_binding_execution_fault_exits_two(self) -> None:
+        result = self.run_conformance(
+            "--binding", "tests.test_cli:ExplodingConformanceBinding"
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("invalid conformance evidence", result.stderr)
+
+    def test_invalid_source_evidence_exits_two(self) -> None:
+        result = self.run_cli(
+            "adapter-conformance",
+            "--corpus", str(REPO_ROOT / "spec" / "adapter-conformance.json"),
+            "--source-root", str(self.cwd),
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("invalid conformance evidence", result.stderr)
+
+    def test_sourceless_binding_factory_exits_two_without_traceback(self) -> None:
+        result = self.run_conformance("--binding", "builtins:dict")
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_crashing_binding_import_exits_two_without_traceback(self) -> None:
+        binding_root = self.cwd / "binding"
+        binding_root.mkdir()
+        (binding_root / "broken.py").write_text(
+            'raise RuntimeError("top-level failure")\n', encoding="utf-8"
+        )
+        for command in (
+            ("git", "init", "-q"),
+            ("git", "config", "user.email", "tests@example.invalid"),
+            ("git", "config", "user.name", "CLI Tests"),
+            ("git", "add", "broken.py"),
+            ("git", "commit", "-q", "-m", "binding"),
+        ):
+            subprocess.run(command, cwd=binding_root, check=True)
+        result = self.run_conformance(
+            "--binding", "broken:factory", "--binding-root", str(binding_root),
+            extra_pythonpath=binding_root,
+        )
+        self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
+        self.assertIn("binding import failed: RuntimeError", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
 
 class WorkspaceLifecycle(CliCase):
@@ -99,10 +191,30 @@ class PublishRefusesIllFormedErrata(CliCase):
 
 
 class RepairReportsHonestly(CliCase):
-    def test_repair_exits_inconclusive_rather_than_claiming_success(self) -> None:
+    def test_repair_without_checkpoint_is_refused_without_mutation(self) -> None:
         self.seed()
         self.publish_supersession()
         result = self.run_cli("repair")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("checkpoint", result.stderr)
+        self.assertEqual(list((self.cwd / ".errata" / "receipts").glob("*.json")), [])
+
+    def test_quarantine_persists_bound_checkpoint_before_repair(self) -> None:
+        self.seed()
+        self.publish_supersession()
+        result = self.run_cli("quarantine")
+        self.assertEqual(result.returncode, EXIT_OK, result.stderr)
+        paths = list((self.cwd / ".errata" / "checkpoints").glob("*.json"))
+        self.assertEqual(len(paths), 1)
+        payload = json.loads(paths[0].read_text())
+        self.assertEqual(payload["erratum_id"], "err_0001")
+        self.assertFalse(payload["consumed"])
+        self.assertIn(payload["checkpoint_digest"], result.stdout)
+
+    def test_repair_exits_inconclusive_rather_than_claiming_success(self) -> None:
+        self.seed()
+        self.publish_supersession()
+        result = self.quarantine_and_repair()
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE, result.stdout + result.stderr)
         self.assertIn("prompt_cache", result.stdout)
 
@@ -111,7 +223,7 @@ class RepairReportsHonestly(CliCase):
         # the result is still not `verified`.
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("test")
         self.assertEqual(result.returncode, EXIT_OK, result.stdout)
         self.assertNotIn("fail", result.stdout)
@@ -119,7 +231,7 @@ class RepairReportsHonestly(CliCase):
     def test_audit_json_is_machine_readable_and_not_green(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("audit", "--json")
         self.assertEqual(result.returncode, EXIT_INCONCLUSIVE)
         payload = json.loads(result.stdout)
@@ -132,7 +244,7 @@ class RepairReportsHonestly(CliCase):
         # report a clean store.
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         payload = json.loads(self.run_cli("audit", "--json").stdout)
         self.assertEqual(payload["stores"]["sqlite"], "failed")
 
@@ -156,16 +268,37 @@ class RepairReportsHonestly(CliCase):
 
 
 class ReceiptsAreVerifiable(CliCase):
+    def test_empty_receipt_is_rejected_by_shared_acceptance_seam(self) -> None:
+        self.assertIn("receipt is vacuous", receipt_acceptance_errors({}))
+
     def test_a_genuine_receipt_verifies(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         self.assertEqual(self.run_cli("verify").returncode, EXIT_OK)
+
+    def test_empty_receipt_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "empty.json"
+        path.write_text("{}", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt is vacuous", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_malformed_receipt_json_is_refused_without_traceback(self) -> None:
+        self.seed()
+        path = self.cwd / ".errata" / "receipts" / "malformed.json"
+        path.write_text("{not json", encoding="utf-8")
+        result = self.run_cli("verify")
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("receipt JSON is unreadable", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_a_tampered_aggregate_is_caught(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         path = sorted((self.cwd / ".errata" / "receipts").glob("*.json"))[0]
         payload = json.loads(path.read_text())
         payload["aggregate"] = "verified"
@@ -187,17 +320,80 @@ class FeedIntegrityHoldsThroughTheCli(CliCase):
         payload = json.loads(feed.read_text().strip())
         payload["replacement"] = "eats only pineapple"
         feed.write_text(json.dumps(payload, sort_keys=True) + "\n")
-        result = self.run_cli("repair")
+        result = self.run_cli("quarantine")
         self.assertEqual(result.returncode, EXIT_REFUSED)
         self.assertIn("signature", result.stderr)
 
     def test_a_second_repair_finds_nothing_to_do(self) -> None:
         self.seed()
         self.publish_supersession()
-        self.run_cli("repair")
+        self.quarantine_and_repair()
         result = self.run_cli("repair")
         self.assertEqual(result.returncode, EXIT_OK)
         self.assertIn("nothing to repair", result.stdout)
+
+
+class SemanticProbeConformance(CliCase):
+    def semantic_test(
+        self, case: str | None = None, *extra: str
+    ) -> subprocess.CompletedProcess[str]:
+        arguments = [
+            "semantic-test",
+            "--probes", str(SEMANTIC_FIXTURES / "probes.json"),
+            "--config", str(SEMANTIC_FIXTURES / "verifier-config.json"),
+            "--observations", str(SEMANTIC_FIXTURES / "observations.json"),
+        ]
+        if case is not None:
+            arguments.extend(("--case", case))
+        return self.run_cli(*arguments, *extra)
+
+    def test_checked_in_cases_return_coverage_exit_codes_and_limitations(self) -> None:
+        expected = {
+            "verified-correction": (EXIT_OK, "verified", None),
+            "failed-supersession": (EXIT_REFUSED, "failed", None),
+            "unknown-erasure": (EXIT_INCONCLUSIVE, "unknown", "inconclusive"),
+            "provider-error": (EXIT_INCONCLUSIVE, "unknown", "returned error"),
+            "missing-response": (EXIT_INCONCLUSIVE, "unknown", "missing required observation"),
+            "duplicate-response": (EXIT_INCONCLUSIVE, "unknown", "duplicate observations"),
+            "configuration-drift": (EXIT_INCONCLUSIVE, "unknown", "configuration drift"),
+            "nonconforming-output": (EXIT_INCONCLUSIVE, "unknown", "operation mismatch"),
+        }
+        for case, (exit_code, coverage, limitation) in expected.items():
+            with self.subTest(case=case):
+                result = self.semantic_test(case)
+                self.assertEqual(result.returncode, exit_code, result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertNotIn("\n", result.stdout.rstrip("\n"))
+                report = json.loads(result.stdout)
+                self.assertEqual(report["coverage"], coverage)
+                if limitation is not None:
+                    self.assertTrue(
+                        any(limitation in item for item in report["limitations"]),
+                        report["limitations"],
+                    )
+                self.assertEqual(
+                    result.stdout,
+                    json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n",
+                )
+
+    def test_exact_documented_invocation_defaults_to_verified_correction(self) -> None:
+        result = self.semantic_test()
+        self.assertEqual(result.returncode, EXIT_OK, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["coverage"], "verified")
+
+    def test_semantic_test_refuses_malformed_input_without_traceback(self) -> None:
+        bad_observations = self.cwd / "bad-observations.json"
+        bad_observations.write_text("{not json", encoding="utf-8")
+        result = self.run_cli(
+            "semantic-test",
+            "--probes", str(SEMANTIC_FIXTURES / "probes.json"),
+            "--config", str(SEMANTIC_FIXTURES / "verifier-config.json"),
+            "--observations", str(bad_observations),
+            "--case", "verified-correction",
+        )
+        self.assertEqual(result.returncode, EXIT_REFUSED)
+        self.assertIn("invalid input", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
 
 if __name__ == "__main__":

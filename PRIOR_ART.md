@@ -15,7 +15,7 @@ The proposal survives only if the following four requirements are evaluated toge
 | A | **Post-export update delivery:** an authenticated correction, supersession, or erasure reaches an importer after the original memory transfer. |
 | B | **Descendant quarantine and repair:** the importer blocks the root and its known local derivation closure before recall, then retires or rebuilds affected descendants. |
 | C | **Repair triad:** conformance tests the negative, positive when applicable, and preservation postconditions. |
-| D | **Coverage-aware callback:** the importer returns a signed result bound to the erratum and pre-/post-repair state, including incomplete or unknown store coverage. |
+| D | **Authenticated, coverage-truthful callback:** D1 authenticates the importer and signed receipt bytes; D2 requires the signed stores, aggregate, and limitations to match the declared required scope, including incomplete or unknown coverage. |
 
 No individual mechanism is claimed as new.
 
@@ -33,7 +33,7 @@ No individual mechanism is claimed as new.
 | [EngramSpec](https://engramspec.org/) | **Yes/Partial:** live correction endpoint and pull-based incremental diffs with tombstones; no webhook/push model in v0.1 | No requirement found for quarantine and repair of importer-local summaries, vectors, graphs, or caches | No requirement found | No repair callback found | **Strongest AI-memory transport collision.** It substantially eliminates “portable corrections” as the novel idea, but not importer-local repair conformance. |
 | [vCon Lifecycle using SCITT](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) with [SCITT RFC 9943](https://datatracker.ietf.org/doc/rfc9943/) | **Yes:** lifecycle events and acknowledgments across recipients | No AI-memory descendant-repair requirement; workflow implementation is left to applications | No | **Partial:** acknowledgments and SCITT inclusion receipts, not a semantic-repair coverage receipt | **Strongest formal control-plane collision.** It proves that cross-recipient lifecycle events and transparent receipts are not new. |
 | [Shomei](https://shomei.ai/how-it-works/) ([API](https://shomei.ai/docs/http-api/), [governance](https://shomei.ai/docs/governance-and-receipts/)) | **Partial:** governed correction/update inside the Shomei boundary; no reviewed persistent post-export importer subscription/callback obligation | **Yes locally:** derived lineage, erasure cascades, and explicit external-delete-pending states | **Partial:** bounded governance evidence, but no reviewed mandatory negative + positive + preservation profile for each importer | **Partial:** signed, bounded governance receipts, but not the complete cross-importer callback | **Strongest governed-memory product collision.** It establishes local lineage, lifecycle, honest coverage, and receipts. |
-| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Partial:** lineage-aware retraction, echo guard, revert, and residue scanning for explicitly or successfully extractor-keyed assertions | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence, not a cross-importer repair callback | **Strongest open-source local correction collision.** Its README also reports that raw conversational prose is rarely keyed reliably, so supersession mostly does not fire there. |
+| [Inspeximus](https://github.com/DanceNitra/inspeximus) | **Partial:** local keyed correction/supersession and erasure channel | **Yes locally, within declared lineage:** `retract_lineage` demotes a root and its recorded descendants from default recall, retains them as superseded with `needs_rederivation`, and `rederive` can rebuild against the correction | **Partial:** stale-value and preservation-oriented checks; no reviewed mandatory replacement-activation triad across independent stores | **Partial:** signed content-free erasure evidence; current `erasure_audit` demotes known unresolved derivation holes but still cannot prove subject-specific completeness after a correct content-free cascade, and there is no cross-importer callback | **Strongest open-source local correction collision.** It substantially implements quarantine-then-rebuild inside one store. Its documented limit remains recorded lineage and its own boundary, not prior independent importers. |
 | [MemoRepair](https://arxiv.org/abs/2605.07242v1) | No cross-system delivery | **Yes, as an explicit contract:** descendants withdrawn before repair, republication restricted to validated predecessor-closed successors; invalidated-memory exposure cut from 69.8–94.3% to 0% *given complete influence provenance* | **Partial:** validated republication, no preservation test | No | **Strongest requirement-B collision found.** It independently arrives at quarantine-before-repair. Added 2026-08-07; post-dates the original cutoff. |
 | [Governed Evolving Memory](https://arxiv.org/abs/2605.26252v1) | No | **Partial:** formal correctness conditions for dependency consistency and provenance preservation | No | No | Argues record-level stores cannot satisfy those conditions. |
 | [Always-On Agents / AOEP-v0](https://arxiv.org/abs/2606.30306v1) | No | Governance obligations scored, not implemented | **Partial:** a deterministic evaluation contract scoring state mutation and recovery rather than answer quality | No | **Closest conformance-protocol collision.** |
@@ -81,7 +81,58 @@ Shomei's [overview](https://shomei.ai/how-it-works/), [HTTP API](https://shomei.
 
 That is a substantial collision with any claim that lineage-aware correction, honest coverage, or signed receipts are new. The reviewed material did not establish a persistent obligation for every independently operated prior importer to receive an erratum and return the complete repair-triad callback.
 
-Inspeximus publicly describes keyed supersession, an `echo_guard`, revert, lineage-aware retraction, residue scans, preservation behavior, and content-free signed erasure receipts. These mechanisms apply to explicitly keyed or successfully extractor-keyed assertions. Its README reports that raw conversational prose is rarely keyed reliably and supersession therefore mostly does not fire there.
+Inspeximus publicly describes keyed supersession, an `echo_guard`, revert,
+lineage-aware retraction, residue scans, preservation behavior, and content-free
+signed erasure receipts. At pinned commit
+[`4c711f2982911841d86d7ac1989b0ffb866dc891`](https://github.com/DanceNitra/inspeximus/tree/4c711f2982911841d86d7ac1989b0ffb866dc891),
+`retract_lineage(subject)` demotes the subject and every descendant reachable
+through recorded `derived_from` taint to superseded state, removes them from
+default recall, retains them for `include_superseded`, and marks them
+`needs_rederivation`; `rederive(subject)` rebuilds eligible descendants against
+the corrected root. That is a stronger requirement-B collision than the
+previous comparison to `forget_subject` and should be treated as local
+quarantine-then-rebuild, not merely deletion.
+
+The earlier pinned documentation described `erasure_audit()` returning
+`coverage{records, with_declared_lineage, undeclared_derived, declared_ratio}`
+and allowed a nonzero incomplete ratio to return `no_declared_residue`. The
+maintainer accepted that finding and changed commit
+[`36611027a463a8e526e23baf2d6bb8d9797b67ac`](https://github.com/DanceNitra/inspeximus/commit/36611027a463a8e526e23baf2d6bb8d9797b67ac): known unresolved derivation holes
+now return `partially_audited`, and the audit reports
+`subject_reachable_records`. The maintainer also found that zero subject reach
+cannot gate success because a correct content-free cascade can erase the same
+evidence needed to distinguish “nothing was declared” from “everything was
+erased.” That residual limit is material.
+
+The same conflict-disclosed review found a mirror defect in LLM Errata: an
+adapter could enumerate an empty set without proving root-specific lineage
+completeness and still receive `verified`. The earlier sentence claiming this
+repository's aggregation was categorically stricter was therefore false. The
+reference controller now maps that unsupported empty walk to `unknown`, while
+preserving the four public coverage results. Both projects still trust their
+own adapter or store instrumentation and neither result is independent
+certification. The maintainer's 0.0000 dogfood ratio remains interested-party
+testimony, not independently reproduced evidence.
+
+The Inspeximus maintainer then published a tagged adapter candidate at
+[`v2.7.0`](https://github.com/DanceNitra/inspeximus/tree/v2.7.0), commit
+`ccdb30de5a32896fafcb4ed18a7a6f228691e078`. Its preserved history and source
+header disclose that v2.6.1 was written with this repository's reference adapter
+open and therefore does not qualify as independent evidence; the maintainer says
+v2.7.0 was rewritten from the protocol signature and prose contract. That
+externally authored candidate confirmed the empty-lineage remediation against
+historical target `a477fe4f5c86730031b6285d9505778fb8eec060`, then exposed two further reference
+defects: checkpoint coverage had been hardcoded for enumerable adapters, and the
+published adapter interface omitted repair methods and a hidden reference-ledger
+dependency. Those findings are accepted and remediated. The v2.7.0 adapter is a
+candidate external implementation, not established independent evidence or a G4
+pass: its clean-room provenance and behavior still require separate validation,
+its producer cannot validate its own adapter, and it must rebind to the current
+immutable target before current conformance results can be evaluated.
+
+These mechanisms apply to explicitly keyed or successfully extractor-keyed
+assertions and recorded lineage. The documented scope is one store, not every
+vector index, prompt log, backup, or independently operated importer.
 
 LLM Errata does not claim to improve or replace these local systems. It proposes the conformance boundary between an origin and multiple importers.
 
@@ -124,7 +175,7 @@ A complete collision should identify one dated public implementation or normativ
 2. a valid event causes quarantine of the root and the importer's known local descendant closure before recall;
 3. descendants are rebuilt or retired without destroying unrelated retained memory;
 4. conformance requires negative, positive when applicable, and preservation tests;
-5. the importer returns a signed callback bound to the erratum and pre-/post-repair state with explicit incomplete or unknown coverage.
+5. the importer returns an authenticated callback bound to the erratum and pre-/post-repair state, while a separate coverage-truthfulness check requires explicit incomplete or unknown coverage.
 
 When such evidence appears, this repository should record it, narrow or withdraw the novelty statement, and preserve the correction in [CHANGELOG.md](CHANGELOG.md). The correct response to a complete collision is not semantic argument—it is an erratum to LLM Errata itself.
 

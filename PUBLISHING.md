@@ -26,10 +26,28 @@ Do not call the repository a standard, certified protocol, proven deletion syste
 9. Enable GitHub private vulnerability reporting before pointing readers to `SECURITY.md`.
 10. Decide whether GitHub Discussions should be enabled for design debate; keep factual corrections and prior-art challenges in Issues so they remain traceable.
 11. Protect `main` from force pushes once external contributions begin.
-12. Require review before merging changes to the bounded novelty statement or source comparison.
-13. Rename `.github/CODEOWNERS.example` to `.github/CODEOWNERS` and replace `@GITHUB_HANDLE` with the real account, so step 12 is enforced rather than remembered.
+12. Require green exact-head CI before merging. Request independent review for changes to the bounded novelty statement or source comparison when a qualified reviewer is available, but do not represent reviewer silence as evidence or make an experimental release depend indefinitely on an unavailable volunteer.
+13. Use `.github/CODEOWNERS` to route relevant review requests. In a sole-owner repository, do not configure a mandatory CODEOWNER approval that only the author can provide and GitHub will not count; preserve required checks, force-push protection, deletion protection, and the public review trail instead.
 14. Confirm the `validate` workflow has run green on `main` at least once, and make it a required status check for pull requests.
 15. Create the `prior-art`, `correction`, `conformance`, `implementation`, and `maintenance` labels used by the issue forms and Dependabot.
+16. Publish [REVIEW_REQUEST.md](REVIEW_REQUEST.md), [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md), and [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) only as calls for evidence. Record an external review, independent implementation, or system experiment in the readiness ledger only after its dated, independently produced result exists.
+
+## Experimental release policy
+
+Publishing an experimental version and declaring production readiness are
+different decisions. A release may be cut when the exact release tree passes
+required CI, metadata and links are internally consistent, ownership and
+licence boundaries are explicit, and release notes enumerate the unresolved
+production gates. G2–G6 stay `BLOCKED` until their evidence contracts are met,
+but their blocked status does not require the maintainer to wait indefinitely
+for unsolicited external review before publishing a better experimental build.
+
+External challenge remains welcome and must be evaluated when it arrives.
+Silence is neither approval nor a blocker; it provides no readiness evidence.
+Branch protection must require the Python 3.11 and 3.13 validation contexts,
+disallow force pushes and deletion, and avoid an impossible sole-owner approval
+requirement. A future independent maintainer may restore mandatory approval
+after their identity, role, and conflict boundaries are documented.
 
 ## Suggested first commit
 
@@ -67,3 +85,4 @@ The repository was published on 2026-08-07 at https://github.com/thomaswillner/l
 - update `RESEARCH.md`, `PRIOR_ART.md`, and `CHANGELOG.md` together when the bounded claim changes;
 - record unsuccessful implementation experiments, not only successes;
 - cut a new version whenever published semantics change.
+- keep [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) aligned with canonical repository URL, `NOT_PROD_READY` status, and external-evidence boundaries; a post, nomination, or invitation never upgrades readiness.

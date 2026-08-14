@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "project_version": "0.4.0",
+  "verdict": "NOT_PROD_READY",
+  "last_reviewed": "2026-08-14",
+  "gates": [
+    {
+      "id": "G1",
+      "name": "Readiness contract and document consistency",
+      "class": "internal",
+      "status": "PASS",
+      "criterion": "VERSION, SECURITY support policy, readiness matrix, and check documentation remain aligned; negative tests protect every machine-enforced binding.",
+      "evidence": [
+        {"kind": "repository", "ref": "VERSION"},
+        {"kind": "repository", "ref": "README.md"},
+        {"kind": "repository", "ref": "AGENTS.md"},
+        {"kind": "repository", "ref": "CONTRIBUTING.md"},
+        {"kind": "repository", "ref": "SECURITY.md"},
+        {"kind": "repository", "ref": "PRODUCTION_READINESS.md"},
+        {"kind": "repository", "ref": "readiness/production-readiness.json"},
+        {"kind": "repository", "ref": "scripts/check_readiness.py"},
+        {"kind": "repository", "ref": "scripts/validate_repo.py"},
+        {"kind": "repository", "ref": "tests/test_readiness.py"},
+        {"kind": "repository", "ref": "tests/test_validate_repo.py"}
+      ]
+    },
+    {
+      "id": "G2",
+      "name": "Phase 2 complete with external conformance review",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Complete Phase 2 implementation, including provider-neutral semantic probes, and an independent reviewer evaluates the complete conformance surface.",
+      "evidence": [
+        {"kind": "repository", "ref": "ROADMAP.md"},
+        {"kind": "repository", "ref": "prototype/checkpoints.py"},
+        {"kind": "repository", "ref": "prototype/semantic.py"},
+        {"kind": "repository", "ref": "spec/semantic/probes.json"},
+        {"kind": "repository", "ref": "spec/semantic/verifier-config.json"},
+        {"kind": "repository", "ref": "spec/semantic/observations.json"},
+        {"kind": "repository", "ref": "spec/vectors/protocol-manifest.json"},
+        {"kind": "repository", "ref": "spec/vectors/receipt-binding-mutations.json"},
+        {"kind": "repository", "ref": "spec/adapter-conformance.json"},
+        {"kind": "repository", "ref": "prototype/conformance.py"},
+        {"kind": "repository", "ref": "tests/test_conformance.py"},
+        {"kind": "repository", "ref": "prototype/README.md"},
+        {"kind": "repository", "ref": "spec/README.md"},
+        {"kind": "repository", "ref": "REVIEW_REQUEST.md"},
+        {"kind": "repository", "ref": "INDEPENDENT_IMPLEMENTATION.md"}
+      ]
+    },
+    {
+      "id": "G3",
+      "name": "Audited constant-time production cryptography",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Production signing uses an audited constant-time library through the Signer seam and independent security review covers key lifecycle.",
+      "evidence": [
+        {"kind": "repository", "ref": "THREAT_MODEL.md"},
+        {"kind": "repository", "ref": "docs/CRYPTOGRAPHY_QUALIFICATION.md"}
+      ]
+    },
+    {
+      "id": "G4",
+      "name": "Two independent implementations and third-party validator",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "Two independently authored adapters consume the same erratum and a third-party validator evaluates their receipts consistently.",
+      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+    },
+    {
+      "id": "G5",
+      "name": "Three-system Phase 3 interoperability experiment",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "One user-controlled synthetic root completes the declared experiment across three independently operated memory systems.",
+      "evidence": [{"kind": "repository", "ref": "ROADMAP.md"}]
+    },
+    {
+      "id": "G6",
+      "name": "Operational production gates",
+      "class": "external",
+      "status": "BLOCKED",
+      "criterion": "All ten operational scopes pass from one independent report bound to exact commit and deployment, with declared thresholds and measured comparators.",
+      "evidence": [
+        {"kind": "repository", "ref": "docs/OPERATIONAL_READINESS.md"},
+        {"kind": "repository", "ref": "SECURITY.md"},
+        {"kind": "repository", "ref": "scripts/check_readiness.py"},
+        {"kind": "repository", "ref": "tests/test_readiness.py"}
+      ]
+    }
+  ]
+}

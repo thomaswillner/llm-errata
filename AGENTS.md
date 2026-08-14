@@ -98,6 +98,24 @@ Never convert missing lineage, inaccessible stores, skipped tests, timeouts, or 
 - Respect quotation, copyright, license, confidentiality, and personal-data boundaries.
 - Preserve contrary and partial-collision evidence. Do not select sources only because they support the proposal.
 
+## Publication discipline
+
+- `publication/active-surfaces.json` is the tracked authority for current public
+  review, implementation, validator, and operated-system calls. Historical
+  GitHub comments stay visible and are superseded append-only; never edit or
+  delete them to make an old target appear current.
+- Before publishing a pinned GitHub blob URL, run
+  `git cat-file -e <commit>:<path>` and verify the public URL. After publishing,
+  read the rendered artifact back and record its author, URL, body, and mentions.
+- Recruitment evidence is not independent readiness evidence. Invitations,
+  mentions, publication, maintainer work, and CI cannot upgrade G2 through G6.
+- Run `make publication` whenever an active surface, frozen target, evidence
+  role, mention, supersession URL, or implementation-licence posture changes.
+- Targeted outreach must begin with a plain-language description of the user
+  problem and exact bounded question. Do not send a specialist only an internal
+  gate label, digest, or repository jargon and expect them to infer why the
+  request matters.
+
 ## Implementation and test expectations
 
 - Use synthetic fixtures; never add real personal, customer, employer, credential, or confidential data.
@@ -108,6 +126,11 @@ Never convert missing lineage, inaccessible stores, skipped tests, timeouts, or 
 - Verify receipt binding to the erratum and relevant pre-repair and post-repair state.
 - Keep deterministic structural checks separate from model-graded behavioral probes.
 - Never mark an opaque required store green merely because accessible stores passed.
+- Never hardcode checkpoint success from enumeration. Preserve adapter-supplied
+  quarantine-phase coverage and carry a worse checkpoint result into the receipt.
+- Keep the declared adapter protocol synchronized with every controller and
+  strategy call; independent adapters must own their repair inputs rather than
+  depending silently on reference-ledger registration.
 
 ## Required completion check
 
@@ -122,11 +145,15 @@ Before presenting work as complete:
    make check
    ```
 
-   This runs three things, and each answers a different question:
+   This runs five validation components, and each answers a different question:
 
-   - `scripts/validate_repo.py` — is the repository structurally well formed?
+   - `scripts/validate_repo.py` — are repository structure and metadata well formed?
    - `scripts/claim_guard.py` — does the documentation still state the bounded claim? It anchors to exact sentences in named files, because keyword presence over the whole corpus cannot tell a hedge from its inversion.
-   - `tests/` — do those two checkers actually reject the faults they claim to catch? A checker that has only ever passed has not been shown to work.
+   - `scripts/check_readiness.py` — is readiness evidence structurally honest and synchronized with `PRODUCTION_READINESS.md`?
+   - `scripts/check_publication.py` — do active public calls bind the corrected immutable target, current licence posture, distinct evidence roles, and honest evidence boundaries?
+   - `tests/` — do the checkers actually reject the faults they claim to catch? A checker that has only ever passed has not been shown to work.
+
+   Readiness-check exit `0` validates structural honesty of the recorded evidence. It does **not** mean `PROD_READY`; the ledger and human matrix state the current verdict.
 
    Run `make links` as well whenever a citation is added or changed.
 

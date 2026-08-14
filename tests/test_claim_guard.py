@@ -78,6 +78,85 @@ class ClaimGuardRejectsOverclaims(unittest.TestCase):
 
 
 class ClaimGuardRejectsInvariantLoss(unittest.TestCase):
+    def test_signature_authenticity_cannot_be_misstated_as_coverage_truth(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "Signature validity authenticates the importer and receipt bytes; "
+                "it does not establish that the reported coverage is truthful.",
+                "Signature validity proves that the reported coverage is truthful.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("signature authenticity boundary", result.stdout)
+
+    def test_coverage_truthfulness_cannot_upgrade_missing_evidence(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "Coverage truthfulness requires the signed stores, aggregate, and "
+                "limitations to match the declared required scope without upgrading "
+                "missing or opaque evidence.",
+                "Coverage truthfulness permits missing and opaque evidence to be upgraded.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("coverage truthfulness boundary", result.stdout)
+
+    def test_empty_enumeration_cannot_become_complete_lineage(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "An empty enumeration is not evidence of complete lineage.",
+                "An empty enumeration proves complete lineage.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("empty enumeration", result.stdout)
+
+    def test_checkpoint_cannot_upgrade_adapter_coverage(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "A durable checkpoint records adapter-supplied quarantine coverage; "
+                "final repair cannot upgrade a worse checkpoint result.",
+                "A durable checkpoint may infer verified coverage and final repair may "
+                "upgrade an earlier result.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("checkpoint coverage", result.stdout)
+
+    def test_adapter_contract_cannot_hide_reference_ledger_dependency(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "The published adapter contract must expose every controller and "
+                "repair operation without hidden reference-ledger dependencies.",
+                "The published adapter contract may omit repair operations and depend "
+                "on the reference ledger implicitly.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("adapter contract", result.stdout)
+
+    def test_receipt_cannot_claim_global_feed_consistency(self) -> None:
+        def mutate(root: Path) -> None:
+            rewrite(
+                root / "IDEA.md",
+                "A receipt establishes the signed event accepted by one importer.",
+                "A receipt establishes the globally consistent owner feed.",
+            )
+
+        result = check_after(SCRIPT, mutate)
+        self.assertEqual(result.returncode, EXIT_FAIL, result.stdout)
+        self.assertIn("importer-view evidence", result.stdout)
+
     def test_inverted_loop_order_is_rejected(self) -> None:
         def mutate(root: Path) -> None:
             path = root / "IDEA.md"

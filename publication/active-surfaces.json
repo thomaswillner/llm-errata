@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "review_target": {
+    "commit": "ad36ed5e209a53aacab17751b5a183ca8a1aac1f",
+    "surface_digest": "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d"
+  },
+  "license": {
+    "specification_implementation": "irrevocable worldwide royalty-free commercial and non-commercial",
+    "required_attribution": [
+      "LLM Errata",
+      "Thomas Willner",
+      "https://github.com/thomaswillner/llm-errata"
+    ],
+    "reference_code": "personal-use only: prototype/, scripts/, tests/",
+    "case_by_case_permission_required": false
+  },
+  "historical_surfaces": [
+    {
+      "id": "g4-inspeximus-current-target-reply",
+      "kind": "issue-comment",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5282207719",
+      "published": "2026-08-13",
+      "commit": "ac4468faf73c2cc7949dd29b2a2a151f5bd23116",
+      "surface_digest": "7e0d6c88c1ca3a87743ac70ba2a3dfea0b350d112d2d3c59a3c6cbb537568f12",
+      "gates": ["G2", "G4"],
+      "roles": ["inspeximus-adapter-author"],
+      "mentions": ["DanceNitra"],
+      "supersedes": [
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280210050",
+        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5280225709"
+      ],
+      "evidence_boundary": "recruitment-only",
+      "superseded_by": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5287579823"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "g4-inspeximus-v040-target-reply",
+      "kind": "issue-comment",
+      "url": "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5287579823",
+      "published": "2026-08-13",
+      "commit": "ad36ed5e209a53aacab17751b5a183ca8a1aac1f",
+      "surface_digest": "3ca427bb2645517e1b1d921859a7721896644a05e32ea39fb0071a021ddc5b6d",
+      "gates": ["G2", "G4"],
+      "roles": ["inspeximus-adapter-author"],
+      "mentions": ["DanceNitra"],
+      "supersedes": [
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5282207719",
+        "https://github.com/thomaswillner/llm-errata/issues/4#issuecomment-5280210050",
+        "https://github.com/thomaswillner/llm-errata/pull/8#issuecomment-5280225709"
+      ],
+      "evidence_boundary": "recruitment-only"
+    }
+  ]
+}

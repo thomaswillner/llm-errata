@@ -52,7 +52,6 @@ class RebuildStrategy:
         attempted. Adding a store must not require editing this file.
         """
 
-        ledger = importer.ledger
         replacement = erratum.replacement
         # Only a supersession retains the old value, and only as scoped
         # history. `valid_from` is the instant it stopped being true.
@@ -60,37 +59,32 @@ class RebuildStrategy:
             erratum.valid_from if erratum.operation is Operation.SUPERSEDE else None
         )
 
-        def source_of(adapter, item: str) -> str:
-            resolve = getattr(adapter, "source_artifact", None) or getattr(
-                adapter, "source_of", None
-            )
-            return resolve(item) if resolve else item
-
         # Pass one: retire everything that descends directly from the root, so
         # pass two knows which inputs are no longer valid.
         retired: set[str] = set()
         for store, items in gated.items():
             adapter = importer.adapter(store)
             for item in items:
-                source = source_of(adapter, item)
-                if source in ledger.artifact_ids() and ledger.artifact(source).inputs:
+                source = adapter.source_artifact(item)
+                if adapter.repair_inputs(item):
                     continue
-                try:
-                    adapter.retire(item, superseded_at=superseded_at)
-                except TypeError:
-                    adapter.retire(item)
+                adapter.retire(item, superseded_at=superseded_at)
                 retired.add(source)
 
         # Pass two: rebuild the mixed artifacts from what survived.
         for store, items in gated.items():
             adapter = importer.adapter(store)
             for item in items:
-                source = source_of(adapter, item)
+                source = adapter.source_artifact(item)
                 if source in retired:
                     continue
                 adapter.rebuild(
                     item,
-                    inputs=ledger.valid_inputs(source, retired=retired),
+                    inputs=tuple(
+                        value
+                        for value in adapter.repair_inputs(item)
+                        if value not in retired
+                    ),
                     replacement=replacement,
                 )
 

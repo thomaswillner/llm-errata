@@ -13,11 +13,12 @@
 | Field | Value |
 |---|---|
 | Author | Thomas Rainer Willner |
-| Version | 0.3.0 |
+| Version | 0.4.0 |
 | Status | Public concept proposal / Request for Comment |
 | Published | 2026-08-07 |
+| Latest release | v0.4.0 — first materially improved experimental release |
 | Research reviewed through | 2026-08-01 |
-| License | Personal use only, see [LICENSE](LICENSE). Releases up to 0.2.0 were Apache-2.0. |
+| License | Attributed specification implementations permitted; reference code remains personal-use. See [LICENSE](LICENSE). |
 
 This is an independent proposal. It does not represent the position of the author's employer or any organization referenced in this repository.
 
@@ -49,9 +50,21 @@ observe → quarantine → rebuild → test → attest
 2. **Quarantine:** block that root and its known local descendants before further recall.
 3. **Rebuild:** retire invalid artifacts and reconstruct mixed artifacts from still-valid inputs.
 4. **Test:** run the repair triad across the declared stores and behavioral scope.
-5. **Attest:** return a signed, coverage-aware receipt bound to the erratum and the importer's pre-repair and post-repair state.
+5. **Attest:** return an authenticated, coverage-truthful receipt bound to the erratum and the importer's pre-repair and post-repair state. Its signature authenticates the bytes; separate coverage rules determine whether the signed claim is honest.
 
 An importer that cannot inspect a relevant cache or derived store reports `unknown`. It does not silently turn incomplete coverage into success.
+
+An empty enumeration is not a clean result by itself. The adapter must also
+establish that its root-specific lineage authority is complete; otherwise the
+store remains `unknown`. A receipt also speaks only for the signed feed view
+that one importer accepted. Detecting different views delivered to different
+importers requires an external witness or append-only transparency mechanism.
+
+A durable quarantine checkpoint records the adapter's own phase-specific
+coverage rather than assuming every enumerable store is verified. Final repair
+cannot erase an earlier `partial`, `unknown`, or `failed` checkpoint. Independent
+adapters own their lineage inputs behind the published interface; they do not
+have to mirror store internals into the reference ledger.
 
 ## The repair triad
 
@@ -85,7 +98,7 @@ This repository does **not** claim to invent portable memory, correction feeds, 
 
 The narrow research conclusion is:
 
-> **No exact public implementation found in the reviewed sources required all four together: post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and a signed, coverage-aware callback bound to the erratum and pre/post state.**
+> **No exact public implementation found in the reviewed sources required all four together: post-export update delivery; importer-side quarantine and repair of the known descendant closure; negative, positive, and preservation tests; and an authenticated, coverage-truthful callback bound to the erratum and pre/post state.**
 
 This is a novel synthesis with an apparently unimplemented conformance gap. It is not a claim of patentability, a “world first,” or freedom to operate. [EngramSpec](https://engramspec.org/) is the strongest AI-memory transport collision. The individual [vCon Lifecycle using SCITT draft](https://datatracker.ietf.org/doc/html/draft-howe-vcon-lifecycle-01) is the strongest formal standards/control-plane collision. [Shomei](https://shomei.ai/docs/governance-and-receipts/) and [Inspeximus](https://github.com/DanceNitra/inspeximus) are the closest local governance and correction collisions.
 
@@ -111,28 +124,38 @@ See [PRIOR_ART.md](PRIOR_ART.md) for the feature-level comparison and [RESEARCH.
 | [CITATION.cff](CITATION.cff) | Citation metadata. |
 | [CHANGELOG.md](CHANGELOG.md) | Public version history, including claims that were narrowed or retired. |
 | [PUBLISHING.md](PUBLISHING.md) | Exact repository settings, review gates, release text, and announcement wording. |
+| [REVIEW_REQUEST.md](REVIEW_REQUEST.md) | Required record for independent conformance and security/distributed-systems review. |
+| [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md) | Call and evidence requirements for independently authored adapters. |
+| [PHASE3_SYSTEMS.md](PHASE3_SYSTEMS.md) | Nominations for future authorized three-system synthetic-data experiment. |
+| [docs/PUBLICATION_STRATEGY.md](docs/PUBLICATION_STRATEGY.md) | Evidence-bounded publication channels and canonical announcement copy. |
+| [docs/PUBLICATION_LOG.md](docs/PUBLICATION_LOG.md) | Public GitHub calls, blocked external-channel attempts, and readiness boundary. |
 
 ## Verifying this repository
 
 Everything is Python standard library only. There is nothing to install.
 
 ```bash
-make check    # structure, bounded claim, and the self-tests for both
+make check    # structure/metadata, bounded claim, readiness-evidence honesty, and self-tests
 make links    # liveness of every cited external URL (needs network)
 ```
 
-`make check` runs three separate things because they answer different questions:
+`make check` runs four validation components because they answer different questions:
 
 | Command | Question | Failure means |
 |---|---|---|
-| `make lint` | Is the repository well formed? | A file, link, encoding, fence, or metadata field is wrong. |
+| `make lint` | Are repository structure and metadata well formed? | A file, link, encoding, fence, or metadata field is wrong. |
 | `make claim` | Does the documentation still state the bounded claim? | An anchor sentence, the quarantine-before-repair ordering, or the novelty boundary has been altered. |
+| `make readiness` | Is the recorded readiness evidence structurally honest and synchronized with the human matrix? | The ledger is malformed, evidence is insufficient for a recorded status, or the matrix contradicts the ledger. |
 | `make test` | Do those checkers reject what they claim to reject? | A checker has stopped catching a fault it is supposed to catch. |
 
-The third one exists because a check that has never failed has not been shown to
+The self-tests exist because a check that has never failed has not been shown to
 work. The self-tests build corpora that misstate the proposal — an inverted
 quarantine ordering, an asserted world first — and require the guard to reject
 each one.
+
+Readiness-check exit `0` validates structural honesty of the recorded evidence.
+It does **not** mean `PROD_READY`; consult the ledger and human matrix for the
+current verdict.
 
 `scripts/claim_guard.py` distinguishes *failed* (exit `1`) from *inconclusive*
 (exit `2`, meaning a guarded file was missing or unreadable, so the claim was
@@ -157,17 +180,15 @@ cannot be read as a bug. See [prototype/README.md](prototype/README.md).
 
 ## Current maturity
 
-Version 0.1.0 is a researched concept and conformance design, not a production protocol or proof of interoperability. The next milestone is deliberately small:
+Version 0.4.0 is an experimental conformance proposal and tested reference implementation, not a production protocol or proof of interoperability. Phase 1 and the internal Phase 2 conformance surface include conflict-disclosed external remediation for split-view limitations, empty-enumeration truthfulness, phase-specific checkpoint coverage, complete adapter call-surface documentation, and removal of hidden reference-ledger coupling. Phase 2 also includes provider-neutral semantic probes, durable `errata quarantine` checkpoints required by CLI repair, owner-key rotation schedules, same-view conflict and invalid-target cases, content-free confidentiality evidence, mutation coverage for every signed receipt field, and independently authored adapter-level cases with target-instance tracing, complete outcomes, bounded proposition multiplicity, exact semantic mutations, and executable validator anti-vacuity controls. G2 remains `BLOCKED`: interested-party findings and internal remediation do not replace a complete independent review of the current surface. G4 also remains `BLOCKED`: one externally authored adapter candidate exists, but two independent implementations and a separately produced third-party validator result are not established.
 
-- one file-backed controller;
-- one Markdown adapter;
-- one vector adapter;
-- one deliberately opaque adapter;
-- one imported root copied into three stores;
-- correction, supersession, erasure, rollback, mixed-source rebuild, and stale-reimport tests;
-- no green aggregate result when required coverage is unknown.
+Current production-readiness verdict: **NOT_PROD_READY**. [ROADMAP.md](ROADMAP.md) defines implementation and kill criteria. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) records the human evidence matrix and continuous enforcement boundaries.
 
-The implementation sequence and kill criteria are in [ROADMAP.md](ROADMAP.md).
+Experimental release readiness is separate from production readiness. Version
+0.4.0 is published so implementers can evaluate and extend a materially better
+baseline while G2–G6 remain an explicit backlog. External challenge is welcome
+whenever users or reviewers encounter the project, but no release claims those
+gates passed merely because a reviewer did not appear.
 
 ## Review requests
 
@@ -179,7 +200,7 @@ The most useful contributions are:
 4. a smaller design that achieves the same user outcome;
 5. a concrete adapter or conformance test.
 
-Please use the evidence requirements in [CONTRIBUTING.md](CONTRIBUTING.md). A convincing prior-art collision should narrow or retire the claim rather than be argued away.
+Please use the evidence requirements in [CONTRIBUTING.md](CONTRIBUTING.md), [REVIEW_REQUEST.md](REVIEW_REQUEST.md), and [INDEPENDENT_IMPLEMENTATION.md](INDEPENDENT_IMPLEMENTATION.md). A convincing prior-art collision should narrow or retire the claim rather than be argued away.
 
 ## Authorship and research disclosure
 
@@ -191,12 +212,17 @@ The public research record exposes the decision criteria and evidence trail. It 
 
 Copyright © 2026 Thomas Rainer Willner.
 
-Licensed for personal, non-commercial evaluation and study. See [LICENSE](LICENSE).
+Commercial and non-commercial independent implementations are permitted under
+an irrevocable, worldwide, royalty-free specification grant. Every product or
+service implementing a material part of LLM Errata must credit **LLM Errata**
+and **Thomas Willner**, with the repository URL, in an ordinarily accessible
+About, Legal, documentation, acknowledgements, or NOTICE location.
 
-You may read, run, study, quote, and cite this work. Commercial use,
-redistribution, derivative works, and implementing the specifications in
-`spec/` require written permission, which is not unreasonably withheld for
-research and standards work.
+Reference code under `prototype/`, `scripts/`, and `tests/` remains licensed
+only for personal, non-commercial evaluation and study unless separately
+licensed. The specification grant permits clean-room implementation; it does
+not permit copying reference code. Attribution does not imply endorsement,
+certification, audit, or support.
 
 Version 0.2.0 and earlier were published under the Apache License 2.0. That
 grant is irrevocable for those releases and is not withdrawn here.
